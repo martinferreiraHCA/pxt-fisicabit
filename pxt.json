@@ -1,0 +1,26 @@
+{
+    "name": "fisicabit-sensores",
+    "version": "0.1.0",
+    "description": "Plantilla de extensión micro:bit para FisicaBit.com — Lectura optimizada de sensores internos y externos con ejemplos en C++ y ASM",
+    "license": "MIT",
+    "dependencies": {
+        "core": "*",
+        "microphone": "*"
+    },
+    "files": [
+        "README.md",
+        "fisicabit.ts",
+        "enums.d.ts",
+        "shims.d.ts",
+        "shims.cpp",
+        "asm_sensors.S",
+        "icon.png"
+    ],
+    "testFiles": [
+        "test.ts"
+    ],
+    "supportedTargets": [
+        "microbit"
+    ],
+    "preferredEditor": "makecode"
+}
