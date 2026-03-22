@@ -13,8 +13,7 @@
         "bluetooth_sensores.ts",
         "enums.d.ts",
         "shims.d.ts",
-        "shims.cpp",
-        "icon.png"
+        "shims.cpp"
     ],
     "testFiles": [
         "test.ts"
@@ -26,7 +25,6 @@
     "bluetooth": {
         "open": 1,
         "pairing_mode": 0,
-        "whitelist": 0,
-        "security_level": null
+        "whitelist": 0
     }
 }
