@@ -331,8 +331,7 @@ namespace fisicabit_native {
     // =========================================================================
 
     //%
-    int medirTiempoBarreraNativo(int pinA, int pinB, int modo,
-                                  int umbralA, int umbralB, int timeoutUs) {
+    int medirTiempoBarreraNativo(int pinA, int pinB, int modo, int umbralA, int umbralB, int timeoutUs) {
         #if MICROBIT_CODAL
 
         // ── Configurar TIMER3 a 1MHz (1 tick = 1μs) ──
