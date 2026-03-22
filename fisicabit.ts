@@ -46,9 +46,9 @@
 // NAMESPACE PRINCIPAL — "FisicaBit" aparecerá en la toolbox de MakeCode
 // =============================================================================
 //% weight=100
-//% color=#0078D7
+//% color=#E64322
 //% icon="\uf0e7"
-//% block="FisicaBit"
+//% block="FisicaBit Sensores"
 //% groups="['Sensores Internos', 'Sensores Externos', 'Sensor Ultrasonido', 'Barrera Óptica', 'Conversiones', 'Nativo C++', 'Utilidades']"
 namespace FisicaBit {
 

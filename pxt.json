@@ -1,14 +1,16 @@
 {
     "name": "fisicabit-sensores",
-    "version": "0.1.0",
-    "description": "Extensión micro:bit para FisicaBit.com — Sensores y barreras ópticas con C++ nativo",
+    "version": "0.2.0",
+    "description": "Extensión micro:bit para FisicaBit.com — Sensores, barreras ópticas y Bluetooth",
     "license": "MIT",
     "dependencies": {
-        "core": "*"
+        "core": "*",
+        "bluetooth": "*"
     },
     "files": [
         "README.md",
         "fisicabit.ts",
+        "bluetooth_sensores.ts",
         "enums.d.ts",
         "shims.d.ts",
         "shims.cpp",
@@ -20,5 +22,11 @@
     "supportedTargets": [
         "microbit"
     ],
-    "preferredEditor": "tsprj"
+    "preferredEditor": "tsprj",
+    "bluetooth": {
+        "open": 1,
+        "pairing_mode": 0,
+        "whitelist": 0,
+        "security_level": null
+    }
 }

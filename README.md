@@ -14,14 +14,16 @@ https://github.com/martinferreiraHCA/Extension-de-prueba
 ## Estructura del proyecto
 
 ```
-├── pxt.json          ← Manifiesto: dependencias, archivos, metadatos
-├── enums.d.ts        ← Enumeraciones (tipos de sensor, unidades, pines)
-├── fisicabit.ts      ← Extensión principal: bloques MakeCode en TypeScript
-├── shims.d.ts        ← Declaraciones: puente TypeScript ↔ C++
-├── shims.cpp         ← Código nativo C++: acceso directo al hardware nRF52833
-├── asm_sensors.S     ← Ensamblador ARM: rutinas de máximo rendimiento
-├── test.ts           ← 8 ejemplos completos con diagramas de cableado
-└── README.md         ← Esta documentación
+├── pxt.json               ← Manifiesto: dependencias, archivos, metadatos
+├── enums.d.ts             ← Enumeraciones (tipos de sensor, unidades, pines)
+├── fisicabit.ts           ← Bloques de sensores (FisicaBit Sensores — rojo)
+├── bluetooth_sensores.ts  ← Bloques Bluetooth BLE UART (FisicaBit BT — azul)
+├── shims.d.ts             ← Declaraciones: puente TypeScript ↔ C++
+├── shims.cpp              ← Código nativo C++: acceso directo al hardware nRF52833
+├── asm_sensors.S          ← Ensamblador ARM: rutinas de máximo rendimiento
+├── test.ts                ← 12 ejemplos completos con diagramas de cableado
+├── icon.png               ← Ícono de la extensión (rayo + onda)
+└── README.md              ← Esta documentación
 ```
 
 ## Arquitectura de capas
@@ -143,6 +145,167 @@ export function fn()         function fn()               int fn()
 | ADC | SAADC 12 bits, 8 canales |
 | GPIO | 48 pines |
 | Radio | Bluetooth 5.0 |
+
+## Bluetooth — Envío inalámbrico de datos
+
+La extensión incluye bloques para enviar datos de sensores por **Bluetooth Low Energy (BLE)** usando el servicio UART (Nordic UART Service). Los datos se reciben en [fisicasimple.com](https://fisicasimple.com) en tiempo real.
+
+### Compatibilidad Bluetooth
+
+| Plataforma | Navegador | Funciona |
+|---|---|---|
+| Windows / macOS / Linux | Chrome, Edge | ✅ |
+| Android | Chrome | ✅ |
+| iOS / iPadOS | Safari | ❌ (Apple no soporta Web Bluetooth) |
+
+### Configuración obligatoria para Bluetooth
+
+#### Paso 1: Habilitar "No Pairing Required"
+
+En tu programa MakeCode, abrí **⚙ → Project Settings** y activá **"No Pairing Required: JustWorks pairing"**. Esto permite la conexión sin PIN.
+
+#### Paso 2: Verificar pxt.json
+
+En el archivo `pxt.json` la sección `bluetooth` debe tener estos valores:
+
+```json
+"bluetooth": {
+    "open": 1,
+    "pairing_mode": 0,
+    "whitelist": 0,
+    "security_level": null
+}
+```
+
+#### Paso 3: Saber que Bluetooth reemplaza Radio y Serial USB
+
+> ⚠ **Importante:** Al agregar Bluetooth se desactiva automáticamente la extensión Radio y el serial USB. Para volver a usar USB, eliminá la extensión Bluetooth y agregá serial.
+
+### Bloques Bluetooth disponibles
+
+#### Conexión
+| Bloque | Descripción |
+|--------|-------------|
+| `iniciar Bluetooth UART` | Inicia el servicio UART (llamar en "al iniciar") |
+| `iniciar Bluetooth UART con todos los servicios` | UART + acelerómetro + temperatura + brújula + botones + LED + I/O |
+| `configurar indicador de conexión BT` | Muestra ❤ al conectar y ✕ al desconectar |
+
+#### Envío de datos manual
+| Bloque | Descripción |
+|--------|-------------|
+| `enviar por BT valor [valor]` | Envía timestamp,valor |
+| `enviar por BT valores [v1] y [v2]` | Envía timestamp,valor1,valor2 |
+| `enviar por BT valores [v1], [v2] y [v3]` | Envía timestamp,valor1,valor2,valor3 |
+| `enviar por BT sensor [Temperatura]` | Lee y envía un sensor con timestamp |
+| `enviar por BT texto [texto]` | Envía texto libre |
+
+#### Envío continuo (automático)
+| Bloque | Descripción |
+|--------|-------------|
+| `configurar velocidad de muestreo [normal 100ms]` | Velocidad predefinida |
+| `configurar muestreo cada [ms] ms` | Velocidad personalizada |
+| `iniciar envío continuo de [sensor]` | Envía 1 variable continuamente |
+| `iniciar envío continuo de [s1] y [s2]` | Envía 2 variables continuamente |
+| `iniciar envío continuo de [s1], [s2] y [s3]` | Envía 3 variables continuamente |
+| `detener envío continuo` | Detiene el envío |
+| `envío BT activo` | Devuelve verdadero si está enviando |
+
+### Formato de datos
+
+Cada línea enviada tiene el formato CSV:
+```
+timestamp,valor1,valor2,...
+```
+- El **timestamp** es `input.runningTime()` en milisegundos
+- Los valores se separan con coma
+- En fisicasimple.com, activar **"Micro:bit envía timestamp"**
+
+### Sensores disponibles para Bluetooth
+
+- Acelerómetro X, Y, Z
+- Temperatura
+- Nivel de Luz
+- Brújula (heading)
+- Nivel Sonido (micro:bit v2)
+- Fuerza G (magnitud del acelerómetro)
+- Analógico P0, P1, P2 (sensores externos conectados a pines)
+
+### Ejemplos de uso Bluetooth
+
+#### 1 variable — Temperatura
+```typescript
+FisicaBitBT.iniciarUART()
+FisicaBitBT.configurarIndicadorConexion()
+FisicaBitBT.configurarVelocidad(VelocidadMuestreo.MuyLento)
+FisicaBitBT.iniciarEnvio1Sensor(SensorBT.Temperatura)
+```
+
+#### 2 variables — Acelerómetro X e Y
+```typescript
+FisicaBitBT.iniciarUART()
+FisicaBitBT.configurarIndicadorConexion()
+FisicaBitBT.configurarVelocidadMs(50)
+FisicaBitBT.iniciarEnvio2Sensores(SensorBT.AcelerometroX, SensorBT.AcelerometroY)
+```
+
+#### 3 variables — Acelerómetro completo
+```typescript
+FisicaBitBT.iniciarUART()
+FisicaBitBT.configurarIndicadorConexion()
+FisicaBitBT.configurarVelocidad(VelocidadMuestreo.MuyRapido)
+FisicaBitBT.iniciarEnvio3Sensores(SensorBT.AcelerometroX, SensorBT.AcelerometroY, SensorBT.AcelerometroZ)
+```
+
+#### Envío manual en un loop personalizado
+```typescript
+FisicaBitBT.iniciarUART()
+FisicaBitBT.configurarIndicadorConexion()
+
+basic.forever(function () {
+    let temp = input.temperature()
+    let luz = input.lightLevel()
+    FisicaBitBT.enviar2Valores(temp, luz)
+    basic.pause(200)
+})
+```
+
+### Conectar desde fisicasimple.com
+
+1. Abrir [fisicasimple.com](https://fisicasimple.com) en **Chrome** o **Edge**
+2. Presionar el botón **BLUETOOTH** (azul)
+3. En el selector del navegador, elegir tu micro:bit (aparece como `BBC micro:bit [XXXXX]`)
+4. Esperar a que se conecte — el botón cambia a "BLUETOOTH CONECTADO"
+5. Presionar **CAPTURAR** para iniciar la toma de datos
+
+> **Reconexión automática:** Si la micro:bit se desconecta (por ejemplo, al alejarse), la app intenta reconectarse automáticamente hasta 4 veces.
+
+### Solución de problemas Bluetooth
+
+| Problema | Solución |
+|----------|----------|
+| No aparece en el selector | Verificar que el programa tenga `iniciar Bluetooth UART`. Reiniciar la micro:bit. Verificar que no esté conectada a otro dispositivo. |
+| Se conecta pero no llegan datos | Verificar que uses bloques de envío. Presionar CAPTURAR después de conectar. Verificar que "Micro:bit envía timestamp" coincida con el formato. |
+| Error "UART no encontrado" | El programa no tiene `iniciar Bluetooth UART`. Recompilar y descargar. |
+| Error "Not supported" en notificaciones | Cache BLE corrupto. Ir a `chrome://bluetooth-internals`, olvidar el dispositivo y reconectar. En macOS: también eliminar desde Preferencias del Sistema > Bluetooth. |
+| Se desconecta frecuentemente | Acercar la micro:bit (rango BLE ~10m). Verificar batería. La app reconecta automáticamente. |
+| No funciona en iPhone/iPad | Apple no soporta Web Bluetooth en Safari/iOS. Usar Chrome en Android o computadora. |
+
+### Servicios BLE adicionales (avanzado)
+
+Además del UART, se pueden habilitar servicios BLE individuales para lectura directa:
+
+```typescript
+FisicaBitBT.iniciarServicioAcelerometro()
+FisicaBitBT.iniciarServicioTemperatura()
+FisicaBitBT.iniciarServicioMagnetometro()
+FisicaBitBT.iniciarServicioBotones()
+FisicaBitBT.iniciarServicioLED()
+FisicaBitBT.iniciarServicioIO()
+```
+
+El UART es el método principal y recomendado para captura de datos.
+
+---
 
 ## Licencia
 
