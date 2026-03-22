@@ -14,8 +14,7 @@
         "enums.d.ts",
         "shims.d.ts",
         "shims.cpp",
-        "icon.png",
-        "card.png"
+        "icon.png"
     ],
     "testFiles": [
         "test.ts"
