@@ -64,4 +64,36 @@ declare namespace fisicabit_native {
      */
     //% shim=fisicabit_native::leerADCPromedio
     function leerADCPromedio(canal: number, muestras: number): number;
+
+    /**
+     * Mide el tiempo entre dos barreras ópticas con precisión de 1μs.
+     * Usa TIMER3 del nRF52833 a 1MHz para máxima resolución temporal.
+     *
+     * Soporta dos modos:
+     *   - Digital (modo=0): Lee GPIO directamente, detecta transición HIGH→LOW
+     *     Ideal para FC-33 y módulos con salida digital
+     *   - Analógico (modo=1): Lee SAADC y compara con umbral
+     *     Ideal para montaje IR DIY con fototransistor
+     *
+     * FLUJO DE MEDICIÓN:
+     *   1. Esperar a que barrera A esté libre (no activada)
+     *   2. Esperar a que barrera A se active (objeto llega)
+     *   3. Capturar timestamp con TIMER3 → T0
+     *   4. Esperar a que barrera B se active (objeto llega)
+     *   5. Capturar timestamp con TIMER3 → T1
+     *   6. Retornar T1 - T0 en microsegundos
+     *
+     * @param pinA Número de pin de barrera A
+     * @param pinB Número de pin de barrera B
+     * @param modo 0=Digital, 1=Analógico
+     * @param umbralA Umbral ADC para barrera A (solo modo analógico)
+     * @param umbralB Umbral ADC para barrera B (solo modo analógico)
+     * @param timeoutUs Timeout en microsegundos
+     * @returns Tiempo en microsegundos, 0 si timeout
+     */
+    //% shim=fisicabit_native::medirTiempoBarreraNativo
+    function medirTiempoBarreraNativo(
+        pinA: number, pinB: number, modo: number,
+        umbralA: number, umbralB: number, timeoutUs: number
+    ): number;
 }

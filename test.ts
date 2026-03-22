@@ -322,3 +322,370 @@ basic.forever(() => {
     FisicaBit.esperar(1000)
 })
 */
+
+
+// =============================================================================
+// EJEMPLO 9: BARRERA ÓPTICA FC-33 — MEDIR VELOCIDAD (DIGITAL)
+// =============================================================================
+// Usa dos módulos FC-33 para medir el tiempo de tránsito de un objeto
+// y calcular su velocidad.
+//
+// SENSOR FC-33:
+//   Módulo de ranura con LED IR + fototransistor + comparador LM393.
+//   El objeto pasa por la ranura de ~10mm y corta el haz infrarrojo.
+//   Salida digital: HIGH (libre) → LOW (haz cortado).
+//   Tiene potenciómetro físico para ajustar la sensibilidad.
+//
+// CABLEADO:
+//   ┌─────────────────────────────────────────────────┐
+//   │                                                  │
+//   │  FC-33 #1 (Barrera A):                          │
+//   │    VCC → 3V                                      │
+//   │    GND → GND                                     │
+//   │    OUT → P1                                      │
+//   │                                                  │
+//   │  FC-33 #2 (Barrera B):                          │
+//   │    VCC → 3V                                      │
+//   │    GND → GND                                     │
+//   │    OUT → P2                                      │
+//   │                                                  │
+//   │  MONTAJE FÍSICO (rampa de prueba):              │
+//   │                                                  │
+//   │   ╔══════════════════════════════╗               │
+//   │   ║  ●──────────────────────►   ║  ← bolita     │
+//   │   ║  ↑                      ↑   ║               │
+//   │   ║ FC-33#1              FC-33#2 ║               │
+//   │   ║ (P1)                 (P2)   ║               │
+//   │   ║         ◄─ 100mm ─►        ║               │
+//   │   ╚══════════════════════════════╝               │
+//   │         rampa inclinada                          │
+//   └─────────────────────────────────────────────────┘
+//
+// CONCEPTOS:
+//   - Barrera óptica digital (FC-33)
+//   - Medición de tiempo de tránsito
+//   - Cálculo de velocidad: v = d / t
+//   - Lectura serie para análisis
+// =============================================================================
+
+/*  ── Descomentar para usar ──
+
+// Distancia entre barreras en mm (medir con regla)
+let DISTANCIA_MM = 100  // 10 cm
+
+basic.showIcon(IconNames.Target)  // Indicar "listo para medir"
+
+input.onButtonPressed(Button.A, () => {
+    basic.showString("?")  // Indicar "esperando objeto..."
+
+    // Medir tiempo entre barrera A (P1) y barrera B (P2)
+    // Modo Digital = para FC-33
+    // Timeout = 10 segundos
+    let tiempoMs = FisicaBit.medirTiempoBarrera(
+        PinAnalogico.P1,
+        PinAnalogico.P2,
+        ModoBarrera.Digital,
+        10000
+    )
+
+    if (tiempoMs < 0) {
+        // Timeout — no pasó ningún objeto
+        basic.showIcon(IconNames.No)
+    } else {
+        // Calcular velocidad (×100 para 2 decimales)
+        // tiempoMs está en ms, convertir a μs para calcularVelocidad
+        let velocidad100 = FisicaBit.calcularVelocidad(tiempoMs * 1000, DISTANCIA_MM)
+
+        // Mostrar: parte entera de la velocidad
+        basic.showNumber(Math.idiv(velocidad100, 100))
+
+        // Log detallado por serie
+        FisicaBit.enviarPorSerie("tiempo_ms", tiempoMs)
+        FisicaBit.enviarPorSerie("velocidad_x100", velocidad100)
+        FisicaBit.enviarPorSerie("distancia_mm", DISTANCIA_MM)
+    }
+
+    FisicaBit.esperar(2000)
+    basic.showIcon(IconNames.Target)  // Listo de nuevo
+})
+*/
+
+
+// =============================================================================
+// EJEMPLO 10: BARRERA ÓPTICA IR DIY — CON CALIBRACIÓN ANALÓGICA
+// =============================================================================
+// Usa dos pares de LED IR emisor + fototransistor receptor.
+// La señal es ANALÓGICA → el umbral se ajusta por software.
+//
+// CABLEADO DE CADA PAR IR:
+//   ┌────────────────────────────────────────────────────┐
+//   │                                                     │
+//   │  EMISOR (LED infrarrojo):                          │
+//   │  3V ─── R(100Ω) ─── LED IR(+) ─── LED IR(-) ─── GND│
+//   │                                                     │
+//   │  RECEPTOR (Fototransistor):                        │
+//   │  3V ─── Fototransistor(C) ───┬─── Pin (señal)     │
+//   │                               │                     │
+//   │                          R(10KΩ)                    │
+//   │                               │                     │
+//   │                              GND                    │
+//   │                                                     │
+//   │  Par #1 → señal en P1 (barrera A)                  │
+//   │  Par #2 → señal en P2 (barrera B)                  │
+//   │                                                     │
+//   │  VISTA SUPERIOR:                                    │
+//   │                                                     │
+//   │  [TX]   [TX]        ← LEDs IR emisores             │
+//   │   ↓      ↓                                          │
+//   │   │  ●───┼──►       ← objeto pasando                │
+//   │   ↓      ↓                                          │
+//   │  [RX]   [RX]        ← Fototransistores             │
+//   │  (P1)   (P2)                                        │
+//   │                                                     │
+//   │  Señal en P1 y P2 (valores típicos):               │
+//   │    Sin objeto: ~800-950 (mucha luz IR llega al RX) │
+//   │    Con objeto: ~50-200  (objeto bloquea la luz)    │
+//   │    Umbral recomendado: ~400-500 (punto medio)      │
+//   │                                                     │
+//   └────────────────────────────────────────────────────┘
+//
+// CONCEPTOS:
+//   - Barrera analógica con umbral software
+//   - Calibración interactiva
+//   - Ajuste de trigger en tiempo real
+//   - LED IR emisor + fototransistor receptor
+// =============================================================================
+
+/*  ── Descomentar para usar ──
+
+// ── Paso 1: Calibración ──
+// Presionar B para entrar en modo calibración
+// La consola serie mostrará los valores crudos de ambas barreras
+
+let modoCalibrar = false
+
+input.onButtonPressed(Button.B, () => {
+    modoCalibrar = !modoCalibrar
+    if (modoCalibrar) {
+        basic.showString("C")  // Modo calibración
+    } else {
+        basic.showIcon(IconNames.Target)  // Modo medición
+    }
+})
+
+// Bucle de calibración: muestra valores crudos por serie
+basic.forever(() => {
+    if (modoCalibrar) {
+        let rawA = FisicaBit.leerBarreraCrudo(PinAnalogico.P1, ModoBarrera.Analogico)
+        let rawB = FisicaBit.leerBarreraCrudo(PinAnalogico.P2, ModoBarrera.Analogico)
+        FisicaBit.enviarPorSerie("barrera_A_raw", rawA)
+        FisicaBit.enviarPorSerie("barrera_B_raw", rawB)
+
+        // Mostrar valor de A en el LED para referencia
+        basic.showNumber(Math.idiv(rawA, 100))  // Mostrar centenas
+
+        FisicaBit.esperar(200)
+    }
+})
+
+// ── Paso 2: Configurar umbrales ──
+// Después de observar los valores crudos, ajustar los umbrales.
+// Ejemplo: sin objeto=850, con objeto=120 → umbral=(850+120)/2=485
+FisicaBit.fijarUmbralBarrera("A", 450)
+FisicaBit.fijarUmbralBarrera("B", 450)
+
+// ── Paso 3: Medir ──
+let DISTANCIA_IR_MM = 80  // 8cm entre barreras
+
+input.onButtonPressed(Button.A, () => {
+    if (modoCalibrar) return  // No medir en modo calibración
+
+    basic.showString("?")
+
+    let tiempoMs = FisicaBit.medirTiempoBarrera(
+        PinAnalogico.P1,
+        PinAnalogico.P2,
+        ModoBarrera.Analogico,
+        10000
+    )
+
+    if (tiempoMs < 0) {
+        basic.showIcon(IconNames.No)
+    } else {
+        let vel100 = FisicaBit.calcularVelocidad(tiempoMs * 1000, DISTANCIA_IR_MM)
+        basic.showNumber(Math.idiv(vel100, 100))
+        FisicaBit.enviarPorSerie("tiempo_ms", tiempoMs)
+        FisicaBit.enviarPorSerie("vel_x100_ms", vel100)
+    }
+
+    FisicaBit.esperar(2000)
+    basic.showIcon(IconNames.Target)
+})
+*/
+
+
+// =============================================================================
+// EJEMPLO 11: BARRERA ÓPTICA NATIVA C++ — MÁXIMA PRECISIÓN
+// =============================================================================
+// Igual que el ejemplo 10, pero usando la función nativa C++ para
+// obtener resolución de 1μs en vez de 1ms.
+//
+// CUÁNDO USAR ESTO vs LA VERSIÓN TYPESCRIPT:
+//   - Objeto a >2 m/s → usar C++ (el error de 1ms es >2%)
+//   - Barreras a <3cm de distancia → usar C++
+//   - Medición de aceleración → usar C++ (necesitas alta precisión)
+//   - Experimento casual / demostración → TypeScript es suficiente
+//
+// TABLA DE PRECISIÓN:
+//   ┌──────────────┬───────────┬────────────┬────────────┐
+//   │ Velocidad    │ Dist.10cm │ Tiempo     │ Error TS   │
+//   ├──────────────┼───────────┼────────────┼────────────┤
+//   │ 0.1 m/s      │ 10cm      │ 1000ms     │ ±0.1%     │
+//   │ 0.5 m/s      │ 10cm      │ 200ms      │ ±0.5%     │
+//   │ 1.0 m/s      │ 10cm      │ 100ms      │ ±1.0%     │
+//   │ 2.0 m/s      │ 10cm      │ 50ms       │ ±2.0%     │
+//   │ 5.0 m/s      │ 10cm      │ 20ms       │ ±5.0% ⚠  │
+//   │ 10 m/s       │ 10cm      │ 10ms       │ ±10% ⚠⚠  │
+//   └──────────────┴───────────┴────────────┴────────────┘
+//   Con C++ nativo, el error es siempre <0.01% para estos rangos.
+//
+// CONCEPTOS:
+//   - Función shim C++ para timing de hardware
+//   - Microsegundos vs milisegundos
+//   - Error relativo y cuándo importa
+// =============================================================================
+
+/*  ── Descomentar para usar ──
+
+let DIST_PREC_MM = 100  // 10cm entre barreras
+
+// Configurar umbrales (solo afecta modo analógico)
+let umbA = 450
+let umbB = 450
+
+input.onButtonPressed(Button.A, () => {
+    basic.showString("?")
+
+    // ── Medición con C++ nativo (1μs de resolución) ──
+    let tiempoUs = FisicaBit.medirTiempoBarreraNativo(
+        1,                      // pinA = P1
+        2,                      // pinB = P2
+        ModoBarrera.Digital,    // Cambiar a .Analogico para IR DIY
+        umbA,                   // Umbral A (ignorado en digital)
+        umbB,                   // Umbral B (ignorado en digital)
+        5000000                 // Timeout: 5 segundos (5,000,000 μs)
+    )
+
+    if (tiempoUs == 0) {
+        basic.showIcon(IconNames.No)  // Timeout
+    } else {
+        // Calcular velocidad con precisión de μs
+        let vel100 = FisicaBit.calcularVelocidad(tiempoUs, DIST_PREC_MM)
+
+        // Convertir tiempo a ms para mostrar
+        let tiempoMs100 = FisicaBit.convertirTiempo(tiempoUs, UnidadTiempo.Milisegundos)
+
+        basic.showNumber(Math.idiv(vel100, 100))
+
+        // Log detallado
+        FisicaBit.enviarPorSerie("tiempo_us", tiempoUs)
+        FisicaBit.enviarPorSerie("tiempo_ms_x100", tiempoMs100)
+        FisicaBit.enviarPorSerie("velocidad_x100", vel100)
+        FisicaBit.enviarPorSerie("distancia_mm", DIST_PREC_MM)
+    }
+
+    FisicaBit.esperar(2000)
+    basic.showIcon(IconNames.Target)
+})
+*/
+
+
+// =============================================================================
+// EJEMPLO 12: CAÍDA LIBRE — MEDIR g CON BARRERAS ÓPTICAS
+// =============================================================================
+// Experimento clásico de física: dejar caer un objeto y medir la
+// aceleración de la gravedad (g ≈ 9.81 m/s²).
+//
+// MONTAJE:
+//   ┌───────────────────────────────────────┐
+//   │            ◯ ← soltar bolita aquí     │
+//   │            │                          │
+//   │            │ caída libre              │
+//   │            ▼                          │
+//   │   ═══[FC-33 A]═══  ← Barrera A (P1)  │
+//   │            │                          │
+//   │            │  d (medir con regla)     │
+//   │            │                          │
+//   │            ▼                          │
+//   │   ═══[FC-33 B]═══  ← Barrera B (P2)  │
+//   │                                       │
+//   └───────────────────────────────────────┘
+//
+// FÍSICA:
+//   En caída libre desde reposo:
+//     d = ½ · g · t²
+//     g = 2d / t²
+//
+//   Pero si el objeto ya tiene velocidad al pasar por A:
+//     v_A = d_prev / t_prev  (si hay barrera previa)
+//     v_B = d / t
+//     a = (v_B - v_A) / t   ← aceleración media
+//
+//   Simplificación (si soltamos desde A):
+//     g = 2 × distancia / tiempo²
+//
+// EJEMPLO NUMÉRICO:
+//   d = 0.5m (50cm), t = 0.3194s
+//   g = 2 × 0.5 / 0.3194² = 9.79 m/s² ✓
+//
+// CONCEPTOS:
+//   - Caída libre y gravedad
+//   - v = d/t, g = 2d/t²
+//   - Precisión de medición
+// =============================================================================
+
+/*  ── Descomentar para usar ──
+
+let CAIDA_DIST_MM = 500  // 50cm entre barreras (ajustar según montaje)
+
+input.onButtonPressed(Button.A, () => {
+    basic.showString("G")
+
+    // Usar versión C++ para máxima precisión
+    let tUs = FisicaBit.medirTiempoBarreraNativo(
+        1, 2,                   // P1 → P2
+        ModoBarrera.Digital,    // FC-33
+        0, 0,                   // umbrales (no aplica)
+        10000000                // 10s timeout
+    )
+
+    if (tUs == 0) {
+        basic.showIcon(IconNames.No)
+        return
+    }
+
+    // g = 2d / t²
+    // Cuidado con overflow: trabajar en unidades consistentes
+    // d en metros = CAIDA_DIST_MM / 1000
+    // t en segundos = tUs / 1000000
+    // g = 2 × (CAIDA_DIST_MM/1000) / (tUs/1000000)²
+    // g = 2 × CAIDA_DIST_MM × 1000000000 / (1000 × tUs × tUs)
+    // g × 100 = 2 × CAIDA_DIST_MM × 100000000 / (tUs × tUs / 1000)
+    // Simplificando para evitar overflow:
+    let tMs = Math.idiv(tUs, 1000)   // tiempo en ms
+    let g100 = 0
+    if (tMs > 0) {
+        // g×100 = 2 × dist_mm × 1000 / (tMs × tMs)
+        g100 = Math.idiv(2 * CAIDA_DIST_MM * 1000, tMs * tMs)
+    }
+
+    // Mostrar g (parte entera)
+    basic.showNumber(Math.idiv(g100, 100))
+
+    // Log
+    FisicaBit.enviarPorSerie("tiempo_us", tUs)
+    FisicaBit.enviarPorSerie("tiempo_ms", tMs)
+    FisicaBit.enviarPorSerie("g_x100", g100)
+    FisicaBit.enviarPorSerie("dist_mm", CAIDA_DIST_MM)
+})
+*/

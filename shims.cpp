@@ -272,6 +272,215 @@ namespace fisicabit_native {
     //
     // =========================================================================
 
+    // =========================================================================
+    // medirTiempoBarreraNativo — Barrera óptica de alta precisión
+    // =========================================================================
+    //
+    // BARRERA ÓPTICA: mide el tiempo entre dos sensores (A y B).
+    //
+    // MODOS DE OPERACIÓN:
+    //
+    // ┌─────────────────────────────────────────────────────────────┐
+    // │ MODO DIGITAL (FC-33)                                       │
+    // │                                                             │
+    // │ Lee directamente el registro GPIO del nRF52833.             │
+    // │ El FC-33 tiene un comparador LM393 con histéresis:          │
+    // │   - Haz libre → salida HIGH (1)                             │
+    // │   - Haz cortado → salida LOW (0)                            │
+    // │                                                             │
+    // │ Ventajas:                                                   │
+    // │   + Lectura en 1 ciclo (solo LDR de GPIO_IN)                │
+    // │   + Sin ruido: señal ya limpia por el comparador            │
+    // │   + Histéresis del LM393 evita rebotes                      │
+    // │                                                             │
+    // │ Señal:   ████████┐         ┌████████                       │
+    // │                  └─────────┘                                │
+    // │          HIGH     LOW(obj)  HIGH                            │
+    // │                  ↑ detecta aquí                              │
+    // ├─────────────────────────────────────────────────────────────┤
+    // │ MODO ANALÓGICO (IR DIY)                                     │
+    // │                                                             │
+    // │ Lee el SAADC del nRF52 y compara con un umbral software.    │
+    // │ El fototransistor produce un voltaje proporcional a la luz. │
+    // │                                                             │
+    // │ Ventajas:                                                   │
+    // │   + Umbral ajustable por software (sin tocar HW)            │
+    // │   + Se pueden ver los valores crudos para calibrar           │
+    // │   + Funciona con cualquier par emisor/receptor               │
+    // │                                                             │
+    // │ Desventajas:                                                │
+    // │   - Lectura ADC tarda ~5μs (vs ~62ns del GPIO)              │
+    // │   - Más susceptible a ruido eléctrico                       │
+    // │   - Puede necesitar filtrado (promedio de muestras)          │
+    // │                                                             │
+    // │ Señal:   ▓▓▓▓▓▓▓▓╲         ╱▓▓▓▓▓▓▓▓                     │
+    // │                    ╲───────╱                                │
+    // │          alto     bajo(obj) alto                            │
+    // │          ········umbral········                              │
+    // │                  ↑ detecta cuando cruza umbral               │
+    // └─────────────────────────────────────────────────────────────┘
+    //
+    // TIMER3 CONFIGURACIÓN:
+    //   Prescaler = 4 → 16MHz / 2^4 = 1MHz → 1 tick = 1μs exacto
+    //   Bitmode = 32 bits → overflow cada ~4295 segundos
+    //   Resolución temporal: 1μs
+    //   Error de medición: ±1μs + tiempo de lectura del sensor
+    //     - Digital: ±1μs total (GPIO se lee en <1μs)
+    //     - Analógico: ±6μs total (ADC tarda ~5μs por lectura)
+    //
+    // =========================================================================
+
+    //%
+    int medirTiempoBarreraNativo(int pinA, int pinB, int modo,
+                                  int umbralA, int umbralB, int timeoutUs) {
+        #if MICROBIT_CODAL
+
+        // ── Configurar TIMER3 a 1MHz (1 tick = 1μs) ──
+        NRF_TIMER3->TASKS_STOP = 1;
+        NRF_TIMER3->TASKS_CLEAR = 1;
+        NRF_TIMER3->PRESCALER = 4;     // 16MHz / 16 = 1MHz
+        NRF_TIMER3->BITMODE = TIMER_BITMODE_BITMODE_32Bit;
+        NRF_TIMER3->TASKS_START = 1;
+
+        if (modo == 0) {
+            // ══════════════════════════════════════════════════════
+            // MODO DIGITAL — FC-33 y similares
+            // ══════════════════════════════════════════════════════
+            // Lee el registro GPIO_IN directamente.
+            // Cada bit del registro corresponde a un pin.
+            // Bit 0 = P0.00, Bit 1 = P0.01, etc.
+            //
+            // El FC-33 pone OUT en LOW cuando el haz está cortado.
+            // Detectamos la transición HIGH→LOW (objeto entra).
+            // ══════════════════════════════════════════════════════
+
+            volatile uint32_t *portIn = &NRF_P0->IN;
+            uint32_t mascaraA = 1 << pinA;
+            uint32_t mascaraB = 1 << pinB;
+
+            // Configurar pines como entrada
+            auto &gpioPinA = uBit.io.pin[pinA];
+            auto &gpioPinB = uBit.io.pin[pinB];
+            gpioPinA.getDigitalValue();  // Forzar modo lectura
+            gpioPinB.getDigitalValue();
+
+            // ── FASE 1: Esperar a que barrera A esté LIBRE (HIGH) ──
+            while ((*portIn & mascaraA) == 0) {
+                NRF_TIMER3->TASKS_CAPTURE[0] = 1;
+                if (NRF_TIMER3->CC[0] > (uint32_t)timeoutUs) {
+                    NRF_TIMER3->TASKS_STOP = 1;
+                    return 0;
+                }
+            }
+
+            // ── FASE 2: Esperar a que barrera A se ACTIVE (LOW) ──
+            // El objeto llega a la primera barrera
+            while ((*portIn & mascaraA) != 0) {
+                NRF_TIMER3->TASKS_CAPTURE[0] = 1;
+                if (NRF_TIMER3->CC[0] > (uint32_t)timeoutUs) {
+                    NRF_TIMER3->TASKS_STOP = 1;
+                    return 0;
+                }
+            }
+
+            // ── CAPTURAR T0 ──
+            NRF_TIMER3->TASKS_CAPTURE[1] = 1;  // T0 en CC[1]
+
+            // ── FASE 3: Esperar a que barrera B se ACTIVE (LOW) ──
+            // El objeto llega a la segunda barrera
+            while ((*portIn & mascaraB) != 0) {
+                NRF_TIMER3->TASKS_CAPTURE[0] = 1;
+                if (NRF_TIMER3->CC[0] > (uint32_t)timeoutUs) {
+                    NRF_TIMER3->TASKS_STOP = 1;
+                    return 0;
+                }
+            }
+
+            // ── CAPTURAR T1 ──
+            NRF_TIMER3->TASKS_CAPTURE[2] = 1;  // T1 en CC[2]
+
+            NRF_TIMER3->TASKS_STOP = 1;
+
+            // ── Calcular diferencia ──
+            uint32_t t0 = NRF_TIMER3->CC[1];
+            uint32_t t1 = NRF_TIMER3->CC[2];
+            return (int)(t1 - t0);
+
+        } else {
+            // ══════════════════════════════════════════════════════
+            // MODO ANALÓGICO — IR DIY con fototransistor
+            // ══════════════════════════════════════════════════════
+            // Lee el SAADC para cada barrera y compara con umbral.
+            //
+            // Señal del fototransistor:
+            //   Sin objeto: valor alto (mucha luz → alto voltaje)
+            //   Con objeto: valor bajo (poca luz → bajo voltaje)
+            //
+            // "Activada" = lectura ADC < umbral
+            //
+            // NOTA: Cada lectura ADC tarda ~5μs, lo que limita la
+            // resolución temporal efectiva a ~5μs en modo analógico.
+            // Para mayor precisión, usar modo digital con FC-33.
+            // ══════════════════════════════════════════════════════
+
+            // Convertir umbrales de 10 bits (0-1023) a 12 bits (0-4095)
+            // porque leerADCNativo devuelve 12 bits
+            int umbralA_12 = umbralA * 4;
+            int umbralB_12 = umbralB * 4;
+
+            // Mapear pines MakeCode a canales ADC del nRF52
+            // P0 = canal 0, P1 = canal 1, P2 = canal 2
+            int canalA = pinA;
+            int canalB = pinB;
+
+            // ── FASE 1: Esperar a que barrera A esté LIBRE ──
+            // (lectura > umbral = mucha luz = sin objeto)
+            while (leerADCNativo(canalA) < umbralA_12) {
+                NRF_TIMER3->TASKS_CAPTURE[0] = 1;
+                if (NRF_TIMER3->CC[0] > (uint32_t)timeoutUs) {
+                    NRF_TIMER3->TASKS_STOP = 1;
+                    return 0;
+                }
+            }
+
+            // ── FASE 2: Esperar a que barrera A se ACTIVE ──
+            // (lectura < umbral = poca luz = objeto presente)
+            while (leerADCNativo(canalA) >= umbralA_12) {
+                NRF_TIMER3->TASKS_CAPTURE[0] = 1;
+                if (NRF_TIMER3->CC[0] > (uint32_t)timeoutUs) {
+                    NRF_TIMER3->TASKS_STOP = 1;
+                    return 0;
+                }
+            }
+
+            // ── CAPTURAR T0 ──
+            NRF_TIMER3->TASKS_CAPTURE[1] = 1;
+
+            // ── FASE 3: Esperar a que barrera B se ACTIVE ──
+            while (leerADCNativo(canalB) >= umbralB_12) {
+                NRF_TIMER3->TASKS_CAPTURE[0] = 1;
+                if (NRF_TIMER3->CC[0] > (uint32_t)timeoutUs) {
+                    NRF_TIMER3->TASKS_STOP = 1;
+                    return 0;
+                }
+            }
+
+            // ── CAPTURAR T1 ──
+            NRF_TIMER3->TASKS_CAPTURE[2] = 1;
+
+            NRF_TIMER3->TASKS_STOP = 1;
+
+            uint32_t t0 = NRF_TIMER3->CC[1];
+            uint32_t t1 = NRF_TIMER3->CC[2];
+            return (int)(t1 - t0);
+        }
+
+        #else
+        return 0;  // micro:bit v1 no soportado
+        #endif
+    }
+
+
     //%
     int leerADCPromedio(int canal, int muestras) {
         // ── Validar parámetros ──

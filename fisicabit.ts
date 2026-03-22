@@ -49,7 +49,7 @@
 //% color=#0078D7
 //% icon="\uf0e7"
 //% block="FisicaBit"
-//% groups="['Sensores Internos', 'Sensores Externos', 'Sensor Ultrasonido', 'Conversiones', 'Nativo C++', 'Utilidades']"
+//% groups="['Sensores Internos', 'Sensores Externos', 'Sensor Ultrasonido', 'Barrera Óptica', 'Conversiones', 'Nativo C++', 'Utilidades']"
 namespace FisicaBit {
 
     // =========================================================================
@@ -320,7 +320,474 @@ namespace FisicaBit {
 
 
     // =========================================================================
-    // GRUPO 4: CONVERSIONES DE UNIDADES
+    // GRUPO 4: BARRERA ÓPTICA — Medición de tiempo entre dos sensores
+    // =========================================================================
+    //
+    // ¿QUÉ ES UNA BARRERA ÓPTICA?
+    // ────────────────────────────
+    // Un par emisor-receptor de luz (normalmente infrarroja) que detecta
+    // cuándo un objeto interrumpe el haz de luz. Usamos DOS barreras
+    // separadas una distancia conocida para medir:
+    //
+    //   - TIEMPO DE TRÁNSITO: cuánto tarda el objeto en ir de A a B
+    //   - VELOCIDAD: distancia / tiempo (si conocemos la separación)
+    //   - ACELERACIÓN: comparando velocidades en tramos consecutivos
+    //
+    // MONTAJE TÍPICO (vista lateral):
+    //
+    //   Barrera A                    Barrera B
+    //   ┌──┐                        ┌──┐
+    //   │IR│   ───objeto──►         │IR│
+    //   │TX│        ●               │TX│
+    //   └──┘    ┌───┴───┐           └──┘
+    //   ┌──┐    │ rampa  │          ┌──┐
+    //   │IR│    └────────┘          │IR│
+    //   │RX│                        │RX│
+    //   └──┘                        └──┘
+    //    P1                          P2
+    //   (pin A)     distancia      (pin B)
+    //           ◄──────────────►
+    //              (conocida)
+    //
+    //
+    // SENSOR FC-33 (módulo de ranura):
+    // ─────────────────────────────────
+    //   ┌─────────────────────────┐
+    //   │  FC-33                  │
+    //   │  ┌───┐    ┌───┐        │  El LED IR y el fototransistor
+    //   │  │LED│    │FOT│        │  están en una ranura de ~10mm.
+    //   │  │ IR│    │OTR│        │  El objeto pasa por la ranura
+    //   │  │   │    │   │        │  y corta el haz.
+    //   │  └─┬─┘    └─┬─┘        │
+    //   │    └──┬──┬──┘          │
+    //   │       │  │  │          │  Pines:
+    //   │      VCC GND OUT       │  - VCC: 3.3V-5V
+    //   └─────────────────────────┘  - GND: tierra
+    //                                - OUT: LOW cuando se corta el haz
+    //   ⚠ El FC-33 tiene un comparador LM393 con potenciómetro
+    //     de ajuste de sensibilidad en la placa. El umbral se
+    //     ajusta con un destornillador, NO por software.
+    //
+    //   Señal del FC-33:
+    //   HIGH ─────┐         ┌─────── HIGH (haz libre)
+    //             │         │
+    //   LOW       └─────────┘         (haz cortado = objeto presente)
+    //             ↑         ↑
+    //          objeto    objeto
+    //          entra     sale
+    //
+    //
+    // MONTAJE DIY CON LED IR + FOTOTRANSISTOR:
+    // ──────────────────────────────────────────
+    //
+    //   EMISOR (LED IR):
+    //   3V ──── R(100Ω) ──── LED IR ánodo(+) ──── cátodo(-) ──── GND
+    //
+    //   RECEPTOR (Fototransistor):
+    //   3V ──── Fototransistor(C) ────┬──── P1 (señal analógica)
+    //                                 │
+    //                            R(10KΩ)
+    //                                 │
+    //                                GND
+    //
+    //   Sin objeto (haz libre):   P1 ≈ 800-1023 (mucha luz → alta tensión)
+    //   Con objeto (haz cortado): P1 ≈ 0-200   (poca luz → baja tensión)
+    //
+    //   Señal analógica del montaje DIY:
+    //   1023 ─────┐         ┌─────── (haz libre, mucha luz)
+    //             │         │
+    //             │  ~200   │
+    //             └─────────┘         (haz cortado, poca luz)
+    //              ↑         ↑
+    //           objeto    objeto
+    //           entra     sale
+    //
+    //   VENTAJA: el umbral se ajusta POR SOFTWARE → ideal para
+    //   experimentar y calibrar desde MakeCode sin tocar el hardware.
+    //
+    //
+    // PRECISIÓN DE TIMING:
+    // ────────────────────
+    // La medición de tiempo usa las funciones nativas C++ (shims.cpp)
+    // con el TIMER3 del nRF52833 configurado a 1MHz (1 tick = 1μs).
+    //
+    //   TypeScript puro:  ~1ms de resolución (usa scheduler)
+    //   C++ con TIMER:    ~1μs de resolución (acceso directo)
+    //
+    // Para un objeto a 1 m/s pasando por barreras a 10cm:
+    //   Tiempo real: 100,000 μs = 100 ms
+    //   Error TS:    ±1ms = ±1% → aceptable
+    //   Error C++:   ±1μs = ±0.001% → excelente
+    //
+    // Para un objeto a 5 m/s (caída libre ~1.3m):
+    //   Tiempo real: 20,000 μs = 20 ms
+    //   Error TS:    ±1ms = ±5% → problemático
+    //   Error C++:   ±1μs = ±0.005% → excelente
+    //
+    // CONCLUSIÓN: Para experimentos de física con objetos rápidos,
+    // usar SIEMPRE las funciones nativas C++ (grupo "Nativo C++").
+    // =========================================================================
+
+    // ── Variables internas para el estado de la barrera ──
+    let _barreraUmbralA = 512   // Umbral analógico barrera A (0-1023)
+    let _barreraUmbralB = 512   // Umbral analógico barrera B (0-1023)
+    let _barreraTiempoInicio = 0 // Timestamp de activación de barrera A
+    let _barreraTiempoFin = 0    // Timestamp de activación de barrera B
+    let _barreraActiva = false   // ¿Está esperando el paso por barrera B?
+
+
+    /**
+     * Ajusta el umbral de disparo (trigger) para una barrera analógica.
+     *
+     * Solo aplica cuando usas modo Analógico (LED IR DIY).
+     * En modo Digital (FC-33), el umbral se ajusta con el potenciómetro
+     * físico que tiene el módulo.
+     *
+     * CÓMO CALIBRAR:
+     *   1. Sin objeto en la barrera → anotar valor (ej: 850)
+     *   2. Con objeto bloqueando  → anotar valor (ej: 120)
+     *   3. Umbral = punto medio = (850 + 120) / 2 = 485
+     *   4. Usar este bloque para fijar el umbral a 485
+     *
+     * CONSEJO: Usa "enviar por serie" para ver los valores crudos
+     *          y encontrar el umbral ideal para tu montaje.
+     *
+     * @param barrera Cuál barrera configurar ("A" = primera, "B" = segunda)
+     * @param umbral Valor de 0 a 1023 que separa "haz libre" de "haz cortado"
+     */
+    //% block="fijar umbral barrera %barrera a %umbral"
+    //% blockId=fisicabit_barrera_umbral
+    //% group="Barrera Óptica"
+    //% weight=99
+    //% umbral.min=0 umbral.max=1023 umbral.defl=512
+    //% barrera.defl="A"
+    export function fijarUmbralBarrera(barrera: string, umbral: number): void {
+        if (barrera === "A" || barrera === "a") {
+            _barreraUmbralA = umbral
+        } else {
+            _barreraUmbralB = umbral
+        }
+    }
+
+
+    /**
+     * Lee el valor crudo de una barrera óptica (para calibración).
+     *
+     * Usa este bloque para ver qué valores produce tu sensor
+     * y así encontrar el umbral correcto.
+     *
+     * EJEMPLO DE CALIBRACIÓN:
+     *   basic.forever(() => {
+     *       let valorA = FisicaBit.leerBarreraCrudo(PinAnalogico.P1, ModoBarrera.Analogico)
+     *       FisicaBit.enviarPorSerie("barrera_A_raw", valorA)
+     *       FisicaBit.esperar(100)
+     *   })
+     *
+     * @param pin Pin donde está conectada la barrera
+     * @param modo Digital (FC-33) o Analógico (IR DIY)
+     * @returns Valor crudo: Digital → 0 o 1, Analógico → 0 a 1023
+     */
+    //% block="leer barrera crudo pin %pin modo %modo"
+    //% blockId=fisicabit_barrera_crudo
+    //% group="Barrera Óptica"
+    //% weight=98
+    //% pin.defl=PinAnalogico.P1
+    //% modo.defl=ModoBarrera.Analogico
+    export function leerBarreraCrudo(pin: PinAnalogico, modo: ModoBarrera): number {
+        if (modo === ModoBarrera.Digital) {
+            return pins.digitalReadPin(pin as number as DigitalPin)
+        } else {
+            return pins.analogReadPin(pin as number as AnalogPin)
+        }
+    }
+
+
+    /**
+     * Comprueba si una barrera óptica está activada (objeto presente).
+     *
+     * En modo DIGITAL (FC-33):
+     *   - Devuelve true cuando OUT = LOW (haz cortado)
+     *   - El FC-33 pone su salida a LOW cuando un objeto corta el haz
+     *
+     * En modo ANALÓGICO (IR DIY):
+     *   - Devuelve true cuando la lectura < umbral configurado
+     *   - Menos luz = menos voltaje = objeto bloqueando
+     *
+     * @param pin Pin de la barrera
+     * @param modo Digital o Analógico
+     * @returns true si hay un objeto cortando el haz
+     */
+    //% block="barrera activada en %pin modo %modo"
+    //% blockId=fisicabit_barrera_activada
+    //% group="Barrera Óptica"
+    //% weight=97
+    //% pin.defl=PinAnalogico.P1
+    //% modo.defl=ModoBarrera.Digital
+    export function barreraActivada(pin: PinAnalogico, modo: ModoBarrera): boolean {
+        if (modo === ModoBarrera.Digital) {
+            // FC-33: salida LOW = objeto presente
+            return pins.digitalReadPin(pin as number as DigitalPin) === 0
+        } else {
+            // IR DIY: lectura analógica por debajo del umbral = objeto presente
+            let valor = pins.analogReadPin(pin as number as AnalogPin)
+            let umbral = (pin === PinAnalogico.P1) ? _barreraUmbralA :
+                         (pin === PinAnalogico.P2) ? _barreraUmbralB :
+                         _barreraUmbralA
+            return valor < umbral
+        }
+    }
+
+
+    /**
+     * Mide el tiempo que tarda un objeto en pasar de la barrera A a la B.
+     * VERSIÓN TYPESCRIPT — resolución ~1ms (usa control.millis).
+     *
+     * FUNCIONAMIENTO:
+     *   1. Espera a que la barrera A se active (objeto entra)
+     *   2. Captura el timestamp de inicio
+     *   3. Espera a que la barrera B se active (objeto llega)
+     *   4. Captura el timestamp de fin
+     *   5. Devuelve la diferencia: fin - inicio
+     *
+     * LIMITACIONES:
+     *   - Resolución de ~1ms (suficiente para objetos lentos)
+     *   - Para objetos rápidos (>2 m/s), usar medirTiempoBarreraNativo()
+     *   - Se bloquea hasta que ambas barreras se activen (o timeout)
+     *
+     * CABLEADO FC-33 (dos módulos):
+     *   FC-33 #1 OUT → P1 (barrera A)
+     *   FC-33 #2 OUT → P2 (barrera B)
+     *   Ambos VCC → 3V, GND → GND
+     *
+     * CABLEADO IR DIY (dos pares emisor/receptor):
+     *   Receptor #1 → P1 (barrera A, analógico)
+     *   Receptor #2 → P2 (barrera B, analógico)
+     *
+     * @param pinA Pin de la barrera A (primera que se activa)
+     * @param pinB Pin de la barrera B (segunda que se activa)
+     * @param modo Digital (FC-33) o Analógico (IR DIY)
+     * @param timeoutMs Timeout máximo en milisegundos (0 = sin timeout)
+     * @returns Tiempo entre barreras en milisegundos, -1 si timeout
+     */
+    //% block="medir tiempo barrera A %pinA → B %pinB modo %modo timeout %timeoutMs ms"
+    //% blockId=fisicabit_barrera_tiempo
+    //% group="Barrera Óptica"
+    //% weight=95
+    //% pinA.defl=PinAnalogico.P1
+    //% pinB.defl=PinAnalogico.P2
+    //% modo.defl=ModoBarrera.Digital
+    //% timeoutMs.defl=10000
+    export function medirTiempoBarrera(
+        pinA: PinAnalogico,
+        pinB: PinAnalogico,
+        modo: ModoBarrera,
+        timeoutMs: number
+    ): number {
+        let inicio = control.millis()
+
+        // ── Fase 1: Esperar a que barrera A esté LIBRE ──
+        // (asegurarnos de que no hay objeto antes de empezar)
+        while (barreraActivada(pinA, modo)) {
+            if (timeoutMs > 0 && (control.millis() - inicio) > timeoutMs) {
+                return -1
+            }
+            // Pequeña pausa para no saturar el bus
+            control.waitMicros(50)
+        }
+
+        // ── Fase 2: Esperar a que barrera A se ACTIVE ──
+        // (el objeto llega a la primera barrera)
+        while (!barreraActivada(pinA, modo)) {
+            if (timeoutMs > 0 && (control.millis() - inicio) > timeoutMs) {
+                return -1
+            }
+            control.waitMicros(50)
+        }
+
+        // ── Capturar tiempo de inicio ──
+        let t0 = control.millis()
+
+        // ── Fase 3: Esperar a que barrera B se ACTIVE ──
+        // (el objeto llega a la segunda barrera)
+        while (!barreraActivada(pinB, modo)) {
+            if (timeoutMs > 0 && (control.millis() - t0) > timeoutMs) {
+                return -1
+            }
+            control.waitMicros(50)
+        }
+
+        // ── Capturar tiempo de fin ──
+        let t1 = control.millis()
+
+        // ── Guardar para consulta posterior ──
+        _barreraTiempoInicio = t0
+        _barreraTiempoFin = t1
+        _barreraActiva = false
+
+        return t1 - t0
+    }
+
+
+    /**
+     * Mide el tiempo entre dos barreras usando C++ nativo.
+     * VERSIÓN DE ALTA PRECISIÓN — resolución de 1μs.
+     *
+     * Usa el TIMER3 del nRF52833 a 1MHz para timing preciso.
+     * En el simulador usa la versión TypeScript como fallback.
+     *
+     * CUÁNDO USAR ESTA VERSIÓN:
+     *   - Objetos en caída libre (>1 m/s)
+     *   - Medición de aceleración (necesitas alta precisión)
+     *   - Distancias cortas entre barreras (<5cm)
+     *   - Cualquier experimento donde ±1ms sea demasiado error
+     *
+     * @param pinA Número del pin de barrera A (ej: 1 para P1)
+     * @param pinB Número del pin de barrera B (ej: 2 para P2)
+     * @param modo Digital (0) o Analógico (1)
+     * @param umbralA Umbral analógico barrera A (ignorado en digital)
+     * @param umbralB Umbral analógico barrera B (ignorado en digital)
+     * @param timeoutUs Timeout en microsegundos
+     * @returns Tiempo en microsegundos, 0 si timeout
+     */
+    //% block="[C++] tiempo barrera A P%pinA → B P%pinB modo %modo umbralA %umbralA umbralB %umbralB timeout %timeoutUs μs"
+    //% blockId=fisicabit_barrera_nativo
+    //% group="Barrera Óptica"
+    //% weight=93
+    //% advanced=true
+    //% pinA.defl=1 pinB.defl=2
+    //% modo.defl=ModoBarrera.Digital
+    //% umbralA.defl=512 umbralB.defl=512
+    //% timeoutUs.defl=5000000
+    //% shim=fisicabit_native::medirTiempoBarreraNativo
+    export function medirTiempoBarreraNativo(
+        pinA: number,
+        pinB: number,
+        modo: ModoBarrera,
+        umbralA: number,
+        umbralB: number,
+        timeoutUs: number
+    ): number {
+        // ── Fallback para simulador ──
+        // En hardware real se ejecuta el C++ de shims.cpp
+        let t = medirTiempoBarrera(
+            pinA as PinAnalogico,
+            pinB as PinAnalogico,
+            modo,
+            Math.idiv(timeoutUs, 1000)
+        )
+        return t >= 0 ? t * 1000 : 0  // Convertir ms→μs
+    }
+
+
+    /**
+     * Calcula la velocidad de un objeto a partir del tiempo entre barreras.
+     *
+     * FÓRMULA: velocidad = distancia / tiempo
+     *
+     * EJEMPLO — Caída libre:
+     *   Barreras separadas 10cm (0.1m)
+     *   Tiempo medido: 50ms = 0.05s
+     *   Velocidad: 0.1 / 0.05 = 2.0 m/s
+     *
+     * @param tiempoUs Tiempo entre barreras en microsegundos
+     * @param distanciaMm Distancia entre barreras en milímetros
+     * @returns Velocidad en m/s (multiplicada por 100 para 2 decimales)
+     */
+    //% block="velocidad con tiempo %tiempoUs μs distancia %distanciaMm mm (×100 m/s)"
+    //% blockId=fisicabit_barrera_velocidad
+    //% group="Barrera Óptica"
+    //% weight=91
+    //% tiempoUs.defl=50000 distanciaMm.defl=100
+    export function calcularVelocidad(tiempoUs: number, distanciaMm: number): number {
+        // velocidad (m/s) = distancia(mm) / tiempo(μs) × 1000
+        //                  = distancia(mm) * 1000 / tiempo(μs)
+        // Multiplicamos por 100 para tener 2 decimales como entero
+        // Ejemplo: 2.35 m/s → devuelve 235
+        if (tiempoUs <= 0) return 0
+        return Math.idiv(distanciaMm * 100000, tiempoUs)
+    }
+
+
+    /**
+     * Convierte un tiempo en microsegundos a la unidad deseada.
+     *
+     * @param tiempoUs Tiempo en microsegundos
+     * @param unidad Unidad de salida deseada
+     * @returns Tiempo en la unidad seleccionada (×100 para 2 decimales en ms y s)
+     */
+    //% block="convertir %tiempoUs μs a %unidad"
+    //% blockId=fisicabit_barrera_convertir_tiempo
+    //% group="Barrera Óptica"
+    //% weight=89
+    //% unidad.defl=UnidadTiempo.Milisegundos
+    export function convertirTiempo(tiempoUs: number, unidad: UnidadTiempo): number {
+        switch (unidad) {
+            case UnidadTiempo.Microsegundos:
+                return tiempoUs
+            case UnidadTiempo.Milisegundos:
+                // Devuelve ms × 100 para 2 decimales → 12345μs = 1234 (12.34ms)
+                return Math.idiv(tiempoUs, 10)
+            case UnidadTiempo.Segundos:
+                // Devuelve s × 100 para 2 decimales → 1234567μs = 123 (1.23s)
+                return Math.idiv(tiempoUs, 10000)
+            default:
+                return tiempoUs
+        }
+    }
+
+
+    /**
+     * Mide cuánto tiempo un objeto bloquea UNA sola barrera.
+     * Útil para medir el ancho/longitud de un objeto en movimiento.
+     *
+     * Si conoces la velocidad del objeto:
+     *   longitud = velocidad × tiempo_de_bloqueo
+     *
+     * @param pin Pin de la barrera
+     * @param modo Digital o Analógico
+     * @param timeoutMs Timeout en milisegundos
+     * @returns Tiempo de bloqueo en milisegundos, -1 si timeout
+     */
+    //% block="tiempo de bloqueo en %pin modo %modo timeout %timeoutMs ms"
+    //% blockId=fisicabit_barrera_bloqueo
+    //% group="Barrera Óptica"
+    //% weight=87
+    //% pin.defl=PinAnalogico.P1
+    //% modo.defl=ModoBarrera.Digital
+    //% timeoutMs.defl=10000
+    export function medirTiempoBloqueo(
+        pin: PinAnalogico,
+        modo: ModoBarrera,
+        timeoutMs: number
+    ): number {
+        let inicio = control.millis()
+
+        // Esperar a que la barrera esté libre
+        while (barreraActivada(pin, modo)) {
+            if (timeoutMs > 0 && (control.millis() - inicio) > timeoutMs) return -1
+            control.waitMicros(50)
+        }
+
+        // Esperar a que el objeto entre (bloquee la barrera)
+        while (!barreraActivada(pin, modo)) {
+            if (timeoutMs > 0 && (control.millis() - inicio) > timeoutMs) return -1
+            control.waitMicros(50)
+        }
+        let t0 = control.millis()
+
+        // Esperar a que el objeto salga (deje de bloquear)
+        while (barreraActivada(pin, modo)) {
+            if (timeoutMs > 0 && (control.millis() - t0) > timeoutMs) return -1
+            control.waitMicros(50)
+        }
+        let t1 = control.millis()
+
+        return t1 - t0
+    }
+
+
+    // =========================================================================
+    // GRUPO 5: CONVERSIONES DE UNIDADES
     // =========================================================================
 
     /**

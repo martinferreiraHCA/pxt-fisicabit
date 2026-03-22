@@ -108,3 +108,70 @@ declare const enum RangoAcelerometro {
     //% block="±8g"
     Rango8G = 8
 }
+
+// -----------------------------------------------------------------------------
+// ModoBarrera: Cómo leer la señal de la barrera óptica
+// -----------------------------------------------------------------------------
+// DIGITAL: El sensor tiene salida digital (HIGH/LOW con comparador integrado)
+//          Ejemplo: FC-33 (tiene potenciómetro de ajuste en la placa)
+// ANALOGICO: Lectura cruda del fototransistor/fotodiodo (0-1023)
+//            Ejemplo: LED IR emisor + receptor con divisor de voltaje
+//            Permite ajustar el umbral por software desde MakeCode
+// -----------------------------------------------------------------------------
+declare const enum ModoBarrera {
+    //% block="Digital"
+    Digital = 0,
+    //% block="Analógico"
+    Analogico = 1
+}
+
+// -----------------------------------------------------------------------------
+// TipoBarreraOptica: Modelo de sensor utilizado
+// -----------------------------------------------------------------------------
+// FC_33:   Módulo comercial con comparador LM393 integrado
+//          - Tiene ranura de 10mm para paso de objetos
+//          - Salida digital (con ajuste por potenciómetro HW)
+//          - Alimentación: 3.3V-5V
+//          - Pin OUT: LOW cuando se interrumpe el haz
+//
+// IR_DIY:  Montaje casero con LED IR + fototransistor
+//          - Distancia ajustable entre emisor y receptor
+//          - Señal analógica proporcional a la luz recibida
+//          - Necesita divisor de voltaje para leer con ADC
+//          - Más flexible, ideal para experimentos de física
+// -----------------------------------------------------------------------------
+declare const enum TipoBarreraOptica {
+    //% block="FC-33 (módulo ranura)"
+    FC_33 = 0,
+    //% block="IR DIY (LED emisor+receptor)"
+    IR_DIY = 1
+}
+
+// -----------------------------------------------------------------------------
+// FlancoBarrera: Qué transición activa la barrera
+// -----------------------------------------------------------------------------
+// Cuando un objeto pasa por la barrera:
+//   - FC-33:  la señal va HIGH→LOW (objeto bloquea el haz)
+//   - IR DIY: la señal analógica BAJA (menos luz llega al receptor)
+//
+// DESCENDENTE = el objeto ENTRA en la barrera (bloquea luz)
+// ASCENDENTE  = el objeto SALE de la barrera (luz se restaura)
+// -----------------------------------------------------------------------------
+declare const enum FlancoBarrera {
+    //% block="Descendente (objeto entra)"
+    Descendente = 0,
+    //% block="Ascendente (objeto sale)"
+    Ascendente = 1
+}
+
+// -----------------------------------------------------------------------------
+// UnidadTiempo: Unidades para mostrar el tiempo medido
+// -----------------------------------------------------------------------------
+declare const enum UnidadTiempo {
+    //% block="μs (microsegundos)"
+    Microsegundos = 0,
+    //% block="ms (milisegundos)"
+    Milisegundos = 1,
+    //% block="s (segundos)"
+    Segundos = 2
+}
