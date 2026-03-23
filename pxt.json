@@ -11,7 +11,9 @@
         "README.md",
         "fisicabit.ts",
         "bluetooth_sensores.ts",
-        "enums.d.ts"
+        "enums.d.ts",
+        "shims.d.ts",
+        "shims.cpp"
     ],
     "testFiles": [
         "test.ts"
