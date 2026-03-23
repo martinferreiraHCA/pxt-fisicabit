@@ -42,12 +42,9 @@
 
 #include "pxt.h"
 
-// Para acceso directo a registros del nRF52833
-// Estos headers definen las direcciones de memoria de los periféricos
-#if MICROBIT_CODAL
-#include "NRF52ADC.h"
-#include "Timer.h"
-#endif
+// pxt.h ya incluye los headers del Nordic SDK (nrf52833.h)
+// que definen NRF_SAADC, NRF_TIMER3, NRF_P0, etc.
+// No se necesitan includes adicionales para acceso directo a registros.
 
 // =============================================================================
 // NAMESPACE: fisicabit_native
