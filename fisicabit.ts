@@ -658,6 +658,7 @@ namespace FisicaBit {
     //% modo.defl=ModoBarrera.Digital
     //% umbralA.defl=512 umbralB.defl=512
     //% timeoutUs.defl=5000000
+    //% shim=fisicabit_native::medirTiempoBarreraNativo
     export function medirTiempoBarreraNativo(
         pinA: number,
         pinB: number,
@@ -897,6 +898,7 @@ namespace FisicaBit {
     //% group="Nativo C++"
     //% weight=50
     //% advanced=true
+    //% shim=fisicabit_native::leerADCNativo
     export function leerADCNativo(canal: number): number {
         // Este cuerpo solo se ejecuta en el simulador.
         // En hardware real, se ejecuta el código C++ de shims.cpp
@@ -917,6 +919,7 @@ namespace FisicaBit {
     //% group="Nativo C++"
     //% weight=45
     //% advanced=true
+    //% shim=fisicabit_native::medirPulsoNativo
     export function medirPulsoNativo(pin: number, nivelAlto: boolean, timeoutUs: number): number {
         // Fallback para simulador
         return 0
@@ -935,6 +938,7 @@ namespace FisicaBit {
     //% group="Nativo C++"
     //% weight=40
     //% advanced=true
+    //% shim=fisicabit_native::leerADCPromedio
     export function leerADCPromedio(canal: number, muestras: number): number {
         // Fallback para simulador: promediar en TS
         let suma = 0
