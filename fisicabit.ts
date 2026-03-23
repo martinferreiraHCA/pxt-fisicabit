@@ -49,7 +49,7 @@
 //% color=#E64322
 //% icon="\uf0e7"
 //% block="FisicaBit Sensores"
-//% groups="['Sensores Internos', 'Sensores Externos', 'Sensor Ultrasonido', 'Barrera Óptica', 'Conversiones', 'Nativo C++', 'Utilidades']"
+//% groups="['Sensores Internos', 'Sensores Externos', 'Sensor Ultrasonido', 'Barrera Óptica', 'Muestreo Serial', 'Conversiones', 'Nativo C++', 'Utilidades']"
 namespace FisicaBit {
 
     // =========================================================================
@@ -950,7 +950,101 @@ namespace FisicaBit {
 
 
     // =========================================================================
-    // GRUPO 6: UTILIDADES
+    // GRUPO 6: MUESTREO SERIAL (USB) — misma lógica que BT
+    // =========================================================================
+
+    let _serialTiempoInicio = 0
+    let _serialIniciado = false
+
+    function _asegurarSerial(): void {
+        if (!_serialIniciado) {
+            serial.redirectToUSB()
+            _serialTiempoInicio = input.runningTime()
+            _serialIniciado = true
+        }
+    }
+
+    /**
+     * Tiempo en milisegundos desde que se inició el serial.
+     * Siempre comienza en 0. Arrastrá este bloque a un slot de muestreo
+     * para incluir el tiempo en los datos enviados.
+     */
+    //% block="tiempo serial (ms)"
+    //% blockId=fisicabit_serial_tiempo
+    //% group="Muestreo Serial"
+    //% weight=75
+    export function tiempoSerial(): number {
+        _asegurarSerial()
+        return input.runningTime() - _serialTiempoInicio
+    }
+
+    /**
+     * Envía UN valor por puerto serie (USB) y espera el tiempo de muestreo.
+     * Coloca este bloque dentro de "para siempre".
+     * @param valor Valor a enviar (cualquier variable, sensor o "tiempo serial (ms)")
+     * @param ms Tiempo de muestreo en milisegundos
+     */
+    //% block="Serial muestrear %valor|cada %ms ms"
+    //% blockId=fisicabit_serial_muestrear_1
+    //% group="Muestreo Serial"
+    //% weight=70
+    //% ms.min=10 ms.max=60000 ms.defl=100
+    //% valor.shadow=math_number
+    //% inlineInputMode=inline
+    export function serialMuestrear1(valor: number, ms: number): void {
+        _asegurarSerial()
+        serial.writeLine("" + valor)
+        basic.pause(ms)
+    }
+
+    /**
+     * Envía DOS valores por puerto serie (USB) y espera el tiempo de muestreo.
+     * Coloca este bloque dentro de "para siempre".
+     * Envía: valor1,valor2
+     * @param valor1 Primer valor
+     * @param valor2 Segundo valor
+     * @param ms Tiempo de muestreo en milisegundos
+     */
+    //% block="Serial muestrear %valor1 y %valor2|cada %ms ms"
+    //% blockId=fisicabit_serial_muestrear_2
+    //% group="Muestreo Serial"
+    //% weight=65
+    //% ms.min=10 ms.max=60000 ms.defl=100
+    //% valor1.shadow=math_number
+    //% valor2.shadow=math_number
+    //% inlineInputMode=inline
+    export function serialMuestrear2(valor1: number, valor2: number, ms: number): void {
+        _asegurarSerial()
+        serial.writeLine("" + valor1 + "," + valor2)
+        basic.pause(ms)
+    }
+
+    /**
+     * Envía TRES valores por puerto serie (USB) y espera el tiempo de muestreo.
+     * Coloca este bloque dentro de "para siempre".
+     * Envía: valor1,valor2,valor3
+     * @param valor1 Primer valor
+     * @param valor2 Segundo valor
+     * @param valor3 Tercer valor
+     * @param ms Tiempo de muestreo en milisegundos
+     */
+    //% block="Serial muestrear %valor1 , %valor2 y %valor3|cada %ms ms"
+    //% blockId=fisicabit_serial_muestrear_3
+    //% group="Muestreo Serial"
+    //% weight=60
+    //% ms.min=10 ms.max=60000 ms.defl=100
+    //% valor1.shadow=math_number
+    //% valor2.shadow=math_number
+    //% valor3.shadow=math_number
+    //% inlineInputMode=inline
+    export function serialMuestrear3(valor1: number, valor2: number, valor3: number, ms: number): void {
+        _asegurarSerial()
+        serial.writeLine("" + valor1 + "," + valor2 + "," + valor3)
+        basic.pause(ms)
+    }
+
+    // =========================================================================
+    // GRUPO 7: UTILIDADES
     // =========================================================================
 
     /**
@@ -966,43 +1060,5 @@ namespace FisicaBit {
     //% weight=30
     export function mostrarEnLED(etiqueta: string, valor: number): void {
         basic.showString(etiqueta + ":" + Math.round(valor))
-    }
-
-    /**
-     * Envía datos de sensor por el puerto serie (USB).
-     * Formato CSV para fácil análisis en hoja de cálculo.
-     *
-     * EJEMPLO — Logging continuo de temperatura:
-     *   basic.forever(() => {
-     *       let t = FisicaBit.leerSensorInterno(TipoSensorInterno.Temperatura)
-     *       FisicaBit.enviarPorSerie("temperatura", t)
-     *       basic.pause(1000)
-     *   })
-     *
-     * Luego abrir la consola serie de MakeCode para ver los datos.
-     *
-     * @param etiqueta Nombre del dato (aparece como columna en CSV)
-     * @param valor Valor numérico
-     */
-    //% block="enviar por serie %etiqueta = %valor"
-    //% blockId=fisicabit_serial
-    //% group="Utilidades"
-    //% weight=25
-    export function enviarPorSerie(etiqueta: string, valor: number): void {
-        serial.writeValue(etiqueta, valor)
-    }
-
-    /**
-     * Espera un intervalo preciso en milisegundos.
-     * Wrapper simple, pero útil para tener todo en un namespace.
-     *
-     * @param ms Milisegundos a esperar
-     */
-    //% block="esperar %ms ms"
-    //% blockId=fisicabit_esperar
-    //% group="Utilidades"
-    //% weight=20
-    export function esperar(ms: number): void {
-        basic.pause(ms)
     }
 }

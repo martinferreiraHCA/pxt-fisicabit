@@ -51,42 +51,35 @@ input.onButtonPressed(Button.B, () => {
 
 
 // =============================================================================
-// EJEMPLO 2: MONITOR DE SENSORES POR SERIE (USB)
+// EJEMPLO 2: MUESTREO SERIAL — ACELERÓMETRO CON TIEMPO
 // =============================================================================
-// Envía lecturas de todos los sensores internos por el puerto serie.
-// Ideal para análisis en tiempo real con la consola de MakeCode
-// o cualquier terminal serie (115200 baudios).
+// Envía tiempo + aceleración X por puerto serie (USB) cada 100ms.
+// Misma lógica que los bloques BT: un bloque, cualquier valor.
 //
-// FORMATO DE SALIDA (CSV):
-//   temperatura:23
-//   acelerometro_x:15
-//   acelerometro_y:-8
-//   acelerometro_z:-1024
-//   luz:128
-//   brujula:270
+// EN BLOQUES:
+//   ┌──────────────────────────────────────────────────────────┐
+//   │ para siempre                                             │
+//   │   ┌──────────────────────────────────────────────────┐   │
+//   │   │ Serial muestrear [tiempo serial (ms)] y [acel X]│   │
+//   │   │                  cada [100] ms                    │   │
+//   │   └──────────────────────────────────────────────────┘   │
+//   └──────────────────────────────────────────────────────────┘
+//
+// SALIDA SERIE (CSV):  0,15  →  100,-8  →  200,23  →  ...
 //
 // CONCEPTOS:
-//   - Lectura de múltiples sensores
-//   - Comunicación serie
-//   - Logging de datos
+//   - Muestreo serial con la misma lógica que BT
+//   - "tiempo serial (ms)" es una variable más (empieza en 0)
+//   - El usuario decide qué datos enviar
 // =============================================================================
 
 /*  ── Descomentar para usar ──
 basic.forever(() => {
-    FisicaBit.enviarPorSerie("temperatura",
-        FisicaBit.leerSensorInterno(TipoSensorInterno.Temperatura))
-    FisicaBit.enviarPorSerie("acel_x",
-        FisicaBit.leerSensorInterno(TipoSensorInterno.AcelerometroX))
-    FisicaBit.enviarPorSerie("acel_y",
-        FisicaBit.leerSensorInterno(TipoSensorInterno.AcelerometroY))
-    FisicaBit.enviarPorSerie("acel_z",
-        FisicaBit.leerSensorInterno(TipoSensorInterno.AcelerometroZ))
-    FisicaBit.enviarPorSerie("luz",
-        FisicaBit.leerSensorInterno(TipoSensorInterno.NivelLuz))
-    FisicaBit.enviarPorSerie("brujula",
-        FisicaBit.leerSensorInterno(TipoSensorInterno.Brujula))
-
-    FisicaBit.esperar(1000)  // Una lectura por segundo
+    FisicaBit.serialMuestrear2(
+        FisicaBit.tiempoSerial(),
+        input.acceleration(Dimension.X),
+        100
+    )
 })
 */
 
@@ -120,10 +113,12 @@ basic.forever(() => {
     // Mostrar en LED
     FisicaBit.mostrarEnLED("d", distancia)
 
-    // Enviar por serie para graficar
-    FisicaBit.enviarPorSerie("distancia_cm", distancia)
-
-    FisicaBit.esperar(500)
+    // Enviar tiempo + distancia por serie para graficar
+    FisicaBit.serialMuestrear2(
+        FisicaBit.tiempoSerial(),
+        distancia,
+        500
+    )
 })
 */
 
@@ -159,11 +154,13 @@ basic.forever(() => {
     // Mostrar porcentaje
     FisicaBit.mostrarEnLED("%", porcentaje)
 
-    // Log por serie
-    FisicaBit.enviarPorSerie("potenciometro_raw", lectura)
-    FisicaBit.enviarPorSerie("potenciometro_pct", porcentaje)
-
-    FisicaBit.esperar(200)
+    // Enviar tiempo + lectura cruda + porcentaje por serie
+    FisicaBit.serialMuestrear3(
+        FisicaBit.tiempoSerial(),
+        lectura,
+        porcentaje,
+        200
+    )
 })
 */
 
@@ -193,19 +190,25 @@ basic.forever(() => {
     let luz = FisicaBit.leerSensorAnalogico(PinAnalogico.P1)
 
     // Clasificar nivel de luz con umbrales
+    let estado = 0
     if (luz < 200) {
         basic.showIcon(IconNames.No)        // Oscuro
-        FisicaBit.enviarPorSerie("estado", 0)
+        estado = 0
     } else if (luz < 600) {
         basic.showIcon(IconNames.SmallHeart) // Normal
-        FisicaBit.enviarPorSerie("estado", 1)
+        estado = 1
     } else {
         basic.showIcon(IconNames.Heart)      // Brillante
-        FisicaBit.enviarPorSerie("estado", 2)
+        estado = 2
     }
 
-    FisicaBit.enviarPorSerie("luz_raw", luz)
-    FisicaBit.esperar(500)
+    // Enviar tiempo + luz + estado por serie
+    FisicaBit.serialMuestrear3(
+        FisicaBit.tiempoSerial(),
+        luz,
+        estado,
+        500
+    )
 })
 */
 
@@ -233,21 +236,22 @@ basic.forever(() => {
 let movimientoDetectado = false
 
 basic.forever(() => {
-    let estado = FisicaBit.leerSensorDigital(8)  // P8
+    let estadoPIR = FisicaBit.leerSensorDigital(8)  // P8
 
-    if (estado == 1 && !movimientoDetectado) {
-        // ¡Movimiento detectado! (flanco ascendente)
+    if (estadoPIR == 1 && !movimientoDetectado) {
         movimientoDetectado = true
         basic.showIcon(IconNames.Surprised)
-        FisicaBit.enviarPorSerie("movimiento", 1)
-    } else if (estado == 0 && movimientoDetectado) {
-        // Movimiento terminó (flanco descendente)
+    } else if (estadoPIR == 0 && movimientoDetectado) {
         movimientoDetectado = false
         basic.showIcon(IconNames.Happy)
-        FisicaBit.enviarPorSerie("movimiento", 0)
     }
 
-    FisicaBit.esperar(100)
+    // Enviar tiempo + estado del PIR por serie
+    FisicaBit.serialMuestrear2(
+        FisicaBit.tiempoSerial(),
+        estadoPIR,
+        100
+    )
 })
 */
 
@@ -276,11 +280,7 @@ basic.forever(() => {
     let promedio = FisicaBit.leerADCPromedio(0, 16)
 
     // Enviar las tres lecturas por serie para comparar
-    FisicaBit.enviarPorSerie("adc_standard_10bit", standard)
-    FisicaBit.enviarPorSerie("adc_nativo_12bit", nativo)
-    FisicaBit.enviarPorSerie("adc_promedio_16x", promedio)
-
-    FisicaBit.esperar(200)
+    FisicaBit.serialMuestrear3(standard, nativo, promedio, 200)
 })
 */
 
@@ -316,10 +316,14 @@ basic.forever(() => {
     let tempAprox = FisicaBit.mapearValor(lecturaNTC, 300, 800, 50, 0)
 
     FisicaBit.mostrarEnLED("T", tempAprox)
-    FisicaBit.enviarPorSerie("ntc_raw", lecturaNTC)
-    FisicaBit.enviarPorSerie("ntc_temp", tempAprox)
 
-    FisicaBit.esperar(1000)
+    // Enviar tiempo + lectura cruda + temperatura por serie
+    FisicaBit.serialMuestrear3(
+        FisicaBit.tiempoSerial(),
+        lecturaNTC,
+        tempAprox,
+        1000
+    )
 })
 */
 
@@ -400,12 +404,12 @@ input.onButtonPressed(Button.A, () => {
         basic.showNumber(Math.idiv(velocidad100, 100))
 
         // Log detallado por serie
-        FisicaBit.enviarPorSerie("tiempo_ms", tiempoMs)
-        FisicaBit.enviarPorSerie("velocidad_x100", velocidad100)
-        FisicaBit.enviarPorSerie("distancia_mm", DISTANCIA_MM)
+        serial.writeValue("tiempo_ms", tiempoMs)
+        serial.writeValue("velocidad_x100", velocidad100)
+        serial.writeValue("distancia_mm", DISTANCIA_MM)
     }
 
-    FisicaBit.esperar(2000)
+    basic.pause(2000)
     basic.showIcon(IconNames.Target)  // Listo de nuevo
 })
 */
@@ -478,13 +482,13 @@ basic.forever(() => {
     if (modoCalibrar) {
         let rawA = FisicaBit.leerBarreraCrudo(PinAnalogico.P1, ModoBarrera.Analogico)
         let rawB = FisicaBit.leerBarreraCrudo(PinAnalogico.P2, ModoBarrera.Analogico)
-        FisicaBit.enviarPorSerie("barrera_A_raw", rawA)
-        FisicaBit.enviarPorSerie("barrera_B_raw", rawB)
+        serial.writeValue("barrera_A_raw", rawA)
+        serial.writeValue("barrera_B_raw", rawB)
 
         // Mostrar valor de A en el LED para referencia
         basic.showNumber(Math.idiv(rawA, 100))  // Mostrar centenas
 
-        FisicaBit.esperar(200)
+        basic.pause(200)
     }
 })
 
@@ -514,11 +518,11 @@ input.onButtonPressed(Button.A, () => {
     } else {
         let vel100 = FisicaBit.calcularVelocidad(tiempoMs * 1000, DISTANCIA_IR_MM)
         basic.showNumber(Math.idiv(vel100, 100))
-        FisicaBit.enviarPorSerie("tiempo_ms", tiempoMs)
-        FisicaBit.enviarPorSerie("vel_x100_ms", vel100)
+        serial.writeValue("tiempo_ms", tiempoMs)
+        serial.writeValue("vel_x100_ms", vel100)
     }
 
-    FisicaBit.esperar(2000)
+    basic.pause(2000)
     basic.showIcon(IconNames.Target)
 })
 */
@@ -588,13 +592,13 @@ input.onButtonPressed(Button.A, () => {
         basic.showNumber(Math.idiv(vel100, 100))
 
         // Log detallado
-        FisicaBit.enviarPorSerie("tiempo_us", tiempoUs)
-        FisicaBit.enviarPorSerie("tiempo_ms_x100", tiempoMs100)
-        FisicaBit.enviarPorSerie("velocidad_x100", vel100)
-        FisicaBit.enviarPorSerie("distancia_mm", DIST_PREC_MM)
+        serial.writeValue("tiempo_us", tiempoUs)
+        serial.writeValue("tiempo_ms_x100", tiempoMs100)
+        serial.writeValue("velocidad_x100", vel100)
+        serial.writeValue("distancia_mm", DIST_PREC_MM)
     }
 
-    FisicaBit.esperar(2000)
+    basic.pause(2000)
     basic.showIcon(IconNames.Target)
 })
 */
@@ -683,10 +687,10 @@ input.onButtonPressed(Button.A, () => {
     basic.showNumber(Math.idiv(g100, 100))
 
     // Log
-    FisicaBit.enviarPorSerie("tiempo_us", tUs)
-    FisicaBit.enviarPorSerie("tiempo_ms", tMs)
-    FisicaBit.enviarPorSerie("g_x100", g100)
-    FisicaBit.enviarPorSerie("dist_mm", CAIDA_DIST_MM)
+    serial.writeValue("tiempo_us", tUs)
+    serial.writeValue("tiempo_ms", tMs)
+    serial.writeValue("g_x100", g100)
+    serial.writeValue("dist_mm", CAIDA_DIST_MM)
 })
 */
 
