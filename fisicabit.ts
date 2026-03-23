@@ -988,7 +988,6 @@ namespace FisicaBit {
     //% group="Muestreo Serial"
     //% weight=70
     //% ms.min=10 ms.max=60000 ms.defl=100
-    //% valor.shadow=math_number
     //% inlineInputMode=inline
     export function serialMuestrear1(valor: number, ms: number): void {
         _asegurarSerial()
@@ -1009,8 +1008,6 @@ namespace FisicaBit {
     //% group="Muestreo Serial"
     //% weight=65
     //% ms.min=10 ms.max=60000 ms.defl=100
-    //% valor1.shadow=math_number
-    //% valor2.shadow=math_number
     //% inlineInputMode=inline
     export function serialMuestrear2(valor1: number, valor2: number, ms: number): void {
         _asegurarSerial()
@@ -1032,9 +1029,6 @@ namespace FisicaBit {
     //% group="Muestreo Serial"
     //% weight=60
     //% ms.min=10 ms.max=60000 ms.defl=100
-    //% valor1.shadow=math_number
-    //% valor2.shadow=math_number
-    //% valor3.shadow=math_number
     //% inlineInputMode=inline
     export function serialMuestrear3(valor1: number, valor2: number, valor3: number, ms: number): void {
         _asegurarSerial()

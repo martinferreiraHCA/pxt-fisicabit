@@ -94,7 +94,6 @@ namespace FisicaBitBT {
     //% group="Muestreo"
     //% weight=100
     //% ms.min=10 ms.max=60000 ms.defl=100
-    //% valor.shadow=math_number
     //% inlineInputMode=inline
     export function muestrear1(valor: number, ms: number): void {
         _asegurarUART()
@@ -115,8 +114,6 @@ namespace FisicaBitBT {
     //% group="Muestreo"
     //% weight=95
     //% ms.min=10 ms.max=60000 ms.defl=100
-    //% valor1.shadow=math_number
-    //% valor2.shadow=math_number
     //% inlineInputMode=inline
     export function muestrear2(valor1: number, valor2: number, ms: number): void {
         _asegurarUART()
@@ -138,9 +135,6 @@ namespace FisicaBitBT {
     //% group="Muestreo"
     //% weight=90
     //% ms.min=10 ms.max=60000 ms.defl=100
-    //% valor1.shadow=math_number
-    //% valor2.shadow=math_number
-    //% valor3.shadow=math_number
     //% inlineInputMode=inline
     export function muestrear3(valor1: number, valor2: number, valor3: number, ms: number): void {
         _asegurarUART()
