@@ -5,16 +5,26 @@
 //  Descripción: Bloques simplificados para muestreo y envío de datos
 //               vía Bluetooth Low Energy (BLE UART).
 //
-//  USO: El usuario arrastra UN bloque dentro de "para siempre" y listo.
-//       El bloque acepta CUALQUIER valor (variable, sensor, expresión).
-//       El timestamp comienza en 0 automáticamente.
+//  USO: El usuario arrastra UN bloque dentro de "para siempre".
+//       Cada slot acepta CUALQUIER valor (variable, sensor, expresión).
+//       Si quiere incluir el tiempo, arrastra el bloque "tiempo (ms)"
+//       en uno de los slots.
 //
-//  EJEMPLO EN BLOQUES:
+//  EJEMPLO EN BLOQUES (con tiempo):
+//  ┌──────────────────────────────────────────────────────┐
+//  │ para siempre                                         │
+//  │   ┌──────────────────────────────────────────────┐   │
+//  │   │ BT muestrear [tiempo (ms)] y [acel X]       │   │
+//  │   │              cada [100] ms                    │   │
+//  │   └──────────────────────────────────────────────┘   │
+//  └──────────────────────────────────────────────────────┘
+//
+//  EJEMPLO EN BLOQUES (sin tiempo):
 //  ┌──────────────────────────────────────────────┐
 //  │ para siempre                                 │
 //  │   ┌────────────────────────────────────────┐ │
-//  │   │ BT muestrear valor [acelerómetro X]   │ │
-//  │   │              muestreo cada [100] ms    │ │
+//  │   │ BT muestrear [acelerómetro X]         │ │
+//  │   │              cada [100] ms             │ │
 //  │   └────────────────────────────────────────┘ │
 //  └──────────────────────────────────────────────┘
 //
@@ -55,25 +65,31 @@ namespace FisicaBitBT {
     }
 
     // =========================================================================
-    // Función interna: timestamp relativo (empieza en 0)
-    // =========================================================================
-    function _timestamp(): number {
-        return input.runningTime() - _tiempoInicio
-    }
-
-    // =========================================================================
-    // GRUPO 1: MUESTREO — Bloques principales (un bloque = todo)
+    // GRUPO 1: MUESTREO — Bloques principales
     // =========================================================================
 
     /**
-     * Muestrea y envía UN valor por Bluetooth con timestamp.
+     * Tiempo en milisegundos desde que se inició el Bluetooth.
+     * Siempre comienza en 0. Arrastrá este bloque a un slot de muestreo
+     * para incluir el tiempo en los datos enviados.
+     */
+    //% block="tiempo (ms)"
+    //% blockId=fisicabit_bt_tiempo
+    //% group="Muestreo"
+    //% weight=105
+    export function tiempo(): number {
+        _asegurarUART()
+        return input.runningTime() - _tiempoInicio
+    }
+
+    /**
+     * Envía UN valor por Bluetooth y espera el tiempo de muestreo.
      * Coloca este bloque dentro de "para siempre".
-     * Envía: timestamp,valor — luego espera el tiempo indicado.
-     * El timestamp comienza en 0 automáticamente.
-     * @param valor Valor a enviar (cualquier variable o sensor)
+     * Envía: valor — luego espera el tiempo indicado.
+     * @param valor Valor a enviar (cualquier variable, sensor o "tiempo (ms)")
      * @param ms Tiempo de muestreo en milisegundos
      */
-    //% block="BT muestrear valor %valor|muestreo cada %ms ms"
+    //% block="BT muestrear %valor|cada %ms ms"
     //% blockId=fisicabit_bt_muestrear_1
     //% group="Muestreo"
     //% weight=100
@@ -82,20 +98,19 @@ namespace FisicaBitBT {
     //% inlineInputMode=inline
     export function muestrear1(valor: number, ms: number): void {
         _asegurarUART()
-        let t = _timestamp()
-        bluetooth.uartWriteLine("" + t + "," + valor)
+        bluetooth.uartWriteLine("" + valor)
         basic.pause(ms)
     }
 
     /**
-     * Muestrea y envía DOS valores por Bluetooth con timestamp.
+     * Envía DOS valores por Bluetooth y espera el tiempo de muestreo.
      * Coloca este bloque dentro de "para siempre".
-     * Envía: timestamp,valor1,valor2 — luego espera el tiempo indicado.
+     * Envía: valor1,valor2 — luego espera el tiempo indicado.
      * @param valor1 Primer valor
      * @param valor2 Segundo valor
      * @param ms Tiempo de muestreo en milisegundos
      */
-    //% block="BT muestrear valores %valor1 y %valor2|muestreo cada %ms ms"
+    //% block="BT muestrear %valor1 y %valor2|cada %ms ms"
     //% blockId=fisicabit_bt_muestrear_2
     //% group="Muestreo"
     //% weight=95
@@ -105,21 +120,20 @@ namespace FisicaBitBT {
     //% inlineInputMode=inline
     export function muestrear2(valor1: number, valor2: number, ms: number): void {
         _asegurarUART()
-        let t = _timestamp()
-        bluetooth.uartWriteLine("" + t + "," + valor1 + "," + valor2)
+        bluetooth.uartWriteLine("" + valor1 + "," + valor2)
         basic.pause(ms)
     }
 
     /**
-     * Muestrea y envía TRES valores por Bluetooth con timestamp.
+     * Envía TRES valores por Bluetooth y espera el tiempo de muestreo.
      * Coloca este bloque dentro de "para siempre".
-     * Envía: timestamp,valor1,valor2,valor3 — luego espera el tiempo indicado.
+     * Envía: valor1,valor2,valor3 — luego espera el tiempo indicado.
      * @param valor1 Primer valor
      * @param valor2 Segundo valor
      * @param valor3 Tercer valor
      * @param ms Tiempo de muestreo en milisegundos
      */
-    //% block="BT muestrear valores %valor1 , %valor2 y %valor3|muestreo cada %ms ms"
+    //% block="BT muestrear %valor1 , %valor2 y %valor3|cada %ms ms"
     //% blockId=fisicabit_bt_muestrear_3
     //% group="Muestreo"
     //% weight=90
@@ -130,8 +144,7 @@ namespace FisicaBitBT {
     //% inlineInputMode=inline
     export function muestrear3(valor1: number, valor2: number, valor3: number, ms: number): void {
         _asegurarUART()
-        let t = _timestamp()
-        bluetooth.uartWriteLine("" + t + "," + valor1 + "," + valor2 + "," + valor3)
+        bluetooth.uartWriteLine("" + valor1 + "," + valor2 + "," + valor3)
         basic.pause(ms)
     }
 
@@ -185,21 +198,6 @@ namespace FisicaBitBT {
     export function enviarTexto(texto: string): void {
         _asegurarUART()
         bluetooth.uartWriteLine(texto)
-    }
-
-    /**
-     * Envía un valor con timestamp por Bluetooth (sin pausa).
-     * Útil para envíos puntuales, no para muestreo continuo.
-     * @param valor Valor a enviar
-     */
-    //% block="BT enviar valor %valor"
-    //% blockId=fisicabit_bt_enviar_valor
-    //% group="Envío Manual"
-    //% weight=55
-    export function enviarValor(valor: number): void {
-        _asegurarUART()
-        let t = _timestamp()
-        bluetooth.uartWriteLine("" + t + "," + valor)
     }
 
     // =========================================================================

@@ -692,32 +692,33 @@ input.onButtonPressed(Button.A, () => {
 
 
 // =============================================================================
-// EJEMPLO 13: BLUETOOTH — MUESTREO DE ACELERÓMETRO
+// EJEMPLO 13: BLUETOOTH — MUESTREO CON TIEMPO Y ACELERÓMETRO
 // =============================================================================
-// Envía la aceleración X por Bluetooth cada 100ms.
-// Equivalente al código que el usuario arma en bloques:
+// Envía tiempo + aceleración X por Bluetooth cada 100ms.
+// El bloque "tiempo (ms)" es un reporter que empieza en 0.
+// El usuario lo arrastra a un slot como cualquier otro valor.
 //
 // EN BLOQUES:
-//   ┌──────────────────────────────────────────────┐
-//   │ para siempre                                 │
-//   │   ┌────────────────────────────────────────┐ │
-//   │   │ BT muestrear valor [acelerómetro X]   │ │
-//   │   │              muestreo cada [100] ms    │ │
-//   │   └────────────────────────────────────────┘ │
-//   └──────────────────────────────────────────────┘
+//   ┌──────────────────────────────────────────────────────┐
+//   │ para siempre                                         │
+//   │   ┌──────────────────────────────────────────────┐   │
+//   │   │ BT muestrear [tiempo (ms)] y [acel X]       │   │
+//   │   │              cada [100] ms                    │   │
+//   │   └──────────────────────────────────────────────┘   │
+//   └──────────────────────────────────────────────────────┘
 //
 // SALIDA BT (CSV):  0,15  →  100,-8  →  200,23  →  ...
-//   (timestamp empieza en 0 automáticamente)
 //
 // CONCEPTOS:
-//   - Un solo bloque hace todo: inicia UART, envía, espera
-//   - El valor puede ser CUALQUIER variable o sensor
-//   - El timestamp comienza en 0 (no usa runningTime directo)
+//   - "tiempo (ms)" es una variable más, no se agrega sola
+//   - El tiempo comienza en 0 (no usa runningTime directo)
+//   - El usuario decide qué datos enviar y en qué orden
 // =============================================================================
 
 /*  ── Descomentar para usar ──
 basic.forever(() => {
-    FisicaBitBT.muestrear1(
+    FisicaBitBT.muestrear2(
+        FisicaBitBT.tiempo(),
         input.acceleration(Dimension.X),
         100
     )
@@ -726,25 +727,45 @@ basic.forever(() => {
 
 
 // =============================================================================
-// EJEMPLO 14: BLUETOOTH — MUESTREO DE 2 VALORES (ACELERÓMETRO X + Y)
+// EJEMPLO 14: BLUETOOTH — MUESTREO SIN TIEMPO (SOLO VALOR)
 // =============================================================================
-// Envía dos ejes del acelerómetro simultáneamente.
+// Si no necesitás timestamp, mandás solo el valor.
 //
 // EN BLOQUES:
-//   ┌──────────────────────────────────────────────────────┐
-//   │ para siempre                                         │
-//   │   ┌──────────────────────────────────────────────┐   │
-//   │   │ BT muestrear valores [acel X] y [acel Y]   │   │
-//   │   │                  muestreo cada [50] ms       │   │
-//   │   └──────────────────────────────────────────────┘   │
-//   └──────────────────────────────────────────────────────┘
+//   ┌──────────────────────────────────────────────┐
+//   │ para siempre                                 │
+//   │   ┌────────────────────────────────────────┐ │
+//   │   │ BT muestrear [temperatura]             │ │
+//   │   │              cada [1000] ms             │ │
+//   │   └────────────────────────────────────────┘ │
+//   └──────────────────────────────────────────────┘
+//
+// SALIDA BT:  23  →  24  →  23  →  ...
+// =============================================================================
+
+/*  ── Descomentar para usar ──
+basic.forever(() => {
+    FisicaBitBT.muestrear1(
+        input.temperature(),
+        1000
+    )
+})
+*/
+
+
+// =============================================================================
+// EJEMPLO 15: BLUETOOTH — TIEMPO + 2 EJES DEL ACELERÓMETRO
+// =============================================================================
+// Envía tiempo, aceleración X y aceleración Y.
+// Usa muestrear3 porque son 3 valores: tiempo + X + Y.
 //
 // SALIDA BT (CSV):  0,15,-8  →  50,23,-12  →  ...
 // =============================================================================
 
 /*  ── Descomentar para usar ──
 basic.forever(() => {
-    FisicaBitBT.muestrear2(
+    FisicaBitBT.muestrear3(
+        FisicaBitBT.tiempo(),
         input.acceleration(Dimension.X),
         input.acceleration(Dimension.Y),
         50
@@ -754,46 +775,22 @@ basic.forever(() => {
 
 
 // =============================================================================
-// EJEMPLO 15: BLUETOOTH — MUESTREO DE VARIABLE PERSONALIZADA
+// EJEMPLO 16: BLUETOOTH — VARIABLE CALCULADA + INDICADOR DE CONEXIÓN
 // =============================================================================
-// Demuestra que se puede enviar CUALQUIER valor, no solo sensores.
-// Aquí enviamos una variable calculada (temperatura en Fahrenheit).
-//
-// CONCEPTOS:
-//   - El bloque acepta cualquier expresión numérica
-//   - Podés meter variables, cálculos, lecturas de sensores
-//   - Muestreo lento (1 segundo) para temperatura
+// Demuestra que se puede enviar CUALQUIER valor calculado.
+// Aquí enviamos tiempo + temperatura en Fahrenheit.
 // =============================================================================
 
 /*  ── Descomentar para usar ──
-basic.forever(() => {
-    let tempC = input.temperature()
-    let tempF = tempC * 9 / 5 + 32
-    FisicaBitBT.muestrear1(tempF, 1000)
-})
-*/
-
-
-// =============================================================================
-// EJEMPLO 16: BLUETOOTH — MUESTREO DE 3 EJES + INDICADOR DE CONEXIÓN
-// =============================================================================
-// Muestreo completo del acelerómetro (X, Y, Z) con indicador visual
-// de conexión Bluetooth.
-//
-// SALIDA BT (CSV):  0,15,-8,1024  →  100,23,-12,1018  →  ...
-// =============================================================================
-
-/*  ── Descomentar para usar ──
-
-// Mostrar estado de conexión en el LED
 FisicaBitBT.configurarIndicadorConexion()
 
 basic.forever(() => {
-    FisicaBitBT.muestrear3(
-        input.acceleration(Dimension.X),
-        input.acceleration(Dimension.Y),
-        input.acceleration(Dimension.Z),
-        100
+    let tempC = input.temperature()
+    let tempF = tempC * 9 / 5 + 32
+    FisicaBitBT.muestrear2(
+        FisicaBitBT.tiempo(),
+        tempF,
+        1000
     )
 })
 */
