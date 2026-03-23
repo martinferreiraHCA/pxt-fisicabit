@@ -689,3 +689,111 @@ input.onButtonPressed(Button.A, () => {
     FisicaBit.enviarPorSerie("dist_mm", CAIDA_DIST_MM)
 })
 */
+
+
+// =============================================================================
+// EJEMPLO 13: BLUETOOTH — MUESTREO DE ACELERÓMETRO
+// =============================================================================
+// Envía la aceleración X por Bluetooth cada 100ms.
+// Equivalente al código que el usuario arma en bloques:
+//
+// EN BLOQUES:
+//   ┌──────────────────────────────────────────────┐
+//   │ para siempre                                 │
+//   │   ┌────────────────────────────────────────┐ │
+//   │   │ BT muestrear valor [acelerómetro X]   │ │
+//   │   │              muestreo cada [100] ms    │ │
+//   │   └────────────────────────────────────────┘ │
+//   └──────────────────────────────────────────────┘
+//
+// SALIDA BT (CSV):  0,15  →  100,-8  →  200,23  →  ...
+//   (timestamp empieza en 0 automáticamente)
+//
+// CONCEPTOS:
+//   - Un solo bloque hace todo: inicia UART, envía, espera
+//   - El valor puede ser CUALQUIER variable o sensor
+//   - El timestamp comienza en 0 (no usa runningTime directo)
+// =============================================================================
+
+/*  ── Descomentar para usar ──
+basic.forever(() => {
+    FisicaBitBT.muestrear1(
+        input.acceleration(Dimension.X),
+        100
+    )
+})
+*/
+
+
+// =============================================================================
+// EJEMPLO 14: BLUETOOTH — MUESTREO DE 2 VALORES (ACELERÓMETRO X + Y)
+// =============================================================================
+// Envía dos ejes del acelerómetro simultáneamente.
+//
+// EN BLOQUES:
+//   ┌──────────────────────────────────────────────────────┐
+//   │ para siempre                                         │
+//   │   ┌──────────────────────────────────────────────┐   │
+//   │   │ BT muestrear valores [acel X] y [acel Y]   │   │
+//   │   │                  muestreo cada [50] ms       │   │
+//   │   └──────────────────────────────────────────────┘   │
+//   └──────────────────────────────────────────────────────┘
+//
+// SALIDA BT (CSV):  0,15,-8  →  50,23,-12  →  ...
+// =============================================================================
+
+/*  ── Descomentar para usar ──
+basic.forever(() => {
+    FisicaBitBT.muestrear2(
+        input.acceleration(Dimension.X),
+        input.acceleration(Dimension.Y),
+        50
+    )
+})
+*/
+
+
+// =============================================================================
+// EJEMPLO 15: BLUETOOTH — MUESTREO DE VARIABLE PERSONALIZADA
+// =============================================================================
+// Demuestra que se puede enviar CUALQUIER valor, no solo sensores.
+// Aquí enviamos una variable calculada (temperatura en Fahrenheit).
+//
+// CONCEPTOS:
+//   - El bloque acepta cualquier expresión numérica
+//   - Podés meter variables, cálculos, lecturas de sensores
+//   - Muestreo lento (1 segundo) para temperatura
+// =============================================================================
+
+/*  ── Descomentar para usar ──
+basic.forever(() => {
+    let tempC = input.temperature()
+    let tempF = tempC * 9 / 5 + 32
+    FisicaBitBT.muestrear1(tempF, 1000)
+})
+*/
+
+
+// =============================================================================
+// EJEMPLO 16: BLUETOOTH — MUESTREO DE 3 EJES + INDICADOR DE CONEXIÓN
+// =============================================================================
+// Muestreo completo del acelerómetro (X, Y, Z) con indicador visual
+// de conexión Bluetooth.
+//
+// SALIDA BT (CSV):  0,15,-8,1024  →  100,23,-12,1018  →  ...
+// =============================================================================
+
+/*  ── Descomentar para usar ──
+
+// Mostrar estado de conexión en el LED
+FisicaBitBT.configurarIndicadorConexion()
+
+basic.forever(() => {
+    FisicaBitBT.muestrear3(
+        input.acceleration(Dimension.X),
+        input.acceleration(Dimension.Y),
+        input.acceleration(Dimension.Z),
+        100
+    )
+})
+*/
