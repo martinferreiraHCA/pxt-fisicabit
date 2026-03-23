@@ -958,7 +958,6 @@ namespace FisicaBit {
 
     function _asegurarSerial(): void {
         if (!_serialIniciado) {
-            serial.redirectToUSB()
             _serialTiempoInicio = input.runningTime()
             _serialIniciado = true
         }
