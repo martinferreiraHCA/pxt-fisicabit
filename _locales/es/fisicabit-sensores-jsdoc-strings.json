@@ -1,0 +1,27 @@
+{
+    "FisicaBit.leerSensorInterno|block": "Lee un sensor interno del micro:bit y devuelve su valor.",
+    "FisicaBit.leerSensorInterno|param|sensor": "Tipo de sensor interno a leer",
+    "FisicaBit.leerSensorAnalogico|block": "Lee un sensor analógico conectado a un pin (0-1023).",
+    "FisicaBit.leerSensorAnalogico|param|pin": "Pin analógico (P0, P1, P2)",
+    "FisicaBit.leerSensorDigital|block": "Lee un sensor digital (HIGH/LOW).",
+    "FisicaBit.leerSensorDigital|param|pin": "Número de pin digital",
+    "FisicaBit.medirDistanciaUltrasonido|block": "Mide distancia con un sensor ultrasónico HC-SR04.",
+    "FisicaBit.fijarUmbralBarrera|block": "Configura el umbral de una barrera óptica analógica.",
+    "FisicaBit.leerBarreraCrudo|block": "Lee el valor crudo de un sensor de barrera para calibración.",
+    "FisicaBit.barreraActivada|block": "Comprueba si una barrera óptica está activada.",
+    "FisicaBit.medirTiempoBarrera|block": "Mide el tiempo de tránsito entre dos barreras (TypeScript, ~1ms).",
+    "FisicaBit.medirTiempoBarreraNativo|block": "Mide el tiempo de tránsito entre dos barreras (C++ nativo, ~1μs).",
+    "FisicaBit.calcularVelocidad|block": "Calcula velocidad a partir de tiempo y distancia.",
+    "FisicaBit.convertirTiempo|block": "Convierte tiempo entre unidades.",
+    "FisicaBit.medirTiempoBloqueo|block": "Mide cuánto tiempo un objeto bloquea una barrera.",
+    "FisicaBit.convertirTemperatura|block": "Convierte temperatura entre Celsius, Fahrenheit y Kelvin.",
+    "FisicaBit.mapearValor|block": "Mapea un valor de un rango a otro.",
+    "FisicaBit.leerADCNativo|block": "Lee el ADC directamente con resolución de 12 bits (0-4095).",
+    "FisicaBit.medirPulsoNativo|block": "Mide duración de pulso con precisión de microsegundos.",
+    "FisicaBit.leerADCPromedio|block": "Lee el ADC con sobremuestreo para reducir ruido.",
+    "FisicaBit.mostrarEnLED|block": "Muestra una etiqueta y valor en la pantalla LED.",
+
+    "FisicaBitBT.iniciarUART|block": "Inicia el servicio Bluetooth UART para enviar datos.",
+    "FisicaBitBT.configurarIndicadorConexion|block": "Muestra un ícono cuando se conecta o desconecta un dispositivo.",
+    "FisicaBitBT.enviarTexto|block": "Envía una línea de texto por Bluetooth UART."
+}

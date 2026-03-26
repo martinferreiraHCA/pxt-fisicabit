@@ -48,8 +48,8 @@
 //% weight=100
 //% color=#E64322
 //% icon="\uf0e7"
-//% block="FisicaBit Sensores"
-//% groups="['Sensores Internos', 'Sensores Externos', 'Sensor Ultrasonido', 'Barrera Óptica', 'Muestreo Serial', 'Conversiones', 'Nativo C++', 'Utilidades']"
+//% block="FisicaBit Sensors"
+//% groups="['Internal Sensors', 'External Sensors', 'Ultrasonic Sensor', 'Optical Barrier', 'Serial Sampling', 'Conversions', 'Native C++', 'Utilities']"
 namespace FisicaBit {
 
     // =========================================================================
@@ -76,9 +76,9 @@ namespace FisicaBit {
      * @param sensor El tipo de sensor interno a leer (ver enum TipoSensorInterno)
      * @returns Valor numérico del sensor (la unidad depende del sensor)
      */
-    //% block="leer sensor interno %sensor"
+    //% block="read internal sensor %sensor"
     //% blockId=fisicabit_leer_sensor_interno
-    //% group="Sensores Internos"
+    //% group="Internal Sensors"
     //% weight=100
     //% sensor.defl=TipoSensorInterno.Temperatura
     export function leerSensorInterno(sensor: TipoSensorInterno): number {
@@ -191,9 +191,9 @@ namespace FisicaBit {
      * @param pin Pin analógico donde está conectado el sensor
      * @returns Valor entre 0 y 1023 (resolución ADC de 10 bits)
      */
-    //% block="leer sensor analógico en %pin"
+    //% block="read analog sensor on %pin"
     //% blockId=fisicabit_leer_analogico
-    //% group="Sensores Externos"
+    //% group="External Sensors"
     //% weight=90
     //% pin.defl=PinAnalogico.P0
     export function leerSensorAnalogico(pin: PinAnalogico): number {
@@ -229,9 +229,9 @@ namespace FisicaBit {
      * @param pin Número del pin digital (ej: 8 para P8, 12 para P12)
      * @returns 0 (LOW) o 1 (HIGH)
      */
-    //% block="leer sensor digital en P%pin"
+    //% block="read digital sensor on P%pin"
     //% blockId=fisicabit_leer_digital
-    //% group="Sensores Externos"
+    //% group="External Sensors"
     //% weight=85
     //% pin.defl=8
     export function leerSensorDigital(pin: number): number {
@@ -273,9 +273,9 @@ namespace FisicaBit {
      * @param unidad Unidad de medida deseada
      * @returns Distancia medida en la unidad seleccionada
      */
-    //% block="distancia ultrasónica TRIG %pinTrig ECHO %pinEcho en %unidad"
+    //% block="ultrasonic distance TRIG %pinTrig ECHO %pinEcho in %unidad"
     //% blockId=fisicabit_ultrasonido
-    //% group="Sensor Ultrasonido"
+    //% group="Ultrasonic Sensor"
     //% weight=80
     //% pinTrig.defl=DigitalPin.P1
     //% pinEcho.defl=DigitalPin.P2
@@ -455,9 +455,9 @@ namespace FisicaBit {
      * @param barrera Cuál barrera configurar ("A" = primera, "B" = segunda)
      * @param umbral Valor de 0 a 1023 que separa "haz libre" de "haz cortado"
      */
-    //% block="fijar umbral barrera %barrera a %umbral"
+    //% block="set barrier %barrera threshold to %umbral"
     //% blockId=fisicabit_barrera_umbral
-    //% group="Barrera Óptica"
+    //% group="Optical Barrier"
     //% weight=99
     //% umbral.min=0 umbral.max=1023 umbral.defl=512
     //% barrera.defl="A"
@@ -487,9 +487,9 @@ namespace FisicaBit {
      * @param modo Digital (FC-33) o Analógico (IR DIY)
      * @returns Valor crudo: Digital → 0 o 1, Analógico → 0 a 1023
      */
-    //% block="leer barrera crudo pin %pin modo %modo"
+    //% block="read barrier raw pin %pin mode %modo"
     //% blockId=fisicabit_barrera_crudo
-    //% group="Barrera Óptica"
+    //% group="Optical Barrier"
     //% weight=98
     //% pin.defl=PinAnalogico.P1
     //% modo.defl=ModoBarrera.Analogico
@@ -517,9 +517,9 @@ namespace FisicaBit {
      * @param modo Digital o Analógico
      * @returns true si hay un objeto cortando el haz
      */
-    //% block="barrera activada en %pin modo %modo"
+    //% block="barrier triggered on %pin mode %modo"
     //% blockId=fisicabit_barrera_activada
-    //% group="Barrera Óptica"
+    //% group="Optical Barrier"
     //% weight=97
     //% pin.defl=PinAnalogico.P1
     //% modo.defl=ModoBarrera.Digital
@@ -569,9 +569,9 @@ namespace FisicaBit {
      * @param timeoutMs Timeout máximo en milisegundos (0 = sin timeout)
      * @returns Tiempo entre barreras en milisegundos, -1 si timeout
      */
-    //% block="medir tiempo barrera A %pinA → B %pinB modo %modo timeout %timeoutMs ms"
+    //% block="measure time barrier A %pinA → B %pinB mode %modo timeout %timeoutMs ms"
     //% blockId=fisicabit_barrera_tiempo
-    //% group="Barrera Óptica"
+    //% group="Optical Barrier"
     //% weight=95
     //% pinA.defl=PinAnalogico.P1
     //% pinB.defl=PinAnalogico.P2
@@ -649,9 +649,9 @@ namespace FisicaBit {
      * @param timeoutUs Timeout en microsegundos
      * @returns Tiempo en microsegundos, 0 si timeout
      */
-    //% block="[C++] tiempo barrera A P%pinA → B P%pinB modo %modo umbralA %umbralA umbralB %umbralB timeout %timeoutUs μs"
+    //% block="[C++] barrier time A P%pinA → B P%pinB mode %modo threshA %umbralA threshB %umbralB timeout %timeoutUs μs"
     //% blockId=fisicabit_barrera_nativo
-    //% group="Barrera Óptica"
+    //% group="Optical Barrier"
     //% weight=93
     //% advanced=true
     //% pinA.defl=1 pinB.defl=2
@@ -693,9 +693,9 @@ namespace FisicaBit {
      * @param distanciaMm Distancia entre barreras en milímetros
      * @returns Velocidad en m/s (multiplicada por 100 para 2 decimales)
      */
-    //% block="velocidad con tiempo %tiempoUs μs distancia %distanciaMm mm (×100 m/s)"
+    //% block="velocity with time %tiempoUs μs distance %distanciaMm mm (×100 m/s)"
     //% blockId=fisicabit_barrera_velocidad
-    //% group="Barrera Óptica"
+    //% group="Optical Barrier"
     //% weight=91
     //% tiempoUs.defl=50000 distanciaMm.defl=100
     export function calcularVelocidad(tiempoUs: number, distanciaMm: number): number {
@@ -715,9 +715,9 @@ namespace FisicaBit {
      * @param unidad Unidad de salida deseada
      * @returns Tiempo en la unidad seleccionada (×100 para 2 decimales en ms y s)
      */
-    //% block="convertir %tiempoUs μs a %unidad"
+    //% block="convert %tiempoUs μs to %unidad"
     //% blockId=fisicabit_barrera_convertir_tiempo
-    //% group="Barrera Óptica"
+    //% group="Optical Barrier"
     //% weight=89
     //% unidad.defl=UnidadTiempo.Milisegundos
     export function convertirTiempo(tiempoUs: number, unidad: UnidadTiempo): number {
@@ -748,9 +748,9 @@ namespace FisicaBit {
      * @param timeoutMs Timeout en milisegundos
      * @returns Tiempo de bloqueo en milisegundos, -1 si timeout
      */
-    //% block="tiempo de bloqueo en %pin modo %modo timeout %timeoutMs ms"
+    //% block="blocking time on %pin mode %modo timeout %timeoutMs ms"
     //% blockId=fisicabit_barrera_bloqueo
-    //% group="Barrera Óptica"
+    //% group="Optical Barrier"
     //% weight=87
     //% pin.defl=PinAnalogico.P1
     //% modo.defl=ModoBarrera.Digital
@@ -802,9 +802,9 @@ namespace FisicaBit {
      * @param a Unidad de destino
      * @returns Temperatura convertida
      */
-    //% block="convertir %valor de %de a %a"
+    //% block="convert %valor from %de to %a"
     //% blockId=fisicabit_convertir_temp
-    //% group="Conversiones"
+    //% group="Conversions"
     //% weight=70
     export function convertirTemperatura(
         valor: number,
@@ -851,9 +851,9 @@ namespace FisicaBit {
      * @param salidaMax Máximo del rango de salida
      * @returns Valor mapeado al nuevo rango
      */
-    //% block="mapear %valor de (%entradaMin — %entradaMax) a (%salidaMin — %salidaMax)"
+    //% block="map %valor from (%entradaMin — %entradaMax) to (%salidaMin — %salidaMax)"
     //% blockId=fisicabit_mapear
-    //% group="Conversiones"
+    //% group="Conversions"
     //% weight=65
     export function mapearValor(
         valor: number,
@@ -893,9 +893,9 @@ namespace FisicaBit {
      * @param canal Canal ADC (0-7, corresponde a los pines analógicos)
      * @returns Valor crudo del ADC de 12 bits (0-4095)
      */
-    //% block="[C++] leer ADC nativo canal %canal"
+    //% block="[C++] read native ADC channel %canal"
     //% blockId=fisicabit_adc_nativo
-    //% group="Nativo C++"
+    //% group="Native C++"
     //% weight=50
     //% advanced=true
     //% shim=fisicabit_native::leerADCNativo
@@ -914,9 +914,9 @@ namespace FisicaBit {
      * @param timeoutUs Timeout en microsegundos
      * @returns Duración del pulso en microsegundos
      */
-    //% block="[C++] medir pulso pin P%pin nivel %nivelAlto timeout %timeoutUs μs"
+    //% block="[C++] measure pulse pin P%pin level %nivelAlto timeout %timeoutUs μs"
     //% blockId=fisicabit_pulso_nativo
-    //% group="Nativo C++"
+    //% group="Native C++"
     //% weight=45
     //% advanced=true
     //% shim=fisicabit_native::medirPulsoNativo
@@ -933,9 +933,9 @@ namespace FisicaBit {
      * @param muestras Número de muestras a promediar (1-64)
      * @returns Promedio de las lecturas (0-4095)
      */
-    //% block="[C++] leer ADC promedio canal %canal muestras %muestras"
+    //% block="[C++] read ADC average channel %canal samples %muestras"
     //% blockId=fisicabit_adc_promedio
-    //% group="Nativo C++"
+    //% group="Native C++"
     //% weight=40
     //% advanced=true
     //% shim=fisicabit_native::leerADCPromedio
@@ -968,9 +968,9 @@ namespace FisicaBit {
      * Siempre comienza en 0. Arrastrá este bloque a un slot de muestreo
      * para incluir el tiempo en los datos enviados.
      */
-    //% block="tiempo serial (ms)"
+    //% block="serial time (ms)"
     //% blockId=fisicabit_serial_tiempo
-    //% group="Muestreo Serial"
+    //% group="Serial Sampling"
     //% weight=75
     export function tiempoSerial(): number {
         _asegurarSerial()
@@ -983,9 +983,9 @@ namespace FisicaBit {
      * @param valor Valor a enviar (cualquier variable, sensor o "tiempo serial (ms)")
      * @param ms Tiempo de muestreo en milisegundos
      */
-    //% block="Serial muestrear %valor|cada %ms ms"
+    //% block="serial sample %valor|every %ms ms"
     //% blockId=fisicabit_serial_muestrear_1
-    //% group="Muestreo Serial"
+    //% group="Serial Sampling"
     //% weight=70
     //% ms.min=10 ms.max=60000 ms.defl=100
     //% inlineInputMode=inline
@@ -1003,9 +1003,9 @@ namespace FisicaBit {
      * @param valor2 Segundo valor
      * @param ms Tiempo de muestreo en milisegundos
      */
-    //% block="Serial muestrear %valor1 y %valor2|cada %ms ms"
+    //% block="serial sample %valor1 and %valor2|every %ms ms"
     //% blockId=fisicabit_serial_muestrear_2
-    //% group="Muestreo Serial"
+    //% group="Serial Sampling"
     //% weight=65
     //% ms.min=10 ms.max=60000 ms.defl=100
     //% inlineInputMode=inline
@@ -1024,9 +1024,9 @@ namespace FisicaBit {
      * @param valor3 Tercer valor
      * @param ms Tiempo de muestreo en milisegundos
      */
-    //% block="Serial muestrear %valor1 , %valor2 y %valor3|cada %ms ms"
+    //% block="serial sample %valor1 , %valor2 and %valor3|every %ms ms"
     //% blockId=fisicabit_serial_muestrear_3
-    //% group="Muestreo Serial"
+    //% group="Serial Sampling"
     //% weight=60
     //% ms.min=10 ms.max=60000 ms.defl=100
     //% inlineInputMode=inline
@@ -1047,9 +1047,9 @@ namespace FisicaBit {
      * @param etiqueta Texto descriptivo (ej: "Temp")
      * @param valor Valor numérico a mostrar
      */
-    //% block="mostrar en LED %etiqueta : %valor"
+    //% block="show on LED %etiqueta : %valor"
     //% blockId=fisicabit_mostrar_led
-    //% group="Utilidades"
+    //% group="Utilities"
     //% weight=30
     export function mostrarEnLED(etiqueta: string, valor: number): void {
         basic.showString(etiqueta + ":" + Math.round(valor))
