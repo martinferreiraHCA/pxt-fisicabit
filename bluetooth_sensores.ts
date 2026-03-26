@@ -44,7 +44,7 @@
 //% color=#0082FB
 //% icon="\uf294"
 //% block="FisicaBit BT"
-//% groups="['Muestreo', 'Conexión', 'Envío Manual', 'Servicios BLE']"
+//% groups="['Sampling', 'Connection', 'Manual Send', 'BLE Services']"
 namespace FisicaBitBT {
 
     // =========================================================================
@@ -73,9 +73,9 @@ namespace FisicaBitBT {
      * Siempre comienza en 0. Arrastrá este bloque a un slot de muestreo
      * para incluir el tiempo en los datos enviados.
      */
-    //% block="tiempo (ms)"
+    //% block="time (ms)"
     //% blockId=fisicabit_bt_tiempo
-    //% group="Muestreo"
+    //% group="Sampling"
     //% weight=105
     export function tiempo(): number {
         _asegurarUART()
@@ -89,9 +89,9 @@ namespace FisicaBitBT {
      * @param valor Valor a enviar (cualquier variable, sensor o "tiempo (ms)")
      * @param ms Tiempo de muestreo en milisegundos
      */
-    //% block="BT muestrear %valor|cada %ms ms"
+    //% block="BT sample %valor|every %ms ms"
     //% blockId=fisicabit_bt_muestrear_1
-    //% group="Muestreo"
+    //% group="Sampling"
     //% weight=100
     //% ms.min=10 ms.max=60000 ms.defl=100
     //% inlineInputMode=inline
@@ -109,9 +109,9 @@ namespace FisicaBitBT {
      * @param valor2 Segundo valor
      * @param ms Tiempo de muestreo en milisegundos
      */
-    //% block="BT muestrear %valor1 y %valor2|cada %ms ms"
+    //% block="BT sample %valor1 and %valor2|every %ms ms"
     //% blockId=fisicabit_bt_muestrear_2
-    //% group="Muestreo"
+    //% group="Sampling"
     //% weight=95
     //% ms.min=10 ms.max=60000 ms.defl=100
     //% inlineInputMode=inline
@@ -130,9 +130,9 @@ namespace FisicaBitBT {
      * @param valor3 Tercer valor
      * @param ms Tiempo de muestreo en milisegundos
      */
-    //% block="BT muestrear %valor1 , %valor2 y %valor3|cada %ms ms"
+    //% block="BT sample %valor1 , %valor2 and %valor3|every %ms ms"
     //% blockId=fisicabit_bt_muestrear_3
-    //% group="Muestreo"
+    //% group="Sampling"
     //% weight=90
     //% ms.min=10 ms.max=60000 ms.defl=100
     //% inlineInputMode=inline
@@ -150,9 +150,9 @@ namespace FisicaBitBT {
      * Inicia el servicio Bluetooth UART manualmente.
      * No es necesario si usás los bloques de muestreo (se inicia solo).
      */
-    //% block="iniciar Bluetooth UART"
+    //% block="start Bluetooth UART"
     //% blockId=fisicabit_bt_iniciar
-    //% group="Conexión"
+    //% group="Connection"
     //% weight=80
     export function iniciarUART(): void {
         _asegurarUART()
@@ -164,9 +164,9 @@ namespace FisicaBitBT {
     /**
      * Muestra un ícono cuando un dispositivo se conecta o desconecta.
      */
-    //% block="configurar indicador de conexión BT"
+    //% block="setup BT connection indicator"
     //% blockId=fisicabit_bt_indicador
-    //% group="Conexión"
+    //% group="Connection"
     //% weight=75
     export function configurarIndicadorConexion(): void {
         bluetooth.onBluetoothConnected(function () {
@@ -185,9 +185,9 @@ namespace FisicaBitBT {
      * Envía una línea de texto libre por Bluetooth.
      * @param texto Texto a enviar
      */
-    //% block="BT enviar texto %texto"
+    //% block="BT send text %texto"
     //% blockId=fisicabit_bt_enviar_texto
-    //% group="Envío Manual"
+    //% group="Manual Send"
     //% weight=60
     export function enviarTexto(texto: string): void {
         _asegurarUART()
@@ -201,9 +201,9 @@ namespace FisicaBitBT {
     /**
      * Inicia el servicio BLE de acelerómetro.
      */
-    //% block="iniciar servicio BLE acelerómetro"
+    //% block="start BLE accelerometer service"
     //% blockId=fisicabit_bt_srv_accel
-    //% group="Servicios BLE"
+    //% group="BLE Services"
     //% weight=50
     //% advanced=true
     export function iniciarServicioAcelerometro(): void {
@@ -213,9 +213,9 @@ namespace FisicaBitBT {
     /**
      * Inicia el servicio BLE de temperatura.
      */
-    //% block="iniciar servicio BLE temperatura"
+    //% block="start BLE temperature service"
     //% blockId=fisicabit_bt_srv_temp
-    //% group="Servicios BLE"
+    //% group="BLE Services"
     //% weight=48
     //% advanced=true
     export function iniciarServicioTemperatura(): void {
@@ -225,9 +225,9 @@ namespace FisicaBitBT {
     /**
      * Inicia el servicio BLE de magnetómetro (brújula).
      */
-    //% block="iniciar servicio BLE magnetómetro"
+    //% block="start BLE magnetometer service"
     //% blockId=fisicabit_bt_srv_mag
-    //% group="Servicios BLE"
+    //% group="BLE Services"
     //% weight=46
     //% advanced=true
     export function iniciarServicioMagnetometro(): void {
@@ -237,9 +237,9 @@ namespace FisicaBitBT {
     /**
      * Inicia el servicio BLE de botones.
      */
-    //% block="iniciar servicio BLE botones"
+    //% block="start BLE button service"
     //% blockId=fisicabit_bt_srv_btn
-    //% group="Servicios BLE"
+    //% group="BLE Services"
     //% weight=44
     //% advanced=true
     export function iniciarServicioBotones(): void {
@@ -249,9 +249,9 @@ namespace FisicaBitBT {
     /**
      * Inicia el servicio BLE de pantalla LED.
      */
-    //% block="iniciar servicio BLE pantalla LED"
+    //% block="start BLE LED service"
     //% blockId=fisicabit_bt_srv_led
-    //% group="Servicios BLE"
+    //% group="BLE Services"
     //% weight=42
     //% advanced=true
     export function iniciarServicioLED(): void {
@@ -261,9 +261,9 @@ namespace FisicaBitBT {
     /**
      * Inicia el servicio BLE de pines I/O.
      */
-    //% block="iniciar servicio BLE pines I/O"
+    //% block="start BLE I/O pin service"
     //% blockId=fisicabit_bt_srv_io
-    //% group="Servicios BLE"
+    //% group="BLE Services"
     //% weight=40
     //% advanced=true
     export function iniciarServicioIO(): void {
