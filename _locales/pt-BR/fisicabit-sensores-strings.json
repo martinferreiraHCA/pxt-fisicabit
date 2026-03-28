@@ -5,7 +5,9 @@
     "fisicabit_leer_sensor_interno|block": "ler sensor interno %sensor",
     "fisicabit_leer_analogico|block": "ler sensor analógico em %pin",
     "fisicabit_leer_digital|block": "ler sensor digital em P%pin",
+    "fisicabit_us_configurar|block": "definir filtro ultrassônico para %filtro",
     "fisicabit_ultrasonido|block": "distância ultrassônica TRIG %pinTrig ECHO %pinEcho em %unidad",
+    "fisicabit_ultrasonido_crudo|block": "distância ultrassônica bruta TRIG %pinTrig ECHO %pinEcho em %unidad",
     "fisicabit_barrera_umbral|block": "definir limiar barreira %barrera para %umbral",
     "fisicabit_barrera_crudo|block": "ler barreira bruto pino %pin modo %modo",
     "fisicabit_barrera_activada|block": "barreira ativada em %pin modo %modo",
@@ -70,6 +72,11 @@
     "UnidadDistancia.Centimetros|block": "cm",
     "UnidadDistancia.Pulgadas|block": "polegadas",
     "UnidadDistancia.Milimetros|block": "mm",
+
+    "FiltroUltrasonido.Ninguno|block": "nenhum (1 leitura)",
+    "FiltroUltrasonido.Suave|block": "leve (mediana de 3)",
+    "FiltroUltrasonido.Medio|block": "médio (mediana de 5)",
+    "FiltroUltrasonido.Fuerte|block": "forte (mediana de 7)",
 
     "ModoBarrera.Digital|block": "Digital",
     "ModoBarrera.Analogico|block": "Analógico",

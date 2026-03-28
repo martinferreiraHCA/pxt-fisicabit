@@ -5,7 +5,9 @@
     "fisicabit_leer_sensor_interno|block": "leer sensor interno %sensor",
     "fisicabit_leer_analogico|block": "leer sensor analógico en %pin",
     "fisicabit_leer_digital|block": "leer sensor digital en P%pin",
+    "fisicabit_us_configurar|block": "fijar filtro ultrasónico a %filtro",
     "fisicabit_ultrasonido|block": "distancia ultrasónica TRIG %pinTrig ECHO %pinEcho en %unidad",
+    "fisicabit_ultrasonido_crudo|block": "distancia ultrasónica cruda TRIG %pinTrig ECHO %pinEcho en %unidad",
     "fisicabit_barrera_umbral|block": "fijar umbral barrera %barrera a %umbral",
     "fisicabit_barrera_crudo|block": "leer barrera crudo pin %pin modo %modo",
     "fisicabit_barrera_activada|block": "barrera activada en %pin modo %modo",
@@ -58,6 +60,11 @@
     "TipoSensorExterno.DS18B20|block": "DS18B20 Temperatura",
 
     "UnidadDistancia.Pulgadas|block": "pulgadas",
+
+    "FiltroUltrasonido.Ninguno|block": "ninguno (1 lectura)",
+    "FiltroUltrasonido.Suave|block": "suave (mediana de 3)",
+    "FiltroUltrasonido.Medio|block": "medio (mediana de 5)",
+    "FiltroUltrasonido.Fuerte|block": "fuerte (mediana de 7)",
 
     "ModoBarrera.Digital|block": "Digital",
     "ModoBarrera.Analogico|block": "Analógico",

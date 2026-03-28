@@ -56,6 +56,17 @@ declare const enum UnidadDistancia {
     Milimetros = 2
 }
 
+declare const enum FiltroUltrasonido {
+    //% block="none (1 reading)"
+    Ninguno = 1,
+    //% block="light (median of 3)"
+    Suave = 3,
+    //% block="medium (median of 5)"
+    Medio = 5,
+    //% block="strong (median of 7)"
+    Fuerte = 7
+}
+
 declare const enum PinAnalogico {
     //% block="P0"
     P0 = 0,
