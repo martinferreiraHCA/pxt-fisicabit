@@ -250,6 +250,20 @@ namespace FisicaBit {
     //   4. El pin ECHO se pone HIGH durante el tiempo de ida y vuelta
     //   5. distancia = (tiempo_μs × velocidad_sonido) / 2
     //
+    // ALGORITMO DE FILTRADO (para experimentos de física):
+    //   - Filtro de mediana: toma N lecturas, ordena y devuelve la central
+    //   - La mediana es IDEAL para eliminar picos espurios (outliers)
+    //     porque un valor extremo aislado no afecta al resultado
+    //   - Validación de rango: descarta lecturas fuera de 2–400 cm
+    //   - Cálculo preciso en mm: duracion × 343 / 2000 (fórmula física exacta)
+    //   - Fallback al último valor válido si todas las lecturas fallan
+    //
+    // RENDIMIENTO vs FILTRADO:
+    //   Ninguno (1 lectura):  ~25ms → hasta 40 Hz (rápido pero ruidoso)
+    //   Suave (mediana de 3): ~80ms → hasta 12 Hz (bueno para MRU/MRUV)
+    //   Medio (mediana de 5): ~135ms → hasta 7 Hz (muy suave)
+    //   Fuerte (mediana de 7): ~190ms → hasta 5 Hz (máxima suavidad)
+    //
     // CABLEADO:
     //   ┌───────────────────────────────┐
     //   │  HC-SR04                      │
@@ -265,8 +279,102 @@ namespace FisicaBit {
     //       en el pin ECHO para no dañar el micro:bit (3.3V max)
     // =========================================================================
 
+    // ── Estado interno del filtro ultrasónico ──
+    let _usFiltroMuestras = 3   // Mediana de 3 por defecto
+    let _usUltimoValido = 0     // Último valor válido (fallback)
+    let _usMinMm = 20           // Mínimo válido: 20 mm (2 cm)
+    let _usMaxMm = 4000         // Máximo válido: 4000 mm (400 cm)
+
+    /**
+     * Realiza UNA medición cruda del HC-SR04 y devuelve la distancia en mm.
+     * Retorna -1 si la lectura es inválida (timeout, fuera de rango).
+     */
+    function _usLecturaCrudaMm(pinTrig: DigitalPin, pinEcho: DigitalPin): number {
+        pins.digitalWritePin(pinTrig, 0)
+        control.waitMicros(2)
+        pins.digitalWritePin(pinTrig, 1)
+        control.waitMicros(10)
+        pins.digitalWritePin(pinTrig, 0)
+
+        let duracion = pins.pulseIn(pinEcho, PulseValue.High, 25000)
+
+        if (duracion <= 0) return -1
+
+        // Fórmula física precisa:
+        // distancia_mm = duracion_μs × velocidad_sonido / 2
+        //              = duracion × 0.343 / 2 = duracion × 343 / 2000
+        let distMm = Math.idiv(duracion * 343, 2000)
+
+        // Validar rango (el HC-SR04 es fiable entre 2 cm y 400 cm)
+        if (distMm < _usMinMm || distMm > _usMaxMm) return -1
+
+        return distMm
+    }
+
+    /**
+     * Insertion sort para arrays pequeños (eficiente para N ≤ 7).
+     */
+    function _usOrdenar(arr: number[], len: number): void {
+        for (let i = 1; i < len; i++) {
+            let clave = arr[i]
+            let j = i - 1
+            while (j >= 0 && arr[j] > clave) {
+                arr[j + 1] = arr[j]
+                j--
+            }
+            arr[j + 1] = clave
+        }
+    }
+
+    /**
+     * Convierte una distancia en mm a la unidad solicitada.
+     */
+    function _usConvertir(mm: number, unidad: UnidadDistancia): number {
+        switch (unidad) {
+            case UnidadDistancia.Milimetros:
+                return mm
+            case UnidadDistancia.Centimetros:
+                return Math.idiv(mm, 10)
+            case UnidadDistancia.Pulgadas:
+                return Math.idiv(mm * 10, 254)
+            default:
+                return Math.idiv(mm, 10)
+        }
+    }
+
+    /**
+     * Configura el filtro del sensor ultrasónico.
+     * Usa este bloque ANTES de medir para ajustar la calidad del filtrado.
+     *
+     * Para MRU/MRUV: filtro "suave" (mediana de 3) da buen equilibrio
+     * entre velocidad de muestreo y eliminación de picos espurios.
+     *
+     * Para caída libre: filtro "ninguno" si necesitas máxima frecuencia,
+     * o "suave" si la caída es lo suficientemente lenta.
+     *
+     * @param filtro Intensidad del filtro (más muestras = más suave pero más lento)
+     */
+    //% block="set ultrasonic filter to %filtro"
+    //% blockId=fisicabit_us_configurar
+    //% group="Ultrasonic Sensor"
+    //% weight=82
+    //% filtro.defl=FiltroUltrasonido.Suave
+    export function configurarFiltroUltrasonido(filtro: FiltroUltrasonido): void {
+        _usFiltroMuestras = filtro
+    }
+
     /**
      * Mide la distancia con un sensor ultrasónico HC-SR04.
+     * Incluye filtro de mediana para eliminar picos espurios.
+     *
+     * Algoritmo:
+     *   1. Toma N lecturas (configurable con "configurar filtro ultrasónico")
+     *   2. Descarta lecturas inválidas (0, fuera de rango)
+     *   3. Ordena las lecturas válidas y toma la mediana (valor central)
+     *   4. Si todas fallan, devuelve la última lectura válida
+     *
+     * Ideal para experimentos de MRU, MRUV y caída libre donde
+     * los picos espurios arruinan el análisis de datos.
      *
      * @param pinTrig Pin conectado a TRIG (disparo)
      * @param pinEcho Pin conectado a ECHO (respuesta)
@@ -285,37 +393,76 @@ namespace FisicaBit {
         pinEcho: DigitalPin,
         unidad: UnidadDistancia
     ): number {
-        // ── Paso 1: Asegurar que TRIG está LOW ──
-        pins.digitalWritePin(pinTrig, 0)
-        control.waitMicros(2)
+        let n = _usFiltroMuestras
 
-        // ── Paso 2: Enviar pulso de 10μs ──
-        pins.digitalWritePin(pinTrig, 1)
-        control.waitMicros(10)
-        pins.digitalWritePin(pinTrig, 0)
-
-        // ── Paso 3: Medir duración del pulso ECHO ──
-        // pulseDuration devuelve el tiempo en microsegundos
-        // maxCmDistance=300 → timeout para evitar bloqueos
-        let duracion = pins.pulseIn(pinEcho, PulseValue.High, 25000)
-
-        // ── Paso 4: Calcular distancia ──
-        // Velocidad del sonido: 343 m/s = 0.0343 cm/μs
-        // Dividimos por 2 porque el sonido va y vuelve
-        // distancia_cm = duracion_μs × 0.0343 / 2 = duracion / 58.2
-        let distanciaCm = Math.idiv(duracion, 58)
-
-        // ── Paso 5: Convertir a la unidad solicitada ──
-        switch (unidad) {
-            case UnidadDistancia.Centimetros:
-                return distanciaCm
-            case UnidadDistancia.Milimetros:
-                return distanciaCm * 10
-            case UnidadDistancia.Pulgadas:
-                return Math.idiv(distanciaCm * 100, 254)
-            default:
-                return distanciaCm
+        // ── Caso sin filtro: lectura única rápida ──
+        if (n <= 1) {
+            let mm = _usLecturaCrudaMm(pinTrig, pinEcho)
+            if (mm > 0) {
+                _usUltimoValido = mm
+                return _usConvertir(mm, unidad)
+            }
+            return _usConvertir(_usUltimoValido, unidad)
         }
+
+        // ── Caso con filtro de mediana ──
+        let lecturas: number[] = []
+        let validas = 0
+
+        for (let i = 0; i < n; i++) {
+            let mm = _usLecturaCrudaMm(pinTrig, pinEcho)
+            if (mm > 0) {
+                lecturas.push(mm)
+                validas++
+            }
+            // Espera entre lecturas para que los ecos se disipen
+            // 2.5 ms ≈ eco de ida y vuelta a ~43 cm
+            if (i < n - 1) {
+                control.waitMicros(2500)
+            }
+        }
+
+        // Si ninguna lectura fue válida, devolver último valor conocido
+        if (validas === 0) {
+            return _usConvertir(_usUltimoValido, unidad)
+        }
+
+        // Ordenar y tomar la mediana (valor central del array ordenado)
+        _usOrdenar(lecturas, validas)
+        let medianaMm = lecturas[Math.idiv(validas, 2)]
+
+        _usUltimoValido = medianaMm
+        return _usConvertir(medianaMm, unidad)
+    }
+
+    /**
+     * Mide la distancia con el HC-SR04 sin ningún filtro.
+     * Devuelve la lectura cruda de una sola medición.
+     *
+     * Usar cuando se necesita la máxima velocidad de muestreo (~40 Hz)
+     * y se prefiere filtrar los datos después (por ejemplo en una
+     * planilla de cálculo o en la app FisicaBit).
+     *
+     * @param pinTrig Pin conectado a TRIG (disparo)
+     * @param pinEcho Pin conectado a ECHO (respuesta)
+     * @param unidad Unidad de medida deseada
+     * @returns Distancia cruda en la unidad seleccionada, 0 si falla
+     */
+    //% block="ultrasonic raw distance TRIG %pinTrig ECHO %pinEcho in %unidad"
+    //% blockId=fisicabit_ultrasonido_crudo
+    //% group="Ultrasonic Sensor"
+    //% weight=78
+    //% pinTrig.defl=DigitalPin.P1
+    //% pinEcho.defl=DigitalPin.P2
+    //% unidad.defl=UnidadDistancia.Milimetros
+    export function medirDistanciaUltrasonidoCrudo(
+        pinTrig: DigitalPin,
+        pinEcho: DigitalPin,
+        unidad: UnidadDistancia
+    ): number {
+        let mm = _usLecturaCrudaMm(pinTrig, pinEcho)
+        if (mm <= 0) return 0
+        return _usConvertir(mm, unidad)
     }
 
 
@@ -653,7 +800,6 @@ namespace FisicaBit {
     //% blockId=fisicabit_barrera_nativo
     //% group="Optical Barrier"
     //% weight=93
-    //% advanced=true
     //% pinA.defl=1 pinB.defl=2
     //% modo.defl=ModoBarrera.Digital
     //% umbralA.defl=512 umbralB.defl=512
@@ -897,7 +1043,6 @@ namespace FisicaBit {
     //% blockId=fisicabit_adc_nativo
     //% group="Native C++"
     //% weight=50
-    //% advanced=true
     //% shim=fisicabit_native::leerADCNativo
     export function leerADCNativo(canal: number): number {
         // Este cuerpo solo se ejecuta en el simulador.
@@ -918,7 +1063,6 @@ namespace FisicaBit {
     //% blockId=fisicabit_pulso_nativo
     //% group="Native C++"
     //% weight=45
-    //% advanced=true
     //% shim=fisicabit_native::medirPulsoNativo
     export function medirPulsoNativo(pin: number, nivelAlto: boolean, timeoutUs: number): number {
         // Fallback para simulador
@@ -937,7 +1081,6 @@ namespace FisicaBit {
     //% blockId=fisicabit_adc_promedio
     //% group="Native C++"
     //% weight=40
-    //% advanced=true
     //% shim=fisicabit_native::leerADCPromedio
     export function leerADCPromedio(canal: number, muestras: number): number {
         // Fallback para simulador: promediar en TS
