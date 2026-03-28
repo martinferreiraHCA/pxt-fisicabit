@@ -6,6 +6,8 @@
     "fisicabit_leer_analogico|block": "leer sensor analógico en %pin",
     "fisicabit_leer_digital|block": "leer sensor digital en P%pin",
     "fisicabit_us_configurar|block": "fijar filtro ultrasónico a %filtro",
+    "fisicabit_us_rango|block": "fijar rango ultrasónico de %minMm a %maxMm mm",
+    "fisicabit_us_max_cambio|block": "fijar salto máximo ultrasónico %maxCambioMm mm",
     "fisicabit_ultrasonido|block": "distancia ultrasónica TRIG %pinTrig ECHO %pinEcho en %unidad",
     "fisicabit_ultrasonido_crudo|block": "distancia ultrasónica cruda TRIG %pinTrig ECHO %pinEcho en %unidad",
     "fisicabit_barrera_umbral|block": "fijar umbral barrera %barrera a %umbral",
