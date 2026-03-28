@@ -284,10 +284,12 @@ namespace FisicaBit {
     let _usUltimoValido = 0     // Último valor válido (fallback)
     let _usMinMm = 20           // Mínimo válido: 20 mm (2 cm)
     let _usMaxMm = 4000         // Máximo válido: 4000 mm (400 cm)
+    let _usMaxCambioMm = 0      // Máx. cambio entre lecturas (0 = desactivado)
 
     /**
      * Realiza UNA medición cruda del HC-SR04 y devuelve la distancia en mm.
-     * Retorna -1 si la lectura es inválida (timeout, fuera de rango).
+     * Retorna -1 si la lectura es inválida (timeout, fuera de rango,
+     * o cambio excesivo respecto a la última lectura válida).
      */
     function _usLecturaCrudaMm(pinTrig: DigitalPin, pinEcho: DigitalPin): number {
         pins.digitalWritePin(pinTrig, 0)
@@ -307,6 +309,14 @@ namespace FisicaBit {
 
         // Validar rango (el HC-SR04 es fiable entre 2 cm y 400 cm)
         if (distMm < _usMinMm || distMm > _usMaxMm) return -1
+
+        // Validar tasa de cambio (si está activada y hay lectura previa)
+        // Rechaza lecturas que salten más de _usMaxCambioMm respecto
+        // a la última lectura válida — físicamente imposible en MRU/MRUV
+        if (_usMaxCambioMm > 0 && _usUltimoValido > 0) {
+            let cambio = Math.abs(distMm - _usUltimoValido)
+            if (cambio > _usMaxCambioMm) return -1
+        }
 
         return distMm
     }
@@ -361,6 +371,55 @@ namespace FisicaBit {
     //% filtro.defl=FiltroUltrasonido.Suave
     export function configurarFiltroUltrasonido(filtro: FiltroUltrasonido): void {
         _usFiltroMuestras = filtro
+    }
+
+    /**
+     * Configura el rango válido de distancia para el sensor ultrasónico.
+     * Las lecturas fuera de este rango se descartan como inválidas.
+     *
+     * Ajustar el rango al experimento específico mejora MUCHO la calidad
+     * de los datos. Por ejemplo, si tu péndulo oscila entre 5 cm y 40 cm,
+     * fijar el rango a 30–500 mm elimina picos espurios fuera de esa zona.
+     *
+     * @param minMm Distancia mínima válida en milímetros (defecto: 20 mm)
+     * @param maxMm Distancia máxima válida en milímetros (defecto: 4000 mm)
+     */
+    //% block="set ultrasonic range from %minMm to %maxMm mm"
+    //% blockId=fisicabit_us_rango
+    //% group="Ultrasonic Sensor"
+    //% weight=81
+    //% minMm.defl=20 minMm.min=10
+    //% maxMm.defl=4000 maxMm.min=20 maxMm.max=4000
+    //% inlineInputMode=inline
+    export function configurarRangoUltrasonido(minMm: number, maxMm: number): void {
+        _usMinMm = Math.max(10, minMm)
+        _usMaxMm = Math.min(4000, maxMm)
+    }
+
+    /**
+     * Configura el máximo cambio permitido entre lecturas consecutivas (en mm).
+     * Lecturas que salten más de este valor respecto a la anterior se descartan.
+     *
+     * Esto es muy eficaz para eliminar picos espurios en experimentos de
+     * MRU, MRUV y caída libre, donde la distancia cambia gradualmente.
+     *
+     * CÓMO CALCULAR EL VALOR:
+     *   maxCambio = velocidad_máxima (mm/s) × periodo_muestreo (s)
+     *   Ejemplo: objeto a 2 m/s, muestreo cada 30 ms
+     *   maxCambio = 2000 × 0.030 = 60 mm
+     *   Usar un valor 2-3× mayor para margen: 120-180 mm
+     *
+     * Usar 0 para desactivar este filtro.
+     *
+     * @param maxCambioMm Máximo cambio permitido en mm (0 = desactivado)
+     */
+    //% block="set ultrasonic max step %maxCambioMm mm"
+    //% blockId=fisicabit_us_max_cambio
+    //% group="Ultrasonic Sensor"
+    //% weight=79
+    //% maxCambioMm.defl=0 maxCambioMm.min=0
+    export function configurarMaxCambioUltrasonido(maxCambioMm: number): void {
+        _usMaxCambioMm = maxCambioMm
     }
 
     /**
