@@ -27,6 +27,7 @@
     "fisicabit_serial|block": "enviar por serial %etiqueta = %valor",
     "fisicabit_esperar|block": "esperar %ms ms",
 
+    "fisicabit_bt_inicio_rapido|block": "iniciar FisicaBit BT",
     "fisicabit_bt_iniciar|block": "iniciar Bluetooth UART",
     "fisicabit_bt_iniciar_completo|block": "iniciar Bluetooth UART com todos os serviços",
     "fisicabit_bt_indicador|block": "configurar indicador de conexão BT",

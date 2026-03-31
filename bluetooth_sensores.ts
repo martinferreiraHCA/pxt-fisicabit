@@ -59,9 +59,47 @@ namespace FisicaBitBT {
     function _asegurarUART(): void {
         if (!_uartIniciado) {
             bluetooth.startUartService()
+            bluetooth.setTransmitPower(7)
             _tiempoInicio = input.runningTime()
             _uartIniciado = true
         }
+    }
+
+    // =========================================================================
+    // GRUPO 0: INICIO RÁPIDO — Conexión inmediata a fisicabit.com
+    // =========================================================================
+
+    /**
+     * Inicia Bluetooth UART con potencia máxima y muestra un indicador
+     * visual de conexión. Colocar en "al iniciar" para que el micro:bit
+     * sea visible inmediatamente en fisicabit.com.
+     *
+     * Qué hace:
+     *   1. Inicia el servicio UART BLE
+     *   2. Sube la potencia de transmisión al máximo (alcance ~20m)
+     *   3. Muestra ícono de corazón al conectar, X al desconectar
+     *   4. Muestra un ícono de "listo" en la pantalla LED
+     *
+     * EJEMPLO:
+     *   al iniciar:
+     *     [start FisicaBit BT]
+     *   por siempre:
+     *     [BT muestrear [tiempo (ms)] y [sensor] cada 100 ms]
+     */
+    //% block="start FisicaBit BT"
+    //% blockId=fisicabit_bt_inicio_rapido
+    //% group="Connection"
+    //% weight=110
+    export function inicioRapido(): void {
+        _asegurarUART()
+        bluetooth.onBluetoothConnected(function () {
+            basic.showIcon(IconNames.Heart)
+        })
+        bluetooth.onBluetoothDisconnected(function () {
+            basic.showIcon(IconNames.Target)
+        })
+        // Mostrar que está listo para conectar
+        basic.showIcon(IconNames.Target)
     }
 
     // =========================================================================
