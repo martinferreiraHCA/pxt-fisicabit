@@ -33,6 +33,7 @@
     "fisicabit_bt_muestrear_1|block": "BT sample %valor|every %ms ms",
     "fisicabit_bt_muestrear_2|block": "BT sample %valor1 and %valor2|every %ms ms",
     "fisicabit_bt_muestrear_3|block": "BT sample %valor1 , %valor2 and %valor3|every %ms ms",
+    "fisicabit_bt_inicio_rapido|block": "start FisicaBit BT",
     "fisicabit_bt_iniciar|block": "start Bluetooth UART",
     "fisicabit_bt_indicador|block": "setup BT connection indicator",
     "fisicabit_bt_enviar_texto|block": "BT send text %texto",
