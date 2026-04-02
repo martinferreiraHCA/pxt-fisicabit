@@ -26,12 +26,8 @@
 //    (A = -log₁₀(T/100) = log₁₀(100/T))
 // =============================================================================
 
-//% weight=80
-//% color=#7B2D8E
-//% icon="\uf0eb"
-//% block="FisicaBit Spectro"
-//% groups='["Setup", "Measurement", "Calibration", "Spectrophotometry", "Advanced"]'
-namespace FisicaBitSpectro {
+// Extiende el namespace FisicaBit con el espectrofotómetro TCS3200
+namespace FisicaBit {
 
     // ── Pines por defecto ──
     let _pinS0 = DigitalPin.P8
@@ -133,8 +129,8 @@ namespace FisicaBitSpectro {
      */
     //% blockId=fisicabit_tcs_inicializar
     //% block="initialize TCS3200 color sensor"
-    //% group="Setup" weight=100
-    export function inicializar(): void {
+    //% group="Spectrophotometer" weight=100
+    export function tcsInicializar(): void {
         _aplicarEscalado(EscaladoTCS3200.Veinte)
         _inicializado = true
     }
@@ -149,11 +145,11 @@ namespace FisicaBitSpectro {
      */
     //% blockId=fisicabit_tcs_inicializar_custom
     //% block="initialize TCS3200 S0 %s0 S1 %s1 S2 %s2 S3 %s3 OUT P %out"
-    //% group="Setup" weight=99
+    //% group="Spectrophotometer" weight=99
     //% s0.defl=DigitalPin.P8 s1.defl=DigitalPin.P12
     //% s2.defl=DigitalPin.P2 s3.defl=DigitalPin.P16
     //% out.min=0 out.max=16 out.defl=1
-    export function inicializarCustom(s0: DigitalPin, s1: DigitalPin, s2: DigitalPin, s3: DigitalPin, out: number): void {
+    export function tcsInicializarCustom(s0: DigitalPin, s1: DigitalPin, s2: DigitalPin, s3: DigitalPin, out: number): void {
         _pinS0 = s0
         _pinS1 = s1
         _pinS2 = s2
@@ -169,8 +165,8 @@ namespace FisicaBitSpectro {
      */
     //% blockId=fisicabit_tcs_escalado
     //% block="set TCS3200 frequency scaling %escalado"
-    //% group="Setup" weight=98
-    export function fijarEscalado(escalado: EscaladoTCS3200): void {
+    //% group="Spectrophotometer" weight=98
+    export function tcsFijarEscalado(escalado: EscaladoTCS3200): void {
         _aplicarEscalado(escalado)
     }
 
@@ -180,9 +176,9 @@ namespace FisicaBitSpectro {
      */
     //% blockId=fisicabit_tcs_muestras
     //% block="set TCS3200 averaging samples %muestras"
-    //% group="Setup" weight=97
+    //% group="Spectrophotometer" weight=97
     //% muestras.min=1 muestras.max=50 muestras.defl=10
-    export function fijarMuestras(muestras: number): void {
+    export function tcsFijarMuestras(muestras: number): void {
         _muestrasPromedio = Math.clamp(1, 50, muestras)
     }
 
@@ -197,8 +193,8 @@ namespace FisicaBitSpectro {
      */
     //% blockId=fisicabit_tcs_leer_canal
     //% block="TCS3200 period (μs) channel %canal"
-    //% group="Measurement" weight=90
-    export function leerCanal(canal: CanalTCS3200): number {
+    //% group="Spectrophotometer" weight=90
+    export function tcsLeerCanal(canal: CanalTCS3200): number {
         return _leerPeriodo(canal)
     }
 
@@ -208,8 +204,8 @@ namespace FisicaBitSpectro {
      */
     //% blockId=fisicabit_tcs_leer_todos
     //% block="TCS3200 read all channels"
-    //% group="Measurement" weight=89
-    export function leerTodos(): void {
+    //% group="Spectrophotometer" weight=89
+    export function tcsLeerTodos(): void {
         _ultimoRojo = _leerPeriodo(CanalTCS3200.Rojo)
         _ultimoVerde = _leerPeriodo(CanalTCS3200.Verde)
         _ultimoAzul = _leerPeriodo(CanalTCS3200.Azul)
@@ -222,8 +218,8 @@ namespace FisicaBitSpectro {
      */
     //% blockId=fisicabit_tcs_valor
     //% block="TCS3200 last value %canal (μs)"
-    //% group="Measurement" weight=88
-    export function valor(canal: CanalTCS3200): number {
+    //% group="Spectrophotometer" weight=88
+    export function tcsValor(canal: CanalTCS3200): number {
         switch (canal) {
             case CanalTCS3200.Rojo: return _ultimoRojo
             case CanalTCS3200.Verde: return _ultimoVerde
@@ -240,9 +236,9 @@ namespace FisicaBitSpectro {
      */
     //% blockId=fisicabit_tcs_leer_promedio
     //% block="TCS3200 averaged period (μs) channel %canal samples %muestras"
-    //% group="Measurement" weight=87
+    //% group="Spectrophotometer" weight=87
     //% muestras.min=1 muestras.max=50 muestras.defl=10
-    export function leerPromediado(canal: CanalTCS3200, muestras: number): number {
+    export function tcsLeerPromediado(canal: CanalTCS3200, muestras: number): number {
         _seleccionarCanal(canal)
         let n = Math.clamp(1, 50, muestras)
         return fisicabit_native.tcs3200LeerRafagaUs(_pinOut, n, _timeoutUs)
@@ -259,8 +255,8 @@ namespace FisicaBitSpectro {
      */
     //% blockId=fisicabit_tcs_calibrar_blanco
     //% block="TCS3200 calibrate white reference"
-    //% group="Calibration" weight=80
-    export function calibrarBlanco(): void {
+    //% group="Spectrophotometer Calibration" weight=80
+    export function tcsCalibrarBlanco(): void {
         _blancoRojo = _leerPeriodo(CanalTCS3200.Rojo)
         _blancoVerde = _leerPeriodo(CanalTCS3200.Verde)
         _blancoAzul = _leerPeriodo(CanalTCS3200.Azul)
@@ -274,8 +270,8 @@ namespace FisicaBitSpectro {
      */
     //% blockId=fisicabit_tcs_fijar_blanco
     //% block="TCS3200 set white reference %canal to %periodoUs μs"
-    //% group="Calibration" weight=79
-    export function fijarBlanco(canal: CanalTCS3200, periodoUs: number): void {
+    //% group="Spectrophotometer Calibration" weight=79
+    export function tcsFijarBlanco(canal: CanalTCS3200, periodoUs: number): void {
         switch (canal) {
             case CanalTCS3200.Rojo: _blancoRojo = periodoUs; break
             case CanalTCS3200.Verde: _blancoVerde = periodoUs; break
@@ -290,8 +286,8 @@ namespace FisicaBitSpectro {
      */
     //% blockId=fisicabit_tcs_blanco_valor
     //% block="TCS3200 white reference %canal (μs)"
-    //% group="Calibration" weight=78
-    export function blancoValor(canal: CanalTCS3200): number {
+    //% group="Spectrophotometer Calibration" weight=78
+    export function tcsBlancoValor(canal: CanalTCS3200): number {
         return _getBlanco(canal)
     }
 
@@ -307,8 +303,8 @@ namespace FisicaBitSpectro {
      */
     //% blockId=fisicabit_tcs_transmitancia
     //% block="TCS3200 transmittance (percent) channel %canal"
-    //% group="Spectrophotometry" weight=70
-    export function transmitancia(canal: CanalTCS3200): number {
+    //% group="Spectrophotometer" weight=70
+    export function tcsTransmitancia(canal: CanalTCS3200): number {
         let blanco = _getBlanco(canal)
         if (blanco <= 0) return 0
         let muestra = _leerPeriodo(canal)
@@ -326,8 +322,8 @@ namespace FisicaBitSpectro {
      */
     //% blockId=fisicabit_tcs_absorbancia
     //% block="TCS3200 absorbance channel %canal"
-    //% group="Spectrophotometry" weight=69
-    export function absorbancia(canal: CanalTCS3200): number {
+    //% group="Spectrophotometer" weight=69
+    export function tcsAbsorbancia(canal: CanalTCS3200): number {
         let blanco = _getBlanco(canal)
         if (blanco <= 0) return 0
         let muestra = _leerPeriodo(canal)
@@ -346,8 +342,8 @@ namespace FisicaBitSpectro {
      */
     //% blockId=fisicabit_tcs_transmitancia_manual
     //% block="transmittance (percent) sample %periodoMuestra white %periodoBlanco μs"
-    //% group="Spectrophotometry" weight=68
-    export function transmitanciaManual(periodoMuestra: number, periodoBlanco: number): number {
+    //% group="Spectrophotometer" weight=68
+    export function tcsTransmitanciaManual(periodoMuestra: number, periodoBlanco: number): number {
         if (periodoBlanco <= 0 || periodoMuestra <= 0) return 0
         return Math.roundWithPrecision((periodoBlanco / periodoMuestra) * 100, 1)
     }
@@ -359,8 +355,8 @@ namespace FisicaBitSpectro {
      */
     //% blockId=fisicabit_tcs_absorbancia_manual
     //% block="absorbance sample %periodoMuestra white %periodoBlanco μs"
-    //% group="Spectrophotometry" weight=67
-    export function absorbanciaManual(periodoMuestra: number, periodoBlanco: number): number {
+    //% group="Spectrophotometer" weight=67
+    export function tcsAbsorbanciaManual(periodoMuestra: number, periodoBlanco: number): number {
         if (periodoBlanco <= 0 || periodoMuestra <= 0) return 0
         let ratio = periodoMuestra / periodoBlanco
         return Math.roundWithPrecision(Math.log(ratio) / Math.log(10), 3)
@@ -376,8 +372,8 @@ namespace FisicaBitSpectro {
      */
     //% blockId=fisicabit_tcs_crudo
     //% block="TCS3200 raw single period (μs) channel %canal"
-    //% group="Advanced" weight=60
-    export function leerCrudo(canal: CanalTCS3200): number {
+    //% group="Spectrophotometer" weight=60
+    export function tcsLeerCrudo(canal: CanalTCS3200): number {
         _seleccionarCanal(canal)
         return fisicabit_native.tcs3200LeerPeriodoUs(_pinOut, _timeoutUs)
     }
@@ -388,9 +384,9 @@ namespace FisicaBitSpectro {
      */
     //% blockId=fisicabit_tcs_timeout
     //% block="set TCS3200 timeout %timeoutMs ms"
-    //% group="Advanced" weight=59
+    //% group="Spectrophotometer" weight=59
     //% timeoutMs.min=50 timeoutMs.max=2000 timeoutMs.defl=500
-    export function fijarTimeout(timeoutMs: number): void {
+    export function tcsFijarTimeout(timeoutMs: number): void {
         _timeoutUs = Math.clamp(50, 2000, timeoutMs) * 1000
     }
 
@@ -400,9 +396,9 @@ namespace FisicaBitSpectro {
      */
     //% blockId=fisicabit_tcs_serial
     //% block="TCS3200 send all channels via serial"
-    //% group="Advanced" weight=58
-    export function enviarSerial(): void {
-        leerTodos()
+    //% group="Spectrophotometer" weight=58
+    export function tcsEnviarSerial(): void {
+        tcsLeerTodos()
         serial.writeLine(
             "R:" + _ultimoRojo +
             ",G:" + _ultimoVerde +
@@ -418,8 +414,8 @@ namespace FisicaBitSpectro {
      */
     //% blockId=fisicabit_tcs_serial_spectro
     //% block="TCS3200 send spectro data via serial channel %canal"
-    //% group="Advanced" weight=57
-    export function enviarSerialSpectro(canal: CanalTCS3200): void {
+    //% group="Spectrophotometer" weight=57
+    export function tcsEnviarSerialSpectro(canal: CanalTCS3200): void {
         let blanco = _getBlanco(canal)
         let muestra = _leerPeriodo(canal)
         let T = 0

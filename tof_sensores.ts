@@ -31,12 +31,8 @@
 // =============================================================================
 
 
-//% weight=95
-//% color=#8B5CF6
-//% icon="\uf0b2"
-//% block="FisicaBit ToF"
-//% groups="['Setup', 'Measurement', 'Advanced']"
-namespace FisicaBitToF {
+// Extiende el namespace FisicaBit con los sensores de distancia ToF
+namespace FisicaBit {
 
     // =========================================================================
     // Estado interno
@@ -496,10 +492,10 @@ namespace FisicaBitToF {
      */
     //% block="select ToF module %modelo"
     //% blockId=fisicabit_tof_seleccionar
-    //% group="Setup"
+    //% group="ToF Distance Sensor"
     //% weight=100
     //% modelo.defl=ModeloToF.TOF200C
-    export function seleccionarModulo(modelo: ModeloToF): void {
+    export function tofSeleccionarModulo(modelo: ModeloToF): void {
         _modelo = modelo
         _listo = false
     }
@@ -511,9 +507,9 @@ namespace FisicaBitToF {
      */
     //% block="initialize ToF sensor"
     //% blockId=fisicabit_tof_inicializar
-    //% group="Setup"
+    //% group="ToF Distance Sensor"
     //% weight=99
-    export function inicializar(): void {
+    export function tofInicializar(): void {
         _listo = _doInit()
         _ultVal = 0
         _ultOk = false
@@ -537,10 +533,10 @@ namespace FisicaBitToF {
      */
     //% block="set ToF smoothing %filtro"
     //% blockId=fisicabit_tof_suavizado
-    //% group="Setup"
+    //% group="ToF Distance Sensor"
     //% weight=95
     //% filtro.defl=FiltroToF.Bajo
-    export function fijarSuavizado(filtro: FiltroToF): void {
+    export function tofFijarSuavizado(filtro: FiltroToF): void {
         _filtroN = filtro
     }
 
@@ -555,10 +551,10 @@ namespace FisicaBitToF {
      */
     //% block="set ToF mode %modo"
     //% blockId=fisicabit_tof_modo
-    //% group="Setup"
+    //% group="ToF Distance Sensor"
     //% weight=94
     //% modo.defl=ModoToF.Estable
-    export function fijarModo(modo: ModoToF): void {
+    export function tofFijarModo(modo: ModoToF): void {
         _rapido = (modo == ModoToF.Rapida)
         if (_listo) {
             _listo = _doInit()
@@ -577,9 +573,9 @@ namespace FisicaBitToF {
      */
     //% block="ToF distance (mm)"
     //% blockId=fisicabit_tof_mm
-    //% group="Measurement"
+    //% group="ToF Distance Sensor"
     //% weight=90
-    export function distanciaMm(): number {
+    export function tofDistanciaMm(): number {
         return _readFiltered()
     }
 
@@ -589,9 +585,9 @@ namespace FisicaBitToF {
      */
     //% block="ToF distance (cm)"
     //% blockId=fisicabit_tof_cm
-    //% group="Measurement"
+    //% group="ToF Distance Sensor"
     //% weight=89
-    export function distanciaCm(): number {
+    export function tofDistanciaCm(): number {
         let mm = _readFiltered()
         return Math.idiv(mm, 10)
     }
@@ -603,9 +599,9 @@ namespace FisicaBitToF {
      */
     //% block="ToF measurement valid"
     //% blockId=fisicabit_tof_valida
-    //% group="Measurement"
+    //% group="ToF Distance Sensor"
     //% weight=85
-    export function medicionValida(): boolean {
+    export function tofMedicionValida(): boolean {
         return _ultOk
     }
 
@@ -620,9 +616,9 @@ namespace FisicaBitToF {
      */
     //% block="ToF sensor connected"
     //% blockId=fisicabit_tof_conectado
-    //% group="Advanced"
+    //% group="ToF Distance Sensor"
     //% weight=80
-    export function sensorConectado(): boolean {
+    export function tofSensorConectado(): boolean {
         return _listo
     }
 
@@ -632,9 +628,9 @@ namespace FisicaBitToF {
      */
     //% block="restart ToF sensor"
     //% blockId=fisicabit_tof_reiniciar
-    //% group="Advanced"
+    //% group="ToF Distance Sensor"
     //% weight=75
-    export function reiniciar(): void {
+    export function tofReiniciar(): void {
         _listo = false
         basic.pause(50)
         _listo = _doInit()
@@ -649,9 +645,9 @@ namespace FisicaBitToF {
      */
     //% block="ToF raw distance (mm)"
     //% blockId=fisicabit_tof_crudo
-    //% group="Advanced"
+    //% group="ToF Distance Sensor"
     //% weight=70
-    export function distanciaCrudaMm(): number {
+    export function tofDistanciaCrudaMm(): number {
         return _doRead()
     }
 }
