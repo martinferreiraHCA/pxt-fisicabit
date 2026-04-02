@@ -5,6 +5,7 @@
     "fisicabit_leer_sensor_interno|block": "ler sensor interno %sensor",
     "fisicabit_leer_analogico|block": "ler sensor analógico em %pin",
     "fisicabit_leer_digital|block": "ler sensor digital em P%pin",
+    "fisicabit_ntc_10k|block": "temperatura NTC 10K em %pin em %unidad",
     "fisicabit_us_configurar|block": "definir filtro ultrassônico para %filtro",
     "fisicabit_us_rango|block": "definir alcance ultrassônico de %minMm a %maxMm mm",
     "fisicabit_us_max_cambio|block": "definir salto máximo ultrassônico %maxCambioMm mm",
