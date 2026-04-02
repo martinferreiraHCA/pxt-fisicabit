@@ -13,6 +13,7 @@
         "README.md",
         "fisicabit.ts",
         "bluetooth_sensores.ts",
+        "tof_sensores.ts",
         "enums.d.ts",
         "shims.d.ts",
         "shims.cpp"
