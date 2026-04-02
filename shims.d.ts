@@ -96,4 +96,27 @@ declare namespace fisicabit_native {
         pinA: number, pinB: number, modo: number,
         umbralA: number, umbralB: number, timeoutUs: number
     ): number;
+
+    /**
+     * Mide un período completo de la señal del TCS3200 (flanco ascendente a flanco ascendente).
+     * Usa system_timer para timing con precisión de ~1-5μs.
+     *
+     * @param pin Número del pin de salida (OUT) del TCS3200
+     * @param timeoutUs Timeout máximo en microsegundos
+     * @returns Período en microsegundos, 0 si timeout
+     */
+    //% shim=fisicabit_native::tcs3200LeerPeriodoUs
+    function tcs3200LeerPeriodoUs(pin: number, timeoutUs: number): number;
+
+    /**
+     * Mide N períodos consecutivos del TCS3200 y retorna el promedio.
+     * Más preciso que una sola lectura al promediar múltiples períodos.
+     *
+     * @param pin Número del pin de salida (OUT) del TCS3200
+     * @param muestras Número de períodos a medir (1-50)
+     * @param timeoutUs Timeout máximo en microsegundos
+     * @returns Período promedio en microsegundos, 0 si timeout
+     */
+    //% shim=fisicabit_native::tcs3200LeerRafagaUs
+    function tcs3200LeerRafagaUs(pin: number, muestras: number, timeoutUs: number): number;
 }

@@ -200,4 +200,107 @@ namespace fisicabit_native {
         return 0;
         #endif
     }
+
+    // =========================================================================
+    // tcs3200LeerPeriodoUs — Mide un período completo en pin TCS3200
+    // =========================================================================
+    // Mide el tiempo entre dos flancos ascendentes consecutivos.
+    // Retorna el período en microsegundos, 0 si timeout.
+    // =========================================================================
+
+    //%
+    int tcs3200LeerPeriodoUs(int pin, int timeoutUs) {
+        #if MICROBIT_CODAL
+        MicroBitPin *gpioPin = getPinByNumber(pin);
+        if (!gpioPin) return 0;
+
+        gpioPin->getDigitalValue();
+
+        uint64_t inicio = system_timer_current_time_us();
+        uint64_t maxTime = (uint64_t)timeoutUs;
+
+        // Esperar a que baje (estar en estado conocido)
+        while (gpioPin->getDigitalValue() != 0) {
+            if (system_timer_current_time_us() - inicio > maxTime)
+                return 0;
+        }
+
+        // Esperar primer flanco ascendente
+        while (gpioPin->getDigitalValue() == 0) {
+            if (system_timer_current_time_us() - inicio > maxTime)
+                return 0;
+        }
+        uint64_t t0 = system_timer_current_time_us();
+
+        // Esperar que baje
+        while (gpioPin->getDigitalValue() != 0) {
+            if (system_timer_current_time_us() - inicio > maxTime)
+                return 0;
+        }
+
+        // Esperar segundo flanco ascendente
+        while (gpioPin->getDigitalValue() == 0) {
+            if (system_timer_current_time_us() - inicio > maxTime)
+                return 0;
+        }
+        uint64_t t1 = system_timer_current_time_us();
+
+        return (int)(t1 - t0);
+        #else
+        return 0;
+        #endif
+    }
+
+    // =========================================================================
+    // tcs3200LeerRafagaUs — Mide N períodos consecutivos, retorna promedio
+    // =========================================================================
+
+    //%
+    int tcs3200LeerRafagaUs(int pin, int muestras, int timeoutUs) {
+        #if MICROBIT_CODAL
+        if (muestras < 1) muestras = 1;
+        if (muestras > 50) muestras = 50;
+
+        MicroBitPin *gpioPin = getPinByNumber(pin);
+        if (!gpioPin) return 0;
+
+        gpioPin->getDigitalValue();
+
+        uint64_t inicio = system_timer_current_time_us();
+        uint64_t maxTime = (uint64_t)timeoutUs;
+
+        // Sincronizar: esperar un flanco ascendente
+        while (gpioPin->getDigitalValue() != 0) {
+            if (system_timer_current_time_us() - inicio > maxTime)
+                return 0;
+        }
+        while (gpioPin->getDigitalValue() == 0) {
+            if (system_timer_current_time_us() - inicio > maxTime)
+                return 0;
+        }
+
+        uint64_t tInicio = system_timer_current_time_us();
+
+        // Medir N períodos consecutivos
+        for (int i = 0; i < muestras; i++) {
+            // Esperar que baje
+            while (gpioPin->getDigitalValue() != 0) {
+                if (system_timer_current_time_us() - inicio > maxTime)
+                    return 0;
+            }
+            // Esperar que suba (siguiente flanco ascendente)
+            while (gpioPin->getDigitalValue() == 0) {
+                if (system_timer_current_time_us() - inicio > maxTime)
+                    return 0;
+            }
+        }
+
+        uint64_t tFin = system_timer_current_time_us();
+
+        // Retornar promedio
+        return (int)((tFin - tInicio) / muestras);
+        #else
+        return 0;
+        #endif
+    }
 }
