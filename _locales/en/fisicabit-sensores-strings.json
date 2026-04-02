@@ -120,5 +120,39 @@
     "{id:group}Sampling": "Sampling",
     "{id:group}Connection": "Connection",
     "{id:group}Manual Send": "Manual Send",
-    "{id:group}BLE Services": "BLE Services"
+    "{id:group}BLE Services": "BLE Services",
+
+    "FisicaBitSpectro|block": "FisicaBit Spectro",
+    "fisicabit_tcs_inicializar|block": "initialize TCS3200 color sensor",
+    "fisicabit_tcs_inicializar_custom|block": "initialize TCS3200 S0 %s0 S1 %s1 S2 %s2 S3 %s3 OUT P %out",
+    "fisicabit_tcs_escalado|block": "set TCS3200 frequency scaling %escalado",
+    "fisicabit_tcs_muestras|block": "set TCS3200 averaging samples %muestras",
+    "fisicabit_tcs_leer_canal|block": "TCS3200 period (μs) channel %canal",
+    "fisicabit_tcs_leer_todos|block": "TCS3200 read all channels",
+    "fisicabit_tcs_valor|block": "TCS3200 last value %canal (μs)",
+    "fisicabit_tcs_leer_promedio|block": "TCS3200 averaged period (μs) channel %canal samples %muestras",
+    "fisicabit_tcs_calibrar_blanco|block": "TCS3200 calibrate white reference",
+    "fisicabit_tcs_fijar_blanco|block": "TCS3200 set white reference %canal to %periodoUs μs",
+    "fisicabit_tcs_blanco_valor|block": "TCS3200 white reference %canal (μs)",
+    "fisicabit_tcs_transmitancia|block": "TCS3200 transmittance (percent) channel %canal",
+    "fisicabit_tcs_absorbancia|block": "TCS3200 absorbance channel %canal",
+    "fisicabit_tcs_transmitancia_manual|block": "transmittance (percent) sample %periodoMuestra white %periodoBlanco μs",
+    "fisicabit_tcs_absorbancia_manual|block": "absorbance sample %periodoMuestra white %periodoBlanco μs",
+    "fisicabit_tcs_crudo|block": "TCS3200 raw single period (μs) channel %canal",
+    "fisicabit_tcs_timeout|block": "set TCS3200 timeout %timeoutMs ms",
+    "fisicabit_tcs_serial|block": "TCS3200 send all channels via serial",
+    "fisicabit_tcs_serial_spectro|block": "TCS3200 send spectro data via serial channel %canal",
+
+    "CanalTCS3200.Rojo|block": "Red",
+    "CanalTCS3200.Verde|block": "Green",
+    "CanalTCS3200.Azul|block": "Blue",
+    "CanalTCS3200.Clear|block": "Clear",
+
+    "EscaladoTCS3200.Apagado|block": "off (0%)",
+    "EscaladoTCS3200.Dos|block": "2%",
+    "EscaladoTCS3200.Veinte|block": "20%",
+    "EscaladoTCS3200.Cien|block": "100%",
+
+    "{id:group}Calibration": "Calibration",
+    "{id:group}Spectrophotometry": "Spectrophotometry"
 }

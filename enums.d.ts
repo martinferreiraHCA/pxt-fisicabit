@@ -141,3 +141,25 @@ declare const enum ModoToF {
     //% block="fast (high speed)"
     Rapida = 1
 }
+
+declare const enum CanalTCS3200 {
+    //% block="Red"
+    Rojo = 0,
+    //% block="Green"
+    Verde = 1,
+    //% block="Blue"
+    Azul = 2,
+    //% block="Clear"
+    Clear = 3
+}
+
+declare const enum EscaladoTCS3200 {
+    //% block="off (0%)"
+    Apagado = 0,
+    //% block="2%"
+    Dos = 1,
+    //% block="20%"
+    Veinte = 2,
+    //% block="100%"
+    Cien = 3
+}
