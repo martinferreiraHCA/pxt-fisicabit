@@ -240,6 +240,92 @@ namespace FisicaBit {
 
 
     // =========================================================================
+    // GRUPO 2b: SENSOR DE TEMPERATURA NTC 10K 3950
+    // =========================================================================
+    //
+    // CÓMO FUNCIONA:
+    //   El NTC (Negative Temperature Coefficient) es una resistencia cuyo
+    //   valor DISMINUYE al aumentar la temperatura. A 25°C vale 10kΩ.
+    //
+    //   Se conecta en un divisor de tensión con una resistencia fija de
+    //   10kΩ. El micro:bit lee el voltaje en el punto medio y calcula
+    //   la temperatura usando la ecuación Beta (Steinhart-Hart simplificada):
+    //
+    //     1/T = 1/T₀ + (1/β) × ln(R_ntc / R₀)
+    //
+    //   donde T₀ = 298.15 K (25°C), R₀ = 10000 Ω, β = 3950
+    //
+    // CABLEADO:
+    //   ┌─────────────────────────────────────────────┐
+    //   │                                             │
+    //   │  3V ─── [10kΩ fijo] ───┬─── Pin analógico   │
+    //   │                        │    (P0, P1 o P2)   │
+    //   │                   [NTC 10kΩ]                │
+    //   │                        │                    │
+    //   │                       GND                   │
+    //   │                                             │
+    //   └─────────────────────────────────────────────┘
+    //
+    //   ⚠ El NTC tiene 2 cables (sin polaridad), no importa cuál
+    //     va a GND y cuál al punto medio del divisor.
+    //
+    // PRECISIÓN:
+    //   El ADC de 10 bits (0-1023) da ~0.15°C de resolución en el
+    //   rango 0-50°C. Suficiente para experimentos de física.
+    // =========================================================================
+
+    /**
+     * Lee la temperatura de un sensor NTC 10K 3950 conectado a un pin
+     * analógico con una resistencia fija de 10kΩ como divisor de tensión.
+     *
+     * Devuelve la temperatura con 1 decimal de precisión.
+     *
+     * @param pin Pin analógico donde está conectado el NTC
+     * @param unidad Unidad de temperatura deseada
+     * @returns Temperatura medida (con 1 decimal)
+     */
+    //% block="NTC 10K temperature on %pin in %unidad"
+    //% blockId=fisicabit_ntc_10k
+    //% group="External Sensors"
+    //% weight=88
+    //% pin.defl=PinAnalogico.P0
+    //% unidad.defl=UnidadTemperatura.Celsius
+    export function leerTemperaturaNTC(pin: PinAnalogico, unidad: UnidadTemperatura): number {
+        let lectura: number
+        switch (pin) {
+            case PinAnalogico.P0: lectura = pins.analogReadPin(AnalogPin.P0); break
+            case PinAnalogico.P1: lectura = pins.analogReadPin(AnalogPin.P1); break
+            case PinAnalogico.P2: lectura = pins.analogReadPin(AnalogPin.P2); break
+            default: lectura = 0
+        }
+
+        // Proteger contra lecturas extremas (divisor de tensión saturado)
+        if (lectura <= 0) lectura = 1
+        if (lectura >= 1023) lectura = 1022
+
+        // Divisor de tensión: R_ntc = R_fija × lectura / (1023 - lectura)
+        let rNtc = 10000.0 * lectura / (1023 - lectura)
+
+        // Ecuación Beta: 1/T = 1/T₀ + (1/β) × ln(R_ntc / R₀)
+        // T₀ = 298.15 K (25°C), β = 3950, R₀ = 10000 Ω
+        let invT = 1.0 / 298.15 + (1.0 / 3950) * Math.log(rNtc / 10000)
+        let tempC = 1.0 / invT - 273.15
+
+        // Convertir a la unidad solicitada (1 decimal de precisión)
+        switch (unidad) {
+            case UnidadTemperatura.Celsius:
+                return Math.round(tempC * 10) / 10
+            case UnidadTemperatura.Fahrenheit:
+                return Math.round((tempC * 9 / 5 + 32) * 10) / 10
+            case UnidadTemperatura.Kelvin:
+                return Math.round((tempC + 273.15) * 10) / 10
+            default:
+                return Math.round(tempC * 10) / 10
+        }
+    }
+
+
+    // =========================================================================
     // GRUPO 3: SENSOR ULTRASÓNICO HC-SR04
     // =========================================================================
     //

@@ -5,6 +5,7 @@
     "fisicabit_leer_sensor_interno|block": "read internal sensor %sensor",
     "fisicabit_leer_analogico|block": "read analog sensor on %pin",
     "fisicabit_leer_digital|block": "read digital sensor on P%pin",
+    "fisicabit_ntc_10k|block": "NTC 10K temperature on %pin in %unidad",
     "fisicabit_us_configurar|block": "set ultrasonic filter to %filtro",
     "fisicabit_us_rango|block": "set ultrasonic range from %minMm to %maxMm mm",
     "fisicabit_us_max_cambio|block": "set ultrasonic max step %maxCambioMm mm",
