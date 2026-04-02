@@ -114,3 +114,30 @@ declare const enum UnidadTiempo {
     //% block="s (seconds)"
     Segundos = 2
 }
+
+declare const enum ModeloToF {
+    //% block="TOF050C (50 cm)"
+    TOF050C = 0,
+    //% block="TOF200C (2 m)"
+    TOF200C = 1,
+    //% block="TOF400C (4 m)"
+    TOF400C = 2
+}
+
+declare const enum FiltroToF {
+    //% block="none"
+    Ninguno = 1,
+    //% block="low (median of 3)"
+    Bajo = 3,
+    //% block="medium (median of 5)"
+    Medio = 5,
+    //% block="high (median of 7)"
+    Alto = 7
+}
+
+declare const enum ModoToF {
+    //% block="stable (accurate)"
+    Estable = 0,
+    //% block="fast (high speed)"
+    Rapida = 1
+}
