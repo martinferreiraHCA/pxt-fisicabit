@@ -149,6 +149,10 @@
     "EscaladoTCS3200.Veinte|block": "20%",
     "EscaladoTCS3200.Cien|block": "100%",
 
-    "{id:group}Spectrophotometer": "Spectrophotometer",
-    "{id:group}Spectrophotometer Calibration": "Spectrophotometer Calibration"
+    "FisicaBitColorimetro|block": "Colorimeter",
+    "{id:group}Setup": "Setup",
+    "{id:group}Measurement": "Measurement",
+    "{id:group}Calibration": "Calibration",
+    "{id:group}Spectrophotometry": "Spectrophotometry",
+    "{id:group}Advanced": "Advanced"
 }

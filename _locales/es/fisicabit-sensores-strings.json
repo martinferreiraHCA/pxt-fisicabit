@@ -149,6 +149,10 @@
     "EscaladoTCS3200.Veinte|block": "20%",
     "EscaladoTCS3200.Cien|block": "100%",
 
-    "{id:group}Spectrophotometer": "Espectrofotómetro",
-    "{id:group}Spectrophotometer Calibration": "Calibración Espectrofotómetro"
+    "FisicaBitColorimetro|block": "Colorímetro",
+    "{id:group}Setup": "Configuración",
+    "{id:group}Measurement": "Medición",
+    "{id:group}Calibration": "Calibración",
+    "{id:group}Spectrophotometry": "Espectrofotometría",
+    "{id:group}Advanced": "Avanzado"
 }
