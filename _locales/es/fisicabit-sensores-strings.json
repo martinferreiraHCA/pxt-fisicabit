@@ -93,7 +93,6 @@
     "ModoToF.Estable|block": "estable (preciso)",
     "ModoToF.Rapida|block": "rápida (alta velocidad)",
 
-    "FisicaBitToF|block": "FisicaBit ToF",
     "fisicabit_tof_seleccionar|block": "seleccionar módulo ToF %modelo",
     "fisicabit_tof_inicializar|block": "inicializar sensor ToF",
     "fisicabit_tof_suavizado|block": "fijar suavizado ToF %filtro",
@@ -105,9 +104,7 @@
     "fisicabit_tof_reiniciar|block": "reiniciar sensor ToF",
     "fisicabit_tof_crudo|block": "distancia ToF cruda (mm)",
 
-    "{id:group}Setup": "Configuración",
-    "{id:group}Measurement": "Medición",
-    "{id:group}Advanced": "Avanzado",
+    "{id:group}ToF Distance Sensor": "Sensor de Distancia ToF",
 
     "{id:group}Internal Sensors": "Sensores Internos",
     "{id:group}External Sensors": "Sensores Externos",
@@ -122,7 +119,6 @@
     "{id:group}Manual Send": "Envío Manual",
     "{id:group}BLE Services": "Servicios BLE",
 
-    "FisicaBitSpectro|block": "FisicaBit Espectro",
     "fisicabit_tcs_inicializar|block": "inicializar sensor de color TCS3200",
     "fisicabit_tcs_inicializar_custom|block": "inicializar TCS3200 S0 %s0 S1 %s1 S2 %s2 S3 %s3 OUT P %out",
     "fisicabit_tcs_escalado|block": "fijar escalado frecuencia TCS3200 %escalado",
@@ -153,6 +149,6 @@
     "EscaladoTCS3200.Veinte|block": "20%",
     "EscaladoTCS3200.Cien|block": "100%",
 
-    "{id:group}Calibration": "Calibración",
-    "{id:group}Spectrophotometry": "Espectrofotometría"
+    "{id:group}Spectrophotometer": "Espectrofotómetro",
+    "{id:group}Spectrophotometer Calibration": "Calibración Espectrofotómetro"
 }
