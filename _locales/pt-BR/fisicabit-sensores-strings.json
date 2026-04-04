@@ -118,6 +118,29 @@
 
     "{id:group}ToF Distance Sensor": "Sensor de Distância ToF",
 
+    "fisicabit_bme280_inicializar|block": "inicializar sensor BME280 em %direccion",
+    "fisicabit_bme280_temperatura|block": "BME280 temperatura em %unidad",
+    "fisicabit_bme280_presion|block": "BME280 pressão em %unidad",
+    "fisicabit_bme280_humedad|block": "BME280 umidade (% RH)",
+    "fisicabit_bme280_altitud|block": "BME280 altitude (m) nível do mar %presionNivelMar hPa",
+    "fisicabit_bme280_conectado|block": "sensor BME280 conectado",
+
+    "fisicabit_dht11_humedad|block": "DHT11 umidade (%) em %pin",
+    "fisicabit_dht11_temperatura|block": "DHT11 temperatura em %pin em %unidad",
+    "fisicabit_dht11_leer|block": "DHT11 ler tudo em %pin",
+    "fisicabit_dht11_ult_humedad|block": "DHT11 última umidade (%)",
+    "fisicabit_dht11_ult_temp|block": "DHT11 última temperatura em %unidad",
+    "fisicabit_dht11_valido|block": "DHT11 leitura válida",
+
+    "UnidadPresion.hPa|block": "hPa (hectopascal)",
+    "UnidadPresion.Pa|block": "Pa (pascal)",
+    "UnidadPresion.mmHg|block": "mmHg",
+    "UnidadPresion.Atm|block": "atm",
+    "DireccionBME280.Addr76|block": "0x76 (SDO→GND)",
+    "DireccionBME280.Addr77|block": "0x77 (SDO→VCC)",
+    "DatosDHT11.Humedad|block": "umidade (%)",
+    "DatosDHT11.Temperatura|block": "temperatura (°C)",
+
     "SensorBT.AcelerometroX|block": "Acelerômetro X",
     "SensorBT.AcelerometroY|block": "Acelerômetro Y",
     "SensorBT.AcelerometroZ|block": "Acelerômetro Z",
@@ -140,6 +163,8 @@
     "{id:group}Sensores Internos": "Sensores Internos",
     "{id:group}Sensores Externos": "Sensores Externos",
     "{id:group}Sensor Ultrasonido": "Sensor Ultrassônico",
+    "{id:group}BME280 Sensor": "Sensor BME280",
+    "{id:group}DHT11 Sensor": "Sensor DHT11",
     "{id:group}Barrera Óptica": "Barreira Óptica",
     "{id:group}Conversiones": "Conversões",
     "{id:group}Nativo C++": "Nativo C++",

@@ -49,7 +49,7 @@
 //% color=#E64322
 //% icon="\uf0e7"
 //% block="FisicaBit Sensors"
-//% groups="['Internal Sensors', 'External Sensors', 'Ultrasonic Sensor', 'ToF Distance Sensor', 'Optical Barrier', 'Serial Sampling', 'Conversions', 'Native C++', 'Utilities']"
+//% groups="['Internal Sensors', 'External Sensors', 'Ultrasonic Sensor', 'ToF Distance Sensor', 'BME280 Sensor', 'DHT11 Sensor', 'Optical Barrier', 'Serial Sampling', 'Conversions', 'Native C++', 'Utilities']"
 namespace FisicaBit {
 
     // =========================================================================

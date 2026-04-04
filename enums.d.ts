@@ -142,6 +142,31 @@ declare const enum ModoToF {
     Rapida = 1
 }
 
+declare const enum UnidadPresion {
+    //% block="hPa (hectopascal)"
+    hPa = 0,
+    //% block="Pa (pascal)"
+    Pa = 1,
+    //% block="mmHg"
+    mmHg = 2,
+    //% block="atm"
+    Atm = 3
+}
+
+declare const enum DireccionBME280 {
+    //% block="0x76 (SDO→GND)"
+    Addr76 = 0x76,
+    //% block="0x77 (SDO→VCC)"
+    Addr77 = 0x77
+}
+
+declare const enum DatosDHT11 {
+    //% block="humidity (%)"
+    Humedad = 0,
+    //% block="temperature (°C)"
+    Temperatura = 1
+}
+
 declare const enum CanalTCS3200 {
     //% block="Red"
     Rojo = 0,
