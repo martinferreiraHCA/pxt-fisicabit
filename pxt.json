@@ -17,7 +17,9 @@
         "enums.d.ts",
         "shims.d.ts",
         "shims.cpp",
-        "tcs3200_sensores.ts"
+        "tcs3200_sensores.ts",
+        "bme280_sensores.ts",
+        "dht11_sensores.ts"
     ],
     "testFiles": [
         "test.ts"
