@@ -167,7 +167,7 @@ declare const enum DatosDHT11 {
     Temperatura = 1
 }
 
-declare const enum CanalTCS3200 {
+declare const enum CanalTCS230 {
     //% block="Red"
     Rojo = 0,
     //% block="Green"
@@ -178,7 +178,7 @@ declare const enum CanalTCS3200 {
     Clear = 3
 }
 
-declare const enum EscaladoTCS3200 {
+declare const enum EscaladoTCS230 {
     //% block="off (0%)"
     Apagado = 0,
     //% block="2%"
