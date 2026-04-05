@@ -49,7 +49,7 @@
 //% color=#E64322
 //% icon="\uf0e7"
 //% block="FisicaBit Sensors"
-//% groups="['Internal Sensors', 'External Sensors', 'Ultrasonic Sensor', 'ToF Distance Sensor', 'BME280 Sensor', 'DHT11 Sensor', 'Optical Barrier', 'Serial Sampling', 'Conversions', 'Native C++', 'Utilities']"
+//% groups="['Internal Sensors', 'External Sensors', 'HC-SR04 — Ultrasonic Distance', 'ToF — Laser Distance (I2C)', 'BME280 — Pressure/Temp/Humidity (I2C)', 'DHT11 — Humidity/Temperature', 'Optical Barrier', 'Serial Sampling', 'Conversions', 'Native C++', 'Utilities']"
 namespace FisicaBit {
 
     // =========================================================================
@@ -452,7 +452,7 @@ namespace FisicaBit {
      */
     //% block="set ultrasonic filter to %filtro"
     //% blockId=fisicabit_us_configurar
-    //% group="Ultrasonic Sensor"
+    //% group="HC-SR04 — Ultrasonic Distance"
     //% weight=82
     //% filtro.defl=FiltroUltrasonido.Suave
     export function configurarFiltroUltrasonido(filtro: FiltroUltrasonido): void {
@@ -472,7 +472,7 @@ namespace FisicaBit {
      */
     //% block="set ultrasonic range from %minMm to %maxMm mm"
     //% blockId=fisicabit_us_rango
-    //% group="Ultrasonic Sensor"
+    //% group="HC-SR04 — Ultrasonic Distance"
     //% weight=81
     //% minMm.defl=20 minMm.min=10
     //% maxMm.defl=4000 maxMm.min=20 maxMm.max=4000
@@ -501,7 +501,7 @@ namespace FisicaBit {
      */
     //% block="set ultrasonic max step %maxCambioMm mm"
     //% blockId=fisicabit_us_max_cambio
-    //% group="Ultrasonic Sensor"
+    //% group="HC-SR04 — Ultrasonic Distance"
     //% weight=79
     //% maxCambioMm.defl=0 maxCambioMm.min=0
     export function configurarMaxCambioUltrasonido(maxCambioMm: number): void {
@@ -526,12 +526,12 @@ namespace FisicaBit {
      * @param unidad Unidad de medida deseada
      * @returns Distancia medida en la unidad seleccionada
      */
-    //% block="ultrasonic distance TRIG %pinTrig ECHO %pinEcho in %unidad"
+    //% block="HC-SR04 distance TRIG %pinTrig ECHO %pinEcho in %unidad"
     //% blockId=fisicabit_ultrasonido
-    //% group="Ultrasonic Sensor"
+    //% group="HC-SR04 — Ultrasonic Distance"
     //% weight=80
-    //% pinTrig.defl=DigitalPin.P1
-    //% pinEcho.defl=DigitalPin.P2
+    //% pinTrig.defl=DigitalPin.P8
+    //% pinEcho.defl=DigitalPin.P12
     //% unidad.defl=UnidadDistancia.Centimetros
     export function medirDistanciaUltrasonido(
         pinTrig: DigitalPin,
@@ -593,12 +593,12 @@ namespace FisicaBit {
      * @param unidad Unidad de medida deseada
      * @returns Distancia cruda en la unidad seleccionada, 0 si falla
      */
-    //% block="ultrasonic raw distance TRIG %pinTrig ECHO %pinEcho in %unidad"
+    //% block="HC-SR04 raw distance TRIG %pinTrig ECHO %pinEcho in %unidad"
     //% blockId=fisicabit_ultrasonido_crudo
-    //% group="Ultrasonic Sensor"
+    //% group="HC-SR04 — Ultrasonic Distance"
     //% weight=78
-    //% pinTrig.defl=DigitalPin.P1
-    //% pinEcho.defl=DigitalPin.P2
+    //% pinTrig.defl=DigitalPin.P8
+    //% pinEcho.defl=DigitalPin.P12
     //% unidad.defl=UnidadDistancia.Milimetros
     export function medirDistanciaUltrasonidoCrudo(
         pinTrig: DigitalPin,

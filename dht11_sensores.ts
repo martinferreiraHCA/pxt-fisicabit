@@ -147,9 +147,9 @@ namespace FisicaBit {
      */
     //% blockId=fisicabit_dht11_humedad
     //% block="DHT11 humidity (percent) on %pin"
-    //% group="DHT11 Sensor"
+    //% group="DHT11 — Humidity/Temperature"
     //% weight=90
-    //% pin.defl=DigitalPin.P0
+    //% pin.defl=DigitalPin.P16
     export function dht11Humedad(pin: DigitalPin): number {
         _dhtLeerConReintento(pin)
         return _dhtUltHumedad / 10
@@ -163,9 +163,9 @@ namespace FisicaBit {
      */
     //% blockId=fisicabit_dht11_temperatura
     //% block="DHT11 temperature on %pin in %unidad"
-    //% group="DHT11 Sensor"
+    //% group="DHT11 — Humidity/Temperature"
     //% weight=89
-    //% pin.defl=DigitalPin.P0
+    //% pin.defl=DigitalPin.P16
     //% unidad.defl=UnidadTemperatura.Celsius
     export function dht11Temperatura(pin: DigitalPin, unidad: UnidadTemperatura): number {
         _dhtLeerConReintento(pin)
@@ -192,9 +192,9 @@ namespace FisicaBit {
      */
     //% blockId=fisicabit_dht11_leer
     //% block="DHT11 read all on %pin"
-    //% group="DHT11 Sensor"
+    //% group="DHT11 — Humidity/Temperature"
     //% weight=88
-    //% pin.defl=DigitalPin.P0
+    //% pin.defl=DigitalPin.P16
     export function dht11Leer(pin: DigitalPin): void {
         _dhtLeerConReintento(pin)
     }
@@ -204,7 +204,7 @@ namespace FisicaBit {
      */
     //% blockId=fisicabit_dht11_ult_humedad
     //% block="DHT11 last humidity (percent)"
-    //% group="DHT11 Sensor"
+    //% group="DHT11 — Humidity/Temperature"
     //% weight=87
     export function dht11UltHumedad(): number {
         return _dhtUltHumedad / 10
@@ -216,7 +216,7 @@ namespace FisicaBit {
      */
     //% blockId=fisicabit_dht11_ult_temp
     //% block="DHT11 last temperature in %unidad"
-    //% group="DHT11 Sensor"
+    //% group="DHT11 — Humidity/Temperature"
     //% weight=86
     //% unidad.defl=UnidadTemperatura.Celsius
     export function dht11UltTemperatura(unidad: UnidadTemperatura): number {
@@ -240,7 +240,7 @@ namespace FisicaBit {
      */
     //% blockId=fisicabit_dht11_valido
     //% block="DHT11 reading valid"
-    //% group="DHT11 Sensor"
+    //% group="DHT11 — Humidity/Temperature"
     //% weight=80
     export function dht11Valido(): boolean {
         return _dhtOk

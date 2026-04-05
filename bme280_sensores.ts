@@ -230,8 +230,8 @@ namespace FisicaBit {
      * @param direccion Dirección I2C (0x76 si SDO→GND, 0x77 si SDO→VCC)
      */
     //% blockId=fisicabit_bme280_inicializar
-    //% block="initialize BME280 sensor at %direccion"
-    //% group="BME280 Sensor"
+    //% block="initialize BME280 (I2C: SDA P20 SCL P19) at %direccion"
+    //% group="BME280 — Pressure/Temp/Humidity (I2C)"
     //% weight=100
     //% direccion.defl=DireccionBME280.Addr76
     export function bme280Inicializar(direccion: DireccionBME280): void {
@@ -267,7 +267,7 @@ namespace FisicaBit {
      */
     //% blockId=fisicabit_bme280_temperatura
     //% block="BME280 temperature in %unidad"
-    //% group="BME280 Sensor"
+    //% group="BME280 — Pressure/Temp/Humidity (I2C)"
     //% weight=95
     //% unidad.defl=UnidadTemperatura.Celsius
     export function bme280Temperatura(unidad: UnidadTemperatura): number {
@@ -293,7 +293,7 @@ namespace FisicaBit {
      */
     //% blockId=fisicabit_bme280_presion
     //% block="BME280 pressure in %unidad"
-    //% group="BME280 Sensor"
+    //% group="BME280 — Pressure/Temp/Humidity (I2C)"
     //% weight=94
     //% unidad.defl=UnidadPresion.hPa
     export function bme280Presion(unidad: UnidadPresion): number {
@@ -321,7 +321,7 @@ namespace FisicaBit {
      */
     //% blockId=fisicabit_bme280_humedad
     //% block="BME280 humidity (percent RH)"
-    //% group="BME280 Sensor"
+    //% group="BME280 — Pressure/Temp/Humidity (I2C)"
     //% weight=93
     export function bme280Humedad(): number {
         if (!_bmeListo) return 0
@@ -338,7 +338,7 @@ namespace FisicaBit {
      */
     //% blockId=fisicabit_bme280_altitud
     //% block="BME280 altitude (m) sea level %presionNivelMar hPa"
-    //% group="BME280 Sensor"
+    //% group="BME280 — Pressure/Temp/Humidity (I2C)"
     //% weight=92
     //% presionNivelMar.defl=1013.25
     export function bme280Altitud(presionNivelMar: number): number {
@@ -356,7 +356,7 @@ namespace FisicaBit {
      */
     //% blockId=fisicabit_bme280_conectado
     //% block="BME280 sensor connected"
-    //% group="BME280 Sensor"
+    //% group="BME280 — Pressure/Temp/Humidity (I2C)"
     //% weight=85
     export function bme280Conectado(): boolean {
         return _bmeListo

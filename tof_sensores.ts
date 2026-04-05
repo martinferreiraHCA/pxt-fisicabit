@@ -492,7 +492,7 @@ namespace FisicaBit {
      */
     //% block="select ToF module %modelo"
     //% blockId=fisicabit_tof_seleccionar
-    //% group="ToF Distance Sensor"
+    //% group="ToF — Laser Distance (I2C)"
     //% weight=100
     //% modelo.defl=ModeloToF.TOF200C
     export function tofSeleccionarModulo(modelo: ModeloToF): void {
@@ -505,9 +505,9 @@ namespace FisicaBit {
      * Detecta el chip, lo configura y lo deja listo para medir.
      * Muestra ✓ en el LED si tuvo éxito, ✗ si falló.
      */
-    //% block="initialize ToF sensor"
+    //% block="initialize ToF sensor (I2C: SDA P20 SCL P19)"
     //% blockId=fisicabit_tof_inicializar
-    //% group="ToF Distance Sensor"
+    //% group="ToF — Laser Distance (I2C)"
     //% weight=99
     export function tofInicializar(): void {
         _listo = _doInit()
@@ -533,7 +533,7 @@ namespace FisicaBit {
      */
     //% block="set ToF smoothing %filtro"
     //% blockId=fisicabit_tof_suavizado
-    //% group="ToF Distance Sensor"
+    //% group="ToF — Laser Distance (I2C)"
     //% weight=95
     //% filtro.defl=FiltroToF.Bajo
     export function tofFijarSuavizado(filtro: FiltroToF): void {
@@ -551,7 +551,7 @@ namespace FisicaBit {
      */
     //% block="set ToF mode %modo"
     //% blockId=fisicabit_tof_modo
-    //% group="ToF Distance Sensor"
+    //% group="ToF — Laser Distance (I2C)"
     //% weight=94
     //% modo.defl=ModoToF.Estable
     export function tofFijarModo(modo: ModoToF): void {
@@ -573,7 +573,7 @@ namespace FisicaBit {
      */
     //% block="ToF distance (mm)"
     //% blockId=fisicabit_tof_mm
-    //% group="ToF Distance Sensor"
+    //% group="ToF — Laser Distance (I2C)"
     //% weight=90
     export function tofDistanciaMm(): number {
         return _readFiltered()
@@ -585,7 +585,7 @@ namespace FisicaBit {
      */
     //% block="ToF distance (cm)"
     //% blockId=fisicabit_tof_cm
-    //% group="ToF Distance Sensor"
+    //% group="ToF — Laser Distance (I2C)"
     //% weight=89
     export function tofDistanciaCm(): number {
         let mm = _readFiltered()
@@ -599,7 +599,7 @@ namespace FisicaBit {
      */
     //% block="ToF measurement valid"
     //% blockId=fisicabit_tof_valida
-    //% group="ToF Distance Sensor"
+    //% group="ToF — Laser Distance (I2C)"
     //% weight=85
     export function tofMedicionValida(): boolean {
         return _ultOk
@@ -616,7 +616,7 @@ namespace FisicaBit {
      */
     //% block="ToF sensor connected"
     //% blockId=fisicabit_tof_conectado
-    //% group="ToF Distance Sensor"
+    //% group="ToF — Laser Distance (I2C)"
     //% weight=80
     export function tofSensorConectado(): boolean {
         return _listo
@@ -628,7 +628,7 @@ namespace FisicaBit {
      */
     //% block="restart ToF sensor"
     //% blockId=fisicabit_tof_reiniciar
-    //% group="ToF Distance Sensor"
+    //% group="ToF — Laser Distance (I2C)"
     //% weight=75
     export function tofReiniciar(): void {
         _listo = false
@@ -645,7 +645,7 @@ namespace FisicaBit {
      */
     //% block="ToF raw distance (mm)"
     //% blockId=fisicabit_tof_crudo
-    //% group="ToF Distance Sensor"
+    //% group="ToF — Laser Distance (I2C)"
     //% weight=70
     export function tofDistanciaCrudaMm(): number {
         return _doRead()
