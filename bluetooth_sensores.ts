@@ -5,35 +5,27 @@
 //  Descripción: Bloques simplificados para muestreo y envío de datos
 //               vía Bluetooth Low Energy (BLE UART).
 //
-//  USO: El usuario arrastra UN bloque dentro de "para siempre".
-//       Cada slot acepta CUALQUIER valor (variable, sensor, expresión).
-//       Si quiere incluir el tiempo, arrastra el bloque "tiempo (ms)"
-//       en uno de los slots.
+//  PROTOCOLO DE CONEXIÓN CON fisicabit.com:
+//  ─────────────────────────────────────────
+//  fisicabit.com usa Web Bluetooth API y busca:
+//    1. Dispositivo con nombre "BBC micro:bit [XXXXX]"
+//    2. Servicio UART Nordic (UUID 6e400001-b5a3-f393-e0a9-e50e24dcca9e)
+//    3. Opcionalmente: servicios BLE nativos (acelerómetro, temperatura, etc.)
 //
-//  EJEMPLO EN BLOQUES (con tiempo):
-//  ┌──────────────────────────────────────────────────────┐
-//  │ para siempre                                         │
-//  │   ┌──────────────────────────────────────────────┐   │
-//  │   │ BT muestrear [tiempo (ms)] y [acel X]       │   │
-//  │   │              cada [100] ms                    │   │
-//  │   └──────────────────────────────────────────────┘   │
-//  └──────────────────────────────────────────────────────┘
+//  El micro:bit envía datos CSV por UART:
+//    - Con timestamp:  "tiempo,valor1,valor2\n"
+//    - Sin timestamp:  "valor1,valor2\n"
 //
-//  EJEMPLO EN BLOQUES (sin tiempo):
-//  ┌──────────────────────────────────────────────┐
-//  │ para siempre                                 │
-//  │   ┌────────────────────────────────────────┐ │
-//  │   │ BT muestrear [acelerómetro X]         │ │
-//  │   │              cada [100] ms             │ │
-//  │   └────────────────────────────────────────┘ │
-//  └──────────────────────────────────────────────┘
+//  CONFIGURACIÓN REQUERIDA (pxt.json):
+//    "bluetooth": { "open": 1, "pairing_mode": 0, "whitelist": 0 }
+//    → Conexión abierta, sin vinculación, sin lista blanca.
 //
-//  IMPORTANTE — CONFIGURACIÓN PREVIA:
-//  ───────────────────────────────────
-//  1. En MakeCode: ⚙ → Project Settings → activar "No Pairing Required"
-//  2. En pxt.json, sección "bluetooth":
-//     { "open": 1, "pairing_mode": 0, "whitelist": 0 }
-//  3. Al agregar Bluetooth se DESACTIVA el serial USB y la extensión Radio.
+//  NOTA SOBRE LAS "BARRITAS" EN LA PANTALLA LED:
+//  ──────────────────────────────────────────────
+//  Al arrancar con Bluetooth, CODAL muestra un patrón de barras
+//  (el nombre BLE del dispositivo) en la matriz LED. El bloque
+//  "start FisicaBit BT" limpia la pantalla inmediatamente y
+//  muestra el ícono de "listo para conectar" en su lugar.
 // =============================================================================
 
 
@@ -62,6 +54,8 @@ namespace FisicaBitBT {
             bluetooth.setTransmitPower(7)
             _tiempoInicio = input.runningTime()
             _uartIniciado = true
+            // Limpiar las "barritas" que CODAL muestra al arrancar BLE
+            basic.clearScreen()
         }
     }
 
@@ -70,21 +64,14 @@ namespace FisicaBitBT {
     // =========================================================================
 
     /**
-     * Inicia Bluetooth UART con potencia máxima y muestra un indicador
-     * visual de conexión. Colocar en "al iniciar" para que el micro:bit
-     * sea visible inmediatamente en fisicabit.com.
+     * Inicia Bluetooth UART listo para fisicabit.com.
+     * Colocar en "al iniciar" como PRIMER bloque.
      *
      * Qué hace:
-     *   1. Inicia el servicio UART BLE
+     *   1. Inicia el servicio UART BLE (requerido por fisicabit.com)
      *   2. Sube la potencia de transmisión al máximo (alcance ~20m)
-     *   3. Muestra ícono de corazón al conectar, X al desconectar
-     *   4. Muestra un ícono de "listo" en la pantalla LED
-     *
-     * EJEMPLO:
-     *   al iniciar:
-     *     [start FisicaBit BT]
-     *   por siempre:
-     *     [BT muestrear [tiempo (ms)] y [sensor] cada 100 ms]
+     *   3. Limpia las barras del patrón Bluetooth de la pantalla
+     *   4. Muestra diana (◎) = listo, corazón (♥) = conectado
      */
     //% block="start FisicaBit BT"
     //% blockId=fisicabit_bt_inicio_rapido
@@ -92,13 +79,45 @@ namespace FisicaBitBT {
     //% weight=110
     export function inicioRapido(): void {
         _asegurarUART()
+        // Indicador visual: corazón al conectar, diana al desconectar
         bluetooth.onBluetoothConnected(function () {
             basic.showIcon(IconNames.Heart)
         })
         bluetooth.onBluetoothDisconnected(function () {
             basic.showIcon(IconNames.Target)
         })
-        // Mostrar que está listo para conectar
+        // Mostrar que está listo para conectar (reemplaza las barras BLE)
+        basic.showIcon(IconNames.Target)
+    }
+
+    /**
+     * Inicia Bluetooth con UART + todos los servicios BLE nativos
+     * que fisicabit.com puede leer directamente (acelerómetro,
+     * temperatura, magnetómetro, botones, LED, pines I/O).
+     *
+     * Usar este bloque si querés que fisicabit.com pueda leer
+     * los sensores internos del micro:bit directamente por BLE
+     * además de recibir datos por UART.
+     */
+    //% block="start FisicaBit BT with all services"
+    //% blockId=fisicabit_bt_inicio_completo
+    //% group="Connection"
+    //% weight=109
+    export function inicioCompleto(): void {
+        _asegurarUART()
+        bluetooth.startAccelerometerService()
+        bluetooth.startTemperatureService()
+        bluetooth.startMagnetometerService()
+        bluetooth.startButtonService()
+        bluetooth.startLEDService()
+        bluetooth.startIOPinService()
+        // Indicador visual
+        bluetooth.onBluetoothConnected(function () {
+            basic.showIcon(IconNames.Heart)
+        })
+        bluetooth.onBluetoothDisconnected(function () {
+            basic.showIcon(IconNames.Target)
+        })
         basic.showIcon(IconNames.Target)
     }
 
