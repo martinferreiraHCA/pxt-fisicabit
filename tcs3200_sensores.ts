@@ -8,10 +8,10 @@
 //               y calcula transmitancia (%) y absorbancia.
 //
 //  CONEXIONADO POR DEFECTO:
-//    S0  → P8   (escalado de frecuencia)
-//    S1  → P12  (escalado de frecuencia)
-//    S2  → P2   (selección de canal)
-//    S3  → P16  (selección de canal)
+//    S0  → P13  (escalado de frecuencia)
+//    S1  → P14  (escalado de frecuencia)
+//    S2  → P15  (selección de canal)
+//    S3  → P9   (selección de canal)
 //    OUT → P1   (señal de frecuencia)
 //
 //  PRINCIPIO DE FUNCIONAMIENTO:
@@ -30,14 +30,14 @@
 //% color=#7B2D8E
 //% icon="\uf0eb"
 //% block="TCS230 — Colorimeter"
-//% groups='["TCS230 Setup (S0=P8 S1=P12 S2=P2 S3=P16 OUT=P1)", "Measurement", "Calibration", "Spectrophotometry", "Advanced"]'
+//% groups='["TCS230 Setup (S0=P13 S1=P14 S2=P15 S3=P9 OUT=P1)", "Measurement", "Calibration", "Spectrophotometry", "Advanced"]'
 namespace FisicaBitColorimetro {
 
     // ── Pines por defecto ──
-    let _pinS0 = DigitalPin.P8
-    let _pinS1 = DigitalPin.P12
-    let _pinS2 = DigitalPin.P2
-    let _pinS3 = DigitalPin.P16
+    let _pinS0 = DigitalPin.P13
+    let _pinS1 = DigitalPin.P14
+    let _pinS2 = DigitalPin.P15
+    let _pinS3 = DigitalPin.P9
     let _pinOut = 1  // número de pin para shim C++
 
     // ── Estado ──
@@ -134,16 +134,16 @@ namespace FisicaBitColorimetro {
      * Conexión física TCS230 → micro:bit:
      *   VCC → 3V
      *   GND → GND
-     *   S0  → P8
-     *   S1  → P12
-     *   S2  → P2
-     *   S3  → P16
+     *   S0  → P13
+     *   S1  → P14
+     *   S2  → P15
+     *   S3  → P9
      *   OUT → P1
      *   OE  → GND (siempre habilitado)
      */
     //% blockId=fisicabit_tcs_inicializar
     //% block="initialize TCS230 color sensor"
-    //% group="TCS230 Setup (S0=P8 S1=P12 S2=P2 S3=P16 OUT=P1)" weight=100
+    //% group="TCS230 Setup (S0=P13 S1=P14 S2=P15 S3=P9 OUT=P1)" weight=100
     export function tcsInicializar(): void {
         _aplicarEscalado(EscaladoTCS230.Veinte)
         _inicializado = true
@@ -159,9 +159,9 @@ namespace FisicaBitColorimetro {
      */
     //% blockId=fisicabit_tcs_inicializar_custom
     //% block="initialize TCS230 S0 %s0 S1 %s1 S2 %s2 S3 %s3 OUT P %out"
-    //% group="TCS230 Setup (S0=P8 S1=P12 S2=P2 S3=P16 OUT=P1)" weight=99
-    //% s0.defl=DigitalPin.P8 s1.defl=DigitalPin.P12
-    //% s2.defl=DigitalPin.P2 s3.defl=DigitalPin.P16
+    //% group="TCS230 Setup (S0=P13 S1=P14 S2=P15 S3=P9 OUT=P1)" weight=99
+    //% s0.defl=DigitalPin.P13 s1.defl=DigitalPin.P14
+    //% s2.defl=DigitalPin.P15 s3.defl=DigitalPin.P9
     //% out.min=0 out.max=16 out.defl=1
     export function tcsInicializarCustom(s0: DigitalPin, s1: DigitalPin, s2: DigitalPin, s3: DigitalPin, out: number): void {
         _pinS0 = s0
@@ -179,7 +179,7 @@ namespace FisicaBitColorimetro {
      */
     //% blockId=fisicabit_tcs_escalado
     //% block="set TCS230 frequency scaling %escalado"
-    //% group="TCS230 Setup (S0=P8 S1=P12 S2=P2 S3=P16 OUT=P1)" weight=98
+    //% group="TCS230 Setup (S0=P13 S1=P14 S2=P15 S3=P9 OUT=P1)" weight=98
     export function tcsFijarEscalado(escalado: EscaladoTCS230): void {
         _aplicarEscalado(escalado)
     }
@@ -190,7 +190,7 @@ namespace FisicaBitColorimetro {
      */
     //% blockId=fisicabit_tcs_muestras
     //% block="set TCS230 averaging samples %muestras"
-    //% group="TCS230 Setup (S0=P8 S1=P12 S2=P2 S3=P16 OUT=P1)" weight=97
+    //% group="TCS230 Setup (S0=P13 S1=P14 S2=P15 S3=P9 OUT=P1)" weight=97
     //% muestras.min=1 muestras.max=50 muestras.defl=10
     export function tcsFijarMuestras(muestras: number): void {
         _muestrasPromedio = Math.clamp(1, 50, muestras)
