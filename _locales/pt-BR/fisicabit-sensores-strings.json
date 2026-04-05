@@ -125,7 +125,7 @@
 
     "{id:group}ToF Distance Sensor": "Sensor de Distância ToF",
 
-    "fisicabit_bme280_inicializar|block": "inicializar BME280 (I2C: SDA P20 SCL P19) em %direccion",
+    "fisicabit_bme280_inicializar|block": "inicializar BME280 (VCC GND SCL→P19 SDA→P20 CSB SDO) em %direccion",
     "fisicabit_bme280_temperatura|block": "BME280 temperatura em %unidad",
     "fisicabit_bme280_presion|block": "BME280 pressão em %unidad",
     "fisicabit_bme280_humedad|block": "BME280 umidade (% RH)",

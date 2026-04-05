@@ -230,7 +230,7 @@ namespace FisicaBit {
      * @param direccion Dirección I2C (0x76 si SDO→GND, 0x77 si SDO→VCC)
      */
     //% blockId=fisicabit_bme280_inicializar
-    //% block="initialize BME280 (I2C: SDA P20 SCL P19) at %direccion"
+    //% block="initialize BME280 (VCC GND SCL→P19 SDA→P20 CSB SDO) at %direccion"
     //% group="BME280 — Pressure/Temp/Humidity (I2C)"
     //% weight=100
     //% direccion.defl=DireccionBME280.Addr76
