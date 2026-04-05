@@ -35,6 +35,7 @@
     "fisicabit_bt_muestrear_2|block": "BT muestrear %valor1 y %valor2|cada %ms ms",
     "fisicabit_bt_muestrear_3|block": "BT muestrear %valor1 , %valor2 y %valor3|cada %ms ms",
     "fisicabit_bt_inicio_rapido|block": "iniciar FisicaBit BT",
+    "fisicabit_bt_inicio_completo|block": "iniciar FisicaBit BT con todos los servicios",
     "fisicabit_bt_iniciar|block": "iniciar Bluetooth UART",
     "fisicabit_bt_indicador|block": "configurar indicador de conexión BT",
     "fisicabit_bt_enviar_texto|block": "BT enviar texto %texto",
