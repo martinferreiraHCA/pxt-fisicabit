@@ -143,6 +143,12 @@ namespace FisicaBit {
      * Lee la humedad relativa del sensor DHT11 (%).
      * Rango: 20 – 90 %RH. Precisión: ±5 %RH.
      * Muestreo: máximo 1 lectura por segundo.
+     *
+     * Conexión física DHT11 → micro:bit:
+     *   VCC (o +)  → 3V
+     *   GND (o -)  → GND
+     *   DATA (o S) → P16
+     *
      * @param pin Pin digital donde está conectado DATA
      */
     //% blockId=fisicabit_dht11_humedad

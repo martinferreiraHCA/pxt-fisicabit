@@ -512,14 +512,17 @@ namespace FisicaBit {
      * Mide la distancia con un sensor ultrasónico HC-SR04.
      * Incluye filtro de mediana para eliminar picos espurios.
      *
+     * Conexión física HC-SR04 → micro:bit:
+     *   VCC  → 3V (o 5V según módulo)
+     *   GND  → GND
+     *   TRIG → P8
+     *   ECHO → P12
+     *
      * Algoritmo:
      *   1. Toma N lecturas (configurable con "configurar filtro ultrasónico")
      *   2. Descarta lecturas inválidas (0, fuera de rango)
      *   3. Ordena las lecturas válidas y toma la mediana (valor central)
      *   4. Si todas fallan, devuelve la última lectura válida
-     *
-     * Ideal para experimentos de MRU, MRUV y caída libre donde
-     * los picos espurios arruinan el análisis de datos.
      *
      * @param pinTrig Pin conectado a TRIG (disparo)
      * @param pinEcho Pin conectado a ECHO (respuesta)
