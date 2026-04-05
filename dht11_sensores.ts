@@ -41,8 +41,13 @@
 //        midiendo los pulsos HIGH para cada bit.
 // =============================================================================
 
-// Extiende el namespace FisicaBit con el sensor DHT11
-namespace FisicaBit {
+// Sensor DHT11 como bloque independiente
+//% weight=88
+//% color=#FF6347
+//% icon="\uf043"
+//% block="DHT11 — Humidity/Temperature"
+//% groups='["Measurement", "Batch Reading", "Diagnostics"]'
+namespace FisicaBitDHT11 {
 
     // ── Estado DHT11 ──
     let _dhtUltHumedad = 0      // Última humedad válida (%RH × 10)
@@ -153,7 +158,7 @@ namespace FisicaBit {
      */
     //% blockId=fisicabit_dht11_humedad
     //% block="DHT11 humidity (percent) on %pin"
-    //% group="DHT11 — Humidity/Temperature"
+    //% group="Measurement"
     //% weight=90
     //% pin.defl=DigitalPin.P16
     export function dht11Humedad(pin: DigitalPin): number {
@@ -169,7 +174,7 @@ namespace FisicaBit {
      */
     //% blockId=fisicabit_dht11_temperatura
     //% block="DHT11 temperature on %pin in %unidad"
-    //% group="DHT11 — Humidity/Temperature"
+    //% group="Measurement"
     //% weight=89
     //% pin.defl=DigitalPin.P16
     //% unidad.defl=UnidadTemperatura.Celsius
@@ -198,7 +203,7 @@ namespace FisicaBit {
      */
     //% blockId=fisicabit_dht11_leer
     //% block="DHT11 read all on %pin"
-    //% group="DHT11 — Humidity/Temperature"
+    //% group="Batch Reading"
     //% weight=88
     //% pin.defl=DigitalPin.P16
     export function dht11Leer(pin: DigitalPin): void {
@@ -210,7 +215,7 @@ namespace FisicaBit {
      */
     //% blockId=fisicabit_dht11_ult_humedad
     //% block="DHT11 last humidity (percent)"
-    //% group="DHT11 — Humidity/Temperature"
+    //% group="Batch Reading"
     //% weight=87
     export function dht11UltHumedad(): number {
         return _dhtUltHumedad / 10
@@ -222,7 +227,7 @@ namespace FisicaBit {
      */
     //% blockId=fisicabit_dht11_ult_temp
     //% block="DHT11 last temperature in %unidad"
-    //% group="DHT11 — Humidity/Temperature"
+    //% group="Batch Reading"
     //% weight=86
     //% unidad.defl=UnidadTemperatura.Celsius
     export function dht11UltTemperatura(unidad: UnidadTemperatura): number {
@@ -246,7 +251,7 @@ namespace FisicaBit {
      */
     //% blockId=fisicabit_dht11_valido
     //% block="DHT11 reading valid"
-    //% group="DHT11 — Humidity/Temperature"
+    //% group="Diagnostics"
     //% weight=80
     export function dht11Valido(): boolean {
         return _dhtOk

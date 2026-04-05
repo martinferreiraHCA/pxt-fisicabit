@@ -30,8 +30,13 @@
 //    (capítulo 4.2.3, implementación en punto fijo de 32 bits).
 // =============================================================================
 
-// Extiende el namespace FisicaBit con el sensor BME280
-namespace FisicaBit {
+// Sensor BME280 como bloque independiente
+//% weight=90
+//% color=#2E8B57
+//% icon="\uf0c2"
+//% block="BME280 — Pressure/Temp/Humidity"
+//% groups='["Configuration", "Measurement", "Diagnostics"]'
+namespace FisicaBitBME280 {
 
     // ── Dirección I2C ──
     let _bmeAddr = 0x76
@@ -240,7 +245,7 @@ namespace FisicaBit {
      */
     //% blockId=fisicabit_bme280_inicializar
     //% block="initialize BME280 (VCC GND SCL→P19 SDA→P20 CSB SDO) at %direccion"
-    //% group="BME280 — Pressure/Temp/Humidity (I2C)"
+    //% group="Configuration"
     //% weight=100
     //% direccion.defl=DireccionBME280.Addr76
     export function bme280Inicializar(direccion: DireccionBME280): void {
@@ -276,7 +281,7 @@ namespace FisicaBit {
      */
     //% blockId=fisicabit_bme280_temperatura
     //% block="BME280 temperature in %unidad"
-    //% group="BME280 — Pressure/Temp/Humidity (I2C)"
+    //% group="Measurement"
     //% weight=95
     //% unidad.defl=UnidadTemperatura.Celsius
     export function bme280Temperatura(unidad: UnidadTemperatura): number {
@@ -302,7 +307,7 @@ namespace FisicaBit {
      */
     //% blockId=fisicabit_bme280_presion
     //% block="BME280 pressure in %unidad"
-    //% group="BME280 — Pressure/Temp/Humidity (I2C)"
+    //% group="Measurement"
     //% weight=94
     //% unidad.defl=UnidadPresion.hPa
     export function bme280Presion(unidad: UnidadPresion): number {
@@ -330,7 +335,7 @@ namespace FisicaBit {
      */
     //% blockId=fisicabit_bme280_humedad
     //% block="BME280 humidity (percent RH)"
-    //% group="BME280 — Pressure/Temp/Humidity (I2C)"
+    //% group="Measurement"
     //% weight=93
     export function bme280Humedad(): number {
         if (!_bmeListo) return 0
@@ -347,7 +352,7 @@ namespace FisicaBit {
      */
     //% blockId=fisicabit_bme280_altitud
     //% block="BME280 altitude (m) sea level %presionNivelMar hPa"
-    //% group="BME280 — Pressure/Temp/Humidity (I2C)"
+    //% group="Measurement"
     //% weight=92
     //% presionNivelMar.defl=1013.25
     export function bme280Altitud(presionNivelMar: number): number {
@@ -365,7 +370,7 @@ namespace FisicaBit {
      */
     //% blockId=fisicabit_bme280_conectado
     //% block="BME280 sensor connected"
-    //% group="BME280 — Pressure/Temp/Humidity (I2C)"
+    //% group="Diagnostics"
     //% weight=85
     export function bme280Conectado(): boolean {
         return _bmeListo
