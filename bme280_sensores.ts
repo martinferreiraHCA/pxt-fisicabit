@@ -227,6 +227,15 @@ namespace FisicaBit {
      * Inicializa el sensor GY-BME280 por I2C.
      * Lee los coeficientes de calibración grabados en fábrica.
      * Muestra ✓ si el sensor responde correctamente, ✗ si no.
+     *
+     * Conexión física GY-BME280 → micro:bit:
+     *   VCC → 3V
+     *   GND → GND
+     *   SCL → P19 (SCL)
+     *   SDA → P20 (SDA)
+     *   CSB → 3V (fija modo I2C)
+     *   SDO → GND (dirección 0x76) o VCC (dirección 0x77)
+     *
      * @param direccion Dirección I2C (0x76 si SDO→GND, 0x77 si SDO→VCC)
      */
     //% blockId=fisicabit_bme280_inicializar

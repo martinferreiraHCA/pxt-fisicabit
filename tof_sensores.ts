@@ -504,6 +504,12 @@ namespace FisicaBit {
      * Inicializa el sensor ToF seleccionado.
      * Detecta el chip, lo configura y lo deja listo para medir.
      * Muestra ✓ en el LED si tuvo éxito, ✗ si falló.
+     *
+     * Conexión física ToF (TOF050C/200C/400C) → micro:bit:
+     *   VCC → 3V
+     *   GND → GND
+     *   SDA → P20 (SDA)
+     *   SCL → P19 (SCL)
      */
     //% block="initialize ToF sensor (I2C: SDA P20 SCL P19)"
     //% blockId=fisicabit_tof_inicializar

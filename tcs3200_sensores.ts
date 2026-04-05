@@ -130,6 +130,16 @@ namespace FisicaBitColorimetro {
     /**
      * Inicializa el sensor TCS230 con los pines por defecto.
      * Escalado: 20% (buena relación velocidad/precisión).
+     *
+     * Conexión física TCS230 → micro:bit:
+     *   VCC → 3V
+     *   GND → GND
+     *   S0  → P8
+     *   S1  → P12
+     *   S2  → P2
+     *   S3  → P16
+     *   OUT → P1
+     *   OE  → GND (siempre habilitado)
      */
     //% blockId=fisicabit_tcs_inicializar
     //% block="initialize TCS230 color sensor"
