@@ -85,6 +85,28 @@ declare const enum RangoAcelerometro {
     Rango8G = 8
 }
 
+declare const enum EjeAceleracion {
+    //% block="X (left/right)"
+    X = 0,
+    //% block="Y (front/back)"
+    Y = 1,
+    //% block="Z (up/down)"
+    Z = 2,
+    //% block="|a| magnitude"
+    Magnitud = 3,
+    //% block="vertical (along gravity)"
+    Vertical = 4
+}
+
+declare const enum UnidadAceleracion {
+    //% block="m/s²"
+    MetroPorSegundo2 = 0,
+    //% block="g (gravities)"
+    G = 1,
+    //% block="mg (milli-g)"
+    Miligravedad = 2
+}
+
 declare const enum ModoBarrera {
     //% block="digital"
     Digital = 0,

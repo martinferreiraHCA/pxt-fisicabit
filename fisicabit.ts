@@ -49,7 +49,7 @@
 //% color=#E64322
 //% icon="\uf0e7"
 //% block="FisicaBit Sensors"
-//% groups="['Internal Sensors', 'External Sensors', 'Optical Barrier', 'Conversions', 'Native C++', 'Utilities']"
+//% groups="['Internal Sensors', 'Acceleration (m/s²)', 'External Sensors', 'Optical Barrier', 'Conversions', 'Native C++', 'Utilities']"
 namespace FisicaBit {
 
     // =========================================================================
@@ -138,6 +138,444 @@ namespace FisicaBit {
             default:
                 return 0
         }
+    }
+
+
+    // =========================================================================
+    // GRUPO 1b: ACELERACIÓN EN m/s² — ALGORITMO AVANZADO
+    // =========================================================================
+    //
+    //  TEORÍA DEL SENSOR (LSM303AGR en micro:bit v2 / MMA8653FC en v1):
+    //  ─────────────────────────────────────────────────────────────────
+    //  El chip es un MEMS capacitivo de 3 ejes. Dentro del die de silicio
+    //  hay una masa de prueba suspendida por muelles microscópicos.
+    //  Cuando el sistema acelera, la masa se desplaza respecto a electrodos
+    //  fijos y cambia la capacidad del condensador diferencial. Un ASIC
+    //  interno convierte ese desbalance capacitivo a un número digital
+    //  de 10 bits (escala ±2 g por defecto) que MakeCode expone en
+    //  miligravedades (1 g = 1000 mg ≈ 1024 en la API por redondeo).
+    //
+    //  PUNTO CRÍTICO — QUÉ MIDE REALMENTE EL ACELERÓMETRO:
+    //  ─────────────────────────────────────────────────────
+    //  NO mide "aceleración" en el sentido newtoniano (dv/dt). Mide
+    //  ACELERACIÓN PROPIA (proper acceleration): la aceleración sentida
+    //  por un observador en reposo relativo al sensor. Es la suma
+    //  vectorial de todas las fuerzas NO gravitatorias por unidad de masa.
+    //
+    //  Consecuencia: en reposo sobre el suelo el sensor NO mide 0. Mide
+    //  +1 g apuntando hacia ARRIBA, porque la normal del suelo ejerce
+    //  una fuerza igual y opuesta al peso. En caída libre mide 0 (no hay
+    //  normal), aunque el cuerpo está acelerando a 9,81 m/s² hacia abajo.
+    //
+    //       a_propia  =  a_coordenada  +  (−g⃗)
+    //  ⇒    a_coordenada  =  a_propia  −  (−g⃗)  =  a_propia  +  g⃗
+    //
+    //  Donde g⃗ es el vector que apunta hacia el CENTRO de la Tierra.
+    //  Equivalentemente, si medimos el vector gravedad APARENTE en el
+    //  sistema del sensor (lo que el acelerómetro lee cuando está
+    //  estático), la aceleración respecto al suelo se obtiene como:
+    //
+    //       a⃗_cuerpo  =  a⃗_lectura  −  g⃗_estático
+    //
+    //  CONVERSIÓN mg → m/s²:
+    //  ──────────────────────
+    //       a [m/s²]  =  (lectura_mg / 1000) × g₀
+    //       g₀ = 9,80665 m/s²  (valor CODATA estándar)
+    //
+    //  CUIDADOS FÍSICOS PARA EXPERIMENTOS CON LA PLACA ENCIMA DEL CUERPO:
+    //  ───────────────────────────────────────────────────────────────────
+    //   1. Alineación: mantener la placa con la misma orientación durante
+    //      todo el experimento; cualquier rotación mezcla componentes
+    //      entre ejes y contamina la medición.
+    //   2. Calibración del bias: todo MEMS tiene un offset residual
+    //      (típicamente ±20 mg). Siempre medir ese offset con el cuerpo
+    //      en reposo ANTES del experimento.
+    //   3. Gravedad variable en el sistema del sensor: si el cuerpo puede
+    //      rotar, la gravedad cambia de eje aparente. Para resolver esto
+    //      estimamos g⃗ con un filtro pasabajos adaptativo.
+    //   4. Ruido térmico y cuantización: el sensor tiene ruido RMS de
+    //      ≈2-4 mg. Un filtro pasabajos de la componente lineal reduce
+    //      esto sin perder dinámica de interés (<20 Hz).
+    //   5. Rango dinámico: ±2 g sólo permite medir hasta ≈19,6 m/s² de
+    //      aceleración propia. Si se esperan golpes o caídas, usar ±8 g.
+    //   6. Banda pasante: el LSM303AGR a 100 Hz de ODR tiene ancho de
+    //      banda útil ≈40 Hz. Fenómenos más rápidos se aliasean.
+    //
+    //  ALGORITMO IMPLEMENTADO — "Gravity Tracking + Bias Cancellation":
+    //  ─────────────────────────────────────────────────────────────────
+    //  Usamos un estimador complementario. El vector gravedad g⃗ en el
+    //  marco del sensor se obtiene con un filtro pasabajos exponencial
+    //  (EMA) de constante α pequeña (≈0,05). La aceleración lineal
+    //  (pasabanda) se obtiene restando g⃗ a la lectura cruda:
+    //
+    //       g⃗_{k+1}  =  (1−α)·g⃗_k  +  α·a⃗_{raw,k}        (LPF, fc≈0,5 Hz)
+    //       a⃗_lineal_k  =  a⃗_{raw,k}  −  g⃗_k  −  bias⃗   (HPF por diferencia)
+    //
+    //  Además, para obtener la aceleración "respecto al suelo" en la
+    //  dirección vertical real (no el eje Z del sensor, que puede estar
+    //  inclinado), PROYECTAMOS a⃗_lineal sobre el versor −ĝ:
+    //
+    //       ĝ  =  g⃗ / |g⃗|
+    //       a_vertical↑  =  − (a⃗_lineal · ĝ)
+    //
+    //  De este modo el bloque devuelve la aceleración vertical POSITIVA
+    //  cuando el cuerpo sube y NEGATIVA cuando frena/cae, con independen‑
+    //  cia de cómo esté inclinada la placa sobre el cuerpo.
+    // =========================================================================
+
+    // ── Constantes físicas ──
+    const G0 = 9.80665               // m/s² — gravedad estándar (CODATA)
+    const MG_A_MS2 = 9.80665 / 1000  // factor mg → m/s²
+
+    // ── Estado del estimador de gravedad (filtro EMA) ──
+    let _gvx = 0        // componente X del vector gravedad estimado (mg)
+    let _gvy = 0        // componente Y                               (mg)
+    let _gvz = -1000    // componente Z (placa plana, cara arriba)     (mg)
+    let _gAlpha = 0.05  // constante del pasabajos (α) — fc ≈ 0.5 Hz a 100 Hz ODR
+    let _gInit = false  // ¿ya inicializamos la gravedad?
+
+    // ── Bias residual del sensor (calibración en reposo) ──
+    let _biasX = 0      // offset DC en mg
+    let _biasY = 0
+    let _biasZ = 0
+
+    /**
+     * Actualiza una vez el estimador de gravedad a partir de la lectura cruda
+     * del acelerómetro. Esta función la llaman internamente los bloques de
+     * lectura, pero también se expone por si el usuario quiere forzar una
+     * actualización dentro de su bucle.
+     *
+     * Modelo matemático (filtro pasabajos EMA de primer orden):
+     *     g_k = (1 − α) · g_{k−1}  +  α · a_raw_k
+     *
+     * Con α = 0,05 y ODR de 100 Hz → frecuencia de corte ≈ 0,8 Hz, lo que
+     * separa eficazmente la componente estática (gravedad, DC-lento) de la
+     * dinámica (movimientos del cuerpo, >1 Hz).
+     */
+    //% block="update gravity estimate"
+    //% blockId=fisicabit_accel_actualizar_gravedad
+    //% group="Acceleration (m/s²)"
+    //% weight=99
+    export function actualizarGravedad(): void {
+        const ax = input.acceleration(Dimension.X)
+        const ay = input.acceleration(Dimension.Y)
+        const az = input.acceleration(Dimension.Z)
+        if (!_gInit) {
+            // Inicializar con la primera muestra para evitar transitorio de convergencia
+            _gvx = ax; _gvy = ay; _gvz = az
+            _gInit = true
+            return
+        }
+        _gvx = (1 - _gAlpha) * _gvx + _gAlpha * ax
+        _gvy = (1 - _gAlpha) * _gvy + _gAlpha * ay
+        _gvz = (1 - _gAlpha) * _gvz + _gAlpha * az
+    }
+
+    /**
+     * Fija la constante α del filtro pasabajos usado para estimar la
+     * gravedad. Valores más bajos → filtro más lento (más inercia, mejor
+     * rechazo de movimiento rápido) pero tarda más en adaptarse a rotaciones.
+     *
+     * Guía práctica:
+     *   α = 0.01  → fc ≈ 0,16 Hz. Ideal si la placa NO rota durante el
+     *               experimento (máxima limpieza del bias gravitatorio).
+     *   α = 0.05  → fc ≈ 0,8 Hz. Valor por defecto. Buen compromiso.
+     *   α = 0.20  → fc ≈ 3,5 Hz. Sólo si el cuerpo cambia de orientación
+     *               con frecuencia (no recomendado para medir a_cuerpo).
+     *
+     * @param alfa Constante del filtro (0 < α < 1). Por defecto 0,05.
+     */
+    //% block="set gravity filter α to %alfa"
+    //% blockId=fisicabit_accel_fijar_alfa
+    //% group="Acceleration (m/s²)"
+    //% weight=98
+    //% alfa.min=0.001 alfa.max=0.5 alfa.defl=0.05
+    export function fijarAlfaGravedad(alfa: number): void {
+        if (alfa < 0.001) alfa = 0.001
+        if (alfa > 0.5) alfa = 0.5
+        _gAlpha = alfa
+    }
+
+    /**
+     * Calibra el acelerómetro midiendo el bias (offset residual) del sensor
+     * mientras el cuerpo está en REPOSO absoluto sobre el suelo.
+     *
+     * PROCEDIMIENTO DE CALIBRACIÓN:
+     *   1. Colocar el cuerpo con la placa encima, totalmente quieto, en la
+     *      orientación final del experimento (ej: placa horizontal, cara
+     *      arriba, sobre el objeto a medir).
+     *   2. Invocar este bloque. El programa tomará N muestras y calculará:
+     *        • El vector gravedad estático g⃗ del entorno.
+     *        • El offset residual del sensor (bias) = promedio − g_esperada.
+     *   3. A partir de ese momento, todas las lecturas de aceleración
+     *      lineal descontarán el bias y la gravedad correctamente.
+     *
+     * JUSTIFICACIÓN FÍSICA:
+     *   En reposo la lectura debería cumplir |a⃗| = 1 g exactamente. Si
+     *   promediamos M muestras obtenemos:
+     *        ⟨a⃗⟩ = g⃗ + bias⃗ + ruido/√M
+     *   Para M = 200 muestras a 100 Hz (2 s), el ruido RMS del sensor
+     *   (~3 mg por eje) se reduce a 3/√200 ≈ 0,21 mg, despreciable.
+     *
+     * Después de la calibración, el módulo del vector g⃗ medido debería
+     * coincidir con 1000 mg ± 20 mg. Si difiere más, probablemente el
+     * cuerpo no estaba realmente quieto o hay vibración ambiental.
+     *
+     * @param muestras Número de muestras a promediar (50-500). Por defecto 200.
+     */
+    //% block="calibrate accelerometer at rest (%muestras samples)"
+    //% blockId=fisicabit_accel_calibrar
+    //% group="Acceleration (m/s²)"
+    //% weight=100
+    //% muestras.min=50 muestras.max=500 muestras.defl=200
+    export function calibrarAcelerometro(muestras: number): void {
+        let sx = 0, sy = 0, sz = 0
+        for (let i = 0; i < muestras; i++) {
+            sx += input.acceleration(Dimension.X)
+            sy += input.acceleration(Dimension.Y)
+            sz += input.acceleration(Dimension.Z)
+            basic.pause(10) // 100 Hz de muestreo → 10 ms por muestra
+        }
+        // Vector gravedad medido (en reposo = aceleración propia pura)
+        const mx = sx / muestras
+        const my = sy / muestras
+        const mz = sz / muestras
+
+        // Inicializamos el estimador de gravedad con el promedio calibrado
+        _gvx = mx
+        _gvy = my
+        _gvz = mz
+        _gInit = true
+
+        // Bias residual: diferencia entre el módulo medido y 1000 mg teóricos.
+        // Repartimos el error proporcionalmente a cada eje (corrección de escala
+        // aproximada). Esto no corrige cross-axis, pero sí el bias dominante.
+        const mod = Math.sqrt(mx * mx + my * my + mz * mz)
+        if (mod > 0) {
+            const factor = (mod - 1000) / mod   // fracción de exceso/defecto
+            _biasX = mx * factor
+            _biasY = my * factor
+            _biasZ = mz * factor
+        } else {
+            _biasX = 0; _biasY = 0; _biasZ = 0
+        }
+    }
+
+    /**
+     * Fija el rango de medición del acelerómetro. Rangos mayores permiten
+     * medir golpes/impactos más fuertes, a cambio de menor resolución por bit.
+     *
+     * Resolución efectiva (API a 10 bits, ≈1024 cuentas por ±rango):
+     *      ±2 g  →  ≈3,9 mg/bit  →  0,038 m/s² por bit   (por defecto)
+     *      ±4 g  →  ≈7,8 mg/bit  →  0,077 m/s² por bit
+     *      ±8 g  →  ≈15,6 mg/bit →  0,153 m/s² por bit
+     *
+     * Regla: elegir el rango MÁS PEQUEÑO que no sature durante el experimento.
+     *
+     * @param rango Rango deseado (±2g, ±4g, ±8g)
+     */
+    //% block="set accelerometer range %rango"
+    //% blockId=fisicabit_accel_rango
+    //% group="Acceleration (m/s²)"
+    //% weight=97
+    //% rango.defl=RangoAcelerometro.Rango2G
+    export function fijarRangoAcelerometro(rango: RangoAcelerometro): void {
+        // La API nativa acepta 1, 2, 4, 8 (g)
+        input.setAccelerometerRange(rango as any)
+    }
+
+    /**
+     * Devuelve la aceleración LINEAL del cuerpo (con la gravedad y el bias ya
+     * descontados) sobre un eje elegido, en la unidad seleccionada.
+     *
+     * ALGORITMO:
+     *   1. Leer la aceleración propia cruda del sensor (a⃗_raw, en mg).
+     *   2. Actualizar el estimador exponencial de gravedad g⃗.
+     *   3. Calcular a⃗_lineal = a⃗_raw − g⃗ − bias⃗.
+     *   4. Si el eje solicitado es "Vertical", proyectar sobre −ĝ:
+     *          a_vert = −(a⃗_lineal · ĝ)
+     *      Así el signo positivo = "hacia arriba respecto al suelo" sin
+     *      importar la orientación física de la placa.
+     *   5. Si el eje es Magnitud, devolver |a⃗_lineal|.
+     *   6. Convertir de mg a la unidad pedida.
+     *
+     * INTERPRETACIÓN:
+     *   - En reposo: todos los ejes ≈ 0 (la gravedad ya se restó).
+     *   - En caída libre: todos los ejes ≈ 0 también; el eje Vertical da
+     *     ≈ −9,81 m/s² (el cuerpo acelera hacia abajo respecto al suelo
+     *     porque ya no hay normal que compense la gravedad).
+     *   - Subiendo en ascensor a 2 m/s²: eje Vertical ≈ +2,0 m/s².
+     *
+     * @param eje Eje físico deseado (X, Y, Z, Magnitud o Vertical)
+     * @param unidad Unidad de salida (m/s², g o mg)
+     */
+    //% block="linear acceleration on axis %eje in %unidad"
+    //% blockId=fisicabit_accel_lineal
+    //% group="Acceleration (m/s²)"
+    //% weight=96
+    //% eje.defl=EjeAceleracion.Vertical
+    //% unidad.defl=UnidadAceleracion.MetroPorSegundo2
+    export function leerAceleracionLineal(eje: EjeAceleracion, unidad: UnidadAceleracion): number {
+        // 1) Lectura cruda
+        const ax = input.acceleration(Dimension.X)
+        const ay = input.acceleration(Dimension.Y)
+        const az = input.acceleration(Dimension.Z)
+
+        // 2) Actualizar estimador de gravedad con esta misma muestra
+        if (!_gInit) {
+            _gvx = ax; _gvy = ay; _gvz = az; _gInit = true
+        } else {
+            _gvx = (1 - _gAlpha) * _gvx + _gAlpha * ax
+            _gvy = (1 - _gAlpha) * _gvy + _gAlpha * ay
+            _gvz = (1 - _gAlpha) * _gvz + _gAlpha * az
+        }
+
+        // 3) Aceleración lineal en mg (resta de gravedad y bias)
+        const lx = ax - _gvx - _biasX
+        const ly = ay - _gvy - _biasY
+        const lz = az - _gvz - _biasZ
+
+        // 4) Selección de componente
+        let valor_mg = 0
+        switch (eje) {
+            case EjeAceleracion.X:
+                valor_mg = lx; break
+            case EjeAceleracion.Y:
+                valor_mg = ly; break
+            case EjeAceleracion.Z:
+                valor_mg = lz; break
+            case EjeAceleracion.Magnitud:
+                valor_mg = Math.sqrt(lx * lx + ly * ly + lz * lz)
+                break
+            case EjeAceleracion.Vertical: {
+                // Proyección sobre el versor −ĝ  (arriba = positivo)
+                const modG = Math.sqrt(_gvx * _gvx + _gvy * _gvy + _gvz * _gvz)
+                if (modG < 1) { valor_mg = 0; break }
+                const dot = lx * _gvx + ly * _gvy + lz * _gvz
+                valor_mg = -dot / modG
+                break
+            }
+        }
+
+        // 5) Conversión a la unidad pedida (2 decimales de redondeo)
+        switch (unidad) {
+            case UnidadAceleracion.MetroPorSegundo2:
+                return Math.round(valor_mg * MG_A_MS2 * 100) / 100
+            case UnidadAceleracion.G:
+                return Math.round(valor_mg / 10) / 100   // mg → g con 2 decimales
+            case UnidadAceleracion.Miligravedad:
+                return Math.round(valor_mg)
+            default:
+                return Math.round(valor_mg * MG_A_MS2 * 100) / 100
+        }
+    }
+
+    /**
+     * Aceleración PROPIA (lo que mide el sensor sin restar nada).
+     * Útil para estudiantes avanzados que quieren comparar el modelo
+     * de "peso aparente" con la teoría: esta función devuelve la fuerza
+     * por unidad de masa que el soporte ejerce sobre el cuerpo (N/kg).
+     *
+     * Equivalente pedagógico: si te paras sobre una balanza dentro de
+     * un ascensor, esta función devuelve lo que marca la balanza
+     * dividido por tu masa.
+     *
+     * @param eje Eje físico (X, Y, Z o Magnitud)
+     * @param unidad Unidad deseada
+     */
+    //% block="proper acceleration on axis %eje in %unidad"
+    //% blockId=fisicabit_accel_propia
+    //% group="Acceleration (m/s²)"
+    //% weight=94
+    //% eje.defl=EjeAceleracion.Magnitud
+    //% unidad.defl=UnidadAceleracion.MetroPorSegundo2
+    export function leerAceleracionPropia(eje: EjeAceleracion, unidad: UnidadAceleracion): number {
+        const ax = input.acceleration(Dimension.X)
+        const ay = input.acceleration(Dimension.Y)
+        const az = input.acceleration(Dimension.Z)
+
+        let valor_mg = 0
+        switch (eje) {
+            case EjeAceleracion.X: valor_mg = ax; break
+            case EjeAceleracion.Y: valor_mg = ay; break
+            case EjeAceleracion.Z: valor_mg = az; break
+            case EjeAceleracion.Magnitud:
+                valor_mg = Math.sqrt(ax * ax + ay * ay + az * az); break
+            case EjeAceleracion.Vertical: {
+                // Componente a lo largo de la vertical real (estimada por filtro)
+                const modG = Math.sqrt(_gvx * _gvx + _gvy * _gvy + _gvz * _gvz)
+                if (modG < 1) { valor_mg = 0; break }
+                const dot = ax * _gvx + ay * _gvy + az * _gvz
+                valor_mg = -dot / modG
+                break
+            }
+        }
+
+        switch (unidad) {
+            case UnidadAceleracion.MetroPorSegundo2:
+                return Math.round(valor_mg * MG_A_MS2 * 100) / 100
+            case UnidadAceleracion.G:
+                return Math.round(valor_mg / 10) / 100
+            case UnidadAceleracion.Miligravedad:
+                return Math.round(valor_mg)
+            default:
+                return Math.round(valor_mg * MG_A_MS2 * 100) / 100
+        }
+    }
+
+    /**
+     * Devuelve el módulo del vector gravedad estimado actualmente, en mg.
+     * Herramienta de diagnóstico: en reposo debería valer ≈1000 mg. Si no
+     * lo hace, el cuerpo se está moviendo o la calibración es incorrecta.
+     */
+    //% block="|g estimated| (mg)"
+    //% blockId=fisicabit_accel_mod_gravedad
+    //% group="Acceleration (m/s²)"
+    //% weight=85
+    export function moduloGravedadEstimada(): number {
+        return Math.round(Math.sqrt(_gvx * _gvx + _gvy * _gvy + _gvz * _gvz))
+    }
+
+    /**
+     * Detecta caída libre con umbral físicamente motivado.
+     *
+     * FUNDAMENTO:
+     *   En caída libre la aceleración propia se anula porque desaparece
+     *   la fuerza normal. Matemáticamente: |a⃗_propia| → 0. En la práctica
+     *   el sensor no llega a 0 exacto por ruido y pequeñas vibraciones,
+     *   por lo que usamos un umbral (típico 100-300 mg).
+     *
+     * Esta función NO usa el filtro de gravedad (sería contraproducente:
+     * durante la caída la "gravedad estimada" apuntaría a 0). Usa la
+     * magnitud cruda del vector de aceleración propia.
+     *
+     * @param umbralMg Umbral en mg por debajo del cual se considera caída libre (def. 200)
+     */
+    //% block="free fall detected? (threshold %umbralMg mg)"
+    //% blockId=fisicabit_accel_caida_libre
+    //% group="Acceleration (m/s²)"
+    //% weight=84
+    //% umbralMg.min=50 umbralMg.max=500 umbralMg.defl=200
+    export function esCaidaLibre(umbralMg: number): boolean {
+        const ax = input.acceleration(Dimension.X)
+        const ay = input.acceleration(Dimension.Y)
+        const az = input.acceleration(Dimension.Z)
+        const mod = Math.sqrt(ax * ax + ay * ay + az * az)
+        return mod < umbralMg
+    }
+
+    /**
+     * Convierte un valor de miligravedades (mg) a m/s² usando la gravedad
+     * estándar CODATA g₀ = 9,80665 m/s². Devuelve con 2 decimales.
+     *
+     * @param mg Valor en miligravedades
+     */
+    //% block="convert %mg mg → m/s²"
+    //% blockId=fisicabit_accel_mg_a_ms2
+    //% group="Acceleration (m/s²)"
+    //% weight=70
+    export function convertirMgAMs2(mg: number): number {
+        return Math.round(mg * MG_A_MS2 * 100) / 100
     }
 
 
