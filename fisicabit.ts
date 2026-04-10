@@ -49,7 +49,7 @@
 //% color=#E64322
 //% icon="\uf0e7"
 //% block="FisicaBit Sensors"
-//% groups="['Internal Sensors', 'Acceleration (m/s²)', 'External Sensors', 'Optical Barrier', 'Conversions', 'Native C++', 'Utilities']"
+//% groups="['Internal Sensors', 'External Sensors', 'Optical Barrier', 'Conversions', 'Native C++', 'Utilities']"
 namespace FisicaBit {
 
     // =========================================================================
@@ -141,630 +141,11 @@ namespace FisicaBit {
     }
 
 
-    // =========================================================================
-    // GRUPO 1b: ACELERACIÓN EN m/s² — ALGORITMO AVANZADO
-    // =========================================================================
-    //
-    //  TEORÍA DEL SENSOR (LSM303AGR en micro:bit v2 / MMA8653FC en v1):
-    //  ─────────────────────────────────────────────────────────────────
-    //  El chip es un MEMS capacitivo de 3 ejes. Dentro del die de silicio
-    //  hay una masa de prueba suspendida por muelles microscópicos.
-    //  Cuando el sistema acelera, la masa se desplaza respecto a electrodos
-    //  fijos y cambia la capacidad del condensador diferencial. Un ASIC
-    //  interno convierte ese desbalance capacitivo a un número digital
-    //  de 10 bits (escala ±2 g por defecto) que MakeCode expone en
-    //  miligravedades (1 g = 1000 mg ≈ 1024 en la API por redondeo).
-    //
-    //  PUNTO CRÍTICO — QUÉ MIDE REALMENTE EL ACELERÓMETRO:
-    //  ─────────────────────────────────────────────────────
-    //  NO mide "aceleración" en el sentido newtoniano (dv/dt). Mide
-    //  ACELERACIÓN PROPIA (proper acceleration): la aceleración sentida
-    //  por un observador en reposo relativo al sensor. Es la suma
-    //  vectorial de todas las fuerzas NO gravitatorias por unidad de masa.
-    //
-    //  Consecuencia: en reposo sobre el suelo el sensor NO mide 0. Mide
-    //  +1 g apuntando hacia ARRIBA, porque la normal del suelo ejerce
-    //  una fuerza igual y opuesta al peso. En caída libre mide 0 (no hay
-    //  normal), aunque el cuerpo está acelerando a 9,81 m/s² hacia abajo.
-    //
-    //       a_propia  =  a_coordenada  +  (−g⃗)
-    //  ⇒    a_coordenada  =  a_propia  −  (−g⃗)  =  a_propia  +  g⃗
-    //
-    //  Donde g⃗ es el vector que apunta hacia el CENTRO de la Tierra.
-    //  Equivalentemente, si medimos el vector gravedad APARENTE en el
-    //  sistema del sensor (lo que el acelerómetro lee cuando está
-    //  estático), la aceleración respecto al suelo se obtiene como:
-    //
-    //       a⃗_cuerpo  =  a⃗_lectura  −  g⃗_estático
-    //
-    //  CONVERSIÓN mg → m/s²:
-    //  ──────────────────────
-    //       a [m/s²]  =  (lectura_mg / 1000) × g₀
-    //       g₀ = 9,80665 m/s²  (valor CODATA estándar)
-    //
-    //  CUIDADOS FÍSICOS PARA EXPERIMENTOS CON LA PLACA ENCIMA DEL CUERPO:
-    //  ───────────────────────────────────────────────────────────────────
-    //   1. Alineación: mantener la placa con la misma orientación durante
-    //      todo el experimento; cualquier rotación mezcla componentes
-    //      entre ejes y contamina la medición.
-    //   2. Calibración del bias: todo MEMS tiene un offset residual
-    //      (típicamente ±20 mg). Siempre medir ese offset con el cuerpo
-    //      en reposo ANTES del experimento.
-    //   3. Gravedad variable en el sistema del sensor: si el cuerpo puede
-    //      rotar, la gravedad cambia de eje aparente. Para resolver esto
-    //      estimamos g⃗ con un filtro pasabajos adaptativo.
-    //   4. Ruido térmico y cuantización: el sensor tiene ruido RMS de
-    //      ≈2-4 mg. Un filtro pasabajos de la componente lineal reduce
-    //      esto sin perder dinámica de interés (<20 Hz).
-    //   5. Rango dinámico: ±2 g sólo permite medir hasta ≈19,6 m/s² de
-    //      aceleración propia. Si se esperan golpes o caídas, usar ±8 g.
-    //   6. Banda pasante: el LSM303AGR a 100 Hz de ODR tiene ancho de
-    //      banda útil ≈40 Hz. Fenómenos más rápidos se aliasean.
-    //
-    //  ALGORITMO IMPLEMENTADO — "Gravity Tracking + Bias Cancellation":
-    //  ─────────────────────────────────────────────────────────────────
-    //  Usamos un estimador complementario. El vector gravedad g⃗ en el
-    //  marco del sensor se obtiene con un filtro pasabajos exponencial
-    //  (EMA) de constante α pequeña (≈0,05). La aceleración lineal
-    //  (pasabanda) se obtiene restando g⃗ a la lectura cruda:
-    //
-    //       g⃗_{k+1}  =  (1−α)·g⃗_k  +  α·a⃗_{raw,k}        (LPF, fc≈0,5 Hz)
-    //       a⃗_lineal_k  =  a⃗_{raw,k}  −  g⃗_k  −  bias⃗   (HPF por diferencia)
-    //
-    //  Además, para obtener la aceleración "respecto al suelo" en la
-    //  dirección vertical real (no el eje Z del sensor, que puede estar
-    //  inclinado), PROYECTAMOS a⃗_lineal sobre el versor −ĝ:
-    //
-    //       ĝ  =  g⃗ / |g⃗|
-    //       a_vertical↑  =  − (a⃗_lineal · ĝ)
-    //
-    //  De este modo el bloque devuelve la aceleración vertical POSITIVA
-    //  cuando el cuerpo sube y NEGATIVA cuando frena/cae, con independen‑
-    //  cia de cómo esté inclinada la placa sobre el cuerpo.
-    //
-    //  INVARIANTE FUNDAMENTAL — "cuerpo quieto ⇒ a = 0":
-    //  ─────────────────────────────────────────────────
-    //  Si el cuerpo está en reposo, las lecturas crudas cumplen
-    //  a⃗_raw = g⃗ + ruido. El estimador EMA converge a g⃗, por lo que
-    //  a⃗_lineal = a⃗_raw − g⃗ ≈ ruido (≈3 mg RMS = 0,03 m/s²). El
-    //  redondeo a 2 decimales en m/s² garantiza que el resultado
-    //  devuelto sea EXACTAMENTE 0,00 m/s² en reposo.
-    //
-    //  Importante: NO se aplica ninguna corrección adicional de "bias"
-    //  más allá del estimador EMA; agregar una segunda resta de bias
-    //  introduciría un offset artificial que rompería este invariante.
-    //  El EMA ya absorbe simultáneamente la gravedad y el offset DC
-    //  intrínseco del sensor MEMS, que es justo lo que queremos.
-    // =========================================================================
-
-    // ── Constantes físicas ──
-    const G0 = 9.80665               // m/s² — gravedad estándar (CODATA)
-    const MG_A_MS2 = 9.80665 / 1000  // factor mg → m/s²
-
-    // ── Estado del estimador de gravedad (filtro EMA) ──
-    let _gvx = 0        // componente X del vector gravedad estimado (mg)
-    let _gvy = 0        // componente Y                               (mg)
-    let _gvz = -1000    // componente Z (placa plana, cara arriba)     (mg)
-    let _gAlpha = 0.05  // constante del pasabajos (α) — fc ≈ 0.8 Hz a 100 Hz ODR
-    let _gInit = false  // ¿ya inicializamos la gravedad?
-    let _gLocked = false // tras calibrar, se congela el vector gravedad
-
-    // ── Filtro anti-pico sobre la lectura cruda del acelerómetro ────
-    // El LSM303AGR tira de forma ocasional "outliers" de un solo sample
-    // (10-50 mg de desviación súbita) por ruido eléctrico, jitter del
-    // bus I²C, EMI de los LED, etc. Sin filtrar, esos outliers aparecen
-    // como PICOS ESPURIOS en la aceleración lineal y, si se integra,
-    // también en la velocidad.
-    //
-    // Solución: MEDIANA DESLIZANTE de las 3 últimas muestras por eje.
-    // La mediana de 3 rechaza CUALQUIER outlier aislado sin añadir
-    // apenas latencia (retardo efectivo ≤ 1 muestra ≈ 10-20 ms a la ODR
-    // por defecto de 100 Hz). Es el filtro no-lineal óptimo para
-    // suprimir glitches impulsivos preservando escalones y rampas.
-    //
-    // Se aplica ANTES del estimador EMA de gravedad para que los
-    // outliers tampoco contaminen la referencia de reposo.
-    let _histAx: number[] = [0, 0, 0]
-    let _histAy: number[] = [0, 0, 0]
-    let _histAz: number[] = [0, 0, 0]
-    let _histIdx = 0
-    let _histInit = false
-
-    // Zona muerta (deadband) de la aceleración LINEAL, en mg. Bajo este
-    // umbral la salida se clampa a 0 para que el reposo dé EXACTAMENTE
-    // 0,00 m/s². 5 mg ≈ 0,05 m/s² absorbe el ruido gaussiano residual
-    // (σ ≈ 3 mg del LSM303AGR) sin tapar aceleraciones reales pequeñas.
-    // NO se aplica a la aceleración PROPIA (ahí el reposo vale ~1000 mg).
-    const DEADBAND_LINEAL_MG = 5
-
-    /**
-     * Mediana de tres valores sin necesidad de ordenar: aprovecha la
-     * identidad  mediana(a,b,c) = a + b + c − max(a,b,c) − min(a,b,c).
-     */
-    function _median3(a: number, b: number, c: number): number {
-        const mn = Math.min(a, Math.min(b, c))
-        const mx = Math.max(a, Math.max(b, c))
-        return a + b + c - mn - mx
-    }
-
-    /**
-     * Lee el acelerómetro crudo, empuja la muestra a la ventana
-     * deslizante de 3 y devuelve [ax, ay, az] en mg YA filtrados por
-     * mediana. La primera llamada rellena la ventana con la muestra
-     * inicial para evitar un pico de arranque.
-     */
-    function _leerAcelRawFiltrado(): number[] {
-        const rx = input.acceleration(Dimension.X)
-        const ry = input.acceleration(Dimension.Y)
-        const rz = input.acceleration(Dimension.Z)
-
-        if (!_histInit) {
-            _histAx = [rx, rx, rx]
-            _histAy = [ry, ry, ry]
-            _histAz = [rz, rz, rz]
-            _histInit = true
-        } else {
-            _histAx[_histIdx] = rx
-            _histAy[_histIdx] = ry
-            _histAz[_histIdx] = rz
-            _histIdx = (_histIdx + 1) % 3
-        }
-
-        return [
-            _median3(_histAx[0], _histAx[1], _histAx[2]),
-            _median3(_histAy[0], _histAy[1], _histAy[2]),
-            _median3(_histAz[0], _histAz[1], _histAz[2])
-        ]
-    }
-
-    /**
-     * Actualiza una vez el estimador de gravedad a partir de la lectura cruda
-     * del acelerómetro. Esta función la llaman internamente los bloques de
-     * lectura, pero también se expone por si el usuario quiere forzar una
-     * actualización dentro de su bucle.
-     *
-     * Modelo matemático (filtro pasabajos EMA de primer orden):
-     *     g_k = (1 − α) · g_{k−1}  +  α · a_raw_k
-     *
-     * Con α = 0,05 y ODR de 100 Hz → frecuencia de corte ≈ 0,8 Hz, lo que
-     * separa eficazmente la componente estática (gravedad, DC-lento) de la
-     * dinámica (movimientos del cuerpo, >1 Hz).
-     *
-     * Si se ha ejecutado "calibrate accelerometer at rest", el vector g⃗
-     * queda CONGELADO y este bloque no lo modifica (garantiza que sostener
-     * una aceleración no sea "absorbida" por el filtro). Para volver a
-     * habilitar el tracking, llamar a "unlock gravity tracking".
-     */
-    //% block="update gravity estimate"
-    //% blockId=fisicabit_accel_actualizar_gravedad
-    //% group="Acceleration (m/s²)"
-    //% weight=99
-    export function actualizarGravedad(): void {
-        const ax = input.acceleration(Dimension.X)
-        const ay = input.acceleration(Dimension.Y)
-        const az = input.acceleration(Dimension.Z)
-        if (!_gInit) {
-            // Inicializar con la primera muestra para evitar transitorio de convergencia
-            _gvx = ax; _gvy = ay; _gvz = az
-            _gInit = true
-            return
-        }
-        if (_gLocked) return
-        _gvx = (1 - _gAlpha) * _gvx + _gAlpha * ax
-        _gvy = (1 - _gAlpha) * _gvy + _gAlpha * ay
-        _gvz = (1 - _gAlpha) * _gvz + _gAlpha * az
-    }
-
-    /**
-     * Fija la constante α del filtro pasabajos usado para estimar la
-     * gravedad. Valores más bajos → filtro más lento (más inercia, mejor
-     * rechazo de movimiento rápido) pero tarda más en adaptarse a rotaciones.
-     *
-     * Guía práctica:
-     *   α = 0.01  → fc ≈ 0,16 Hz. Ideal si la placa NO rota durante el
-     *               experimento (máxima limpieza del bias gravitatorio).
-     *   α = 0.05  → fc ≈ 0,8 Hz. Valor por defecto. Buen compromiso.
-     *   α = 0.20  → fc ≈ 3,5 Hz. Sólo si el cuerpo cambia de orientación
-     *               con frecuencia (no recomendado para medir a_cuerpo).
-     *
-     * @param alfa Constante del filtro (0 < α < 1). Por defecto 0,05.
-     */
-    //% block="set gravity filter α to %alfa"
-    //% blockId=fisicabit_accel_fijar_alfa
-    //% group="Acceleration (m/s²)"
-    //% weight=98
-    //% alfa.min=0.001 alfa.max=0.5 alfa.defl=0.05
-    export function fijarAlfaGravedad(alfa: number): void {
-        if (alfa < 0.001) alfa = 0.001
-        if (alfa > 0.5) alfa = 0.5
-        _gAlpha = alfa
-    }
-
-    /**
-     * Vuelve a habilitar el seguimiento adaptativo del vector gravedad
-     * (desbloquea el EMA) después de una calibración. Usar sólo si el
-     * cuerpo va a cambiar de orientación durante el experimento.
-     */
-    //% block="unlock gravity tracking"
-    //% blockId=fisicabit_accel_unlock
-    //% group="Acceleration (m/s²)"
-    //% weight=95
-    export function desbloquearGravedad(): void {
-        _gLocked = false
-    }
-
-    /**
-     * Calibra el acelerómetro midiendo el vector gravedad del entorno
-     * mientras el cuerpo está en REPOSO absoluto sobre el suelo.
-     *
-     * PROCEDIMIENTO DE CALIBRACIÓN:
-     *   1. Colocar el cuerpo con la placa encima, totalmente quieto, en la
-     *      orientación final del experimento (ej: placa horizontal, cara
-     *      arriba, sobre el objeto a medir).
-     *   2. Invocar este bloque. El programa tomará N muestras y calculará
-     *      el vector gravedad aparente g⃗ = ⟨a⃗_raw⟩ promediando muestras
-     *      sucesivas para eliminar el ruido por el factor 1/√N.
-     *   3. El vector g⃗ queda CONGELADO como referencia: todas las lecturas
-     *      posteriores de "linear acceleration" le restarán exactamente
-     *      ese vector, de modo que:
-     *           • en reposo:     a⃗_lineal = a⃗_raw − g⃗ ≈ 0  (0,00 m/s²)
-     *           • en movimiento: a⃗_lineal = variación respecto al reposo
-     *
-     * JUSTIFICACIÓN FÍSICA:
-     *   La lectura promedio en reposo contiene tanto la aceleración propia
-     *   debida a la gravedad como el offset intrínseco DC del sensor MEMS:
-     *        ⟨a⃗⟩ = g⃗_aparente + bias_sensor + ruido/√M
-     *   Al usarla como referencia y restarla, eliminamos AMBAS contribucio‑
-     *   nes de golpe, sin necesidad de conocer por separado la gravedad
-     *   ideal (9,81 m/s²) ni el bias del chip. Para M = 200 muestras a
-     *   100 Hz (2 s), el ruido RMS del sensor (~3 mg) se reduce a
-     *   3/√200 ≈ 0,21 mg, despreciable.
-     *
-     * NOTA: el módulo del vector capturado debería valer ≈1000 mg (1 g).
-     * Si el micro:bit está lejos del ecuador (g_real ≈ 9,78 a 9,83 m/s²)
-     * o si hay bias de hasta ±30 mg, el módulo puede diferir un 1-3 %.
-     * Esto NO afecta al invariante "cuerpo quieto ⇒ 0 m/s²" porque
-     * restamos exactamente la misma referencia.
-     *
-     * @param muestras Número de muestras a promediar (50-500). Por defecto 200.
-     */
-    //% block="calibrate accelerometer at rest (%muestras samples)"
-    //% blockId=fisicabit_accel_calibrar
-    //% group="Acceleration (m/s²)"
-    //% weight=100
-    //% muestras.min=50 muestras.max=500 muestras.defl=200
-    export function calibrarAcelerometro(muestras: number): void {
-        let sx = 0, sy = 0, sz = 0
-        for (let i = 0; i < muestras; i++) {
-            sx += input.acceleration(Dimension.X)
-            sy += input.acceleration(Dimension.Y)
-            sz += input.acceleration(Dimension.Z)
-            basic.pause(10) // 100 Hz de muestreo → 10 ms por muestra
-        }
-        // Vector gravedad medido (en reposo = aceleración propia pura
-        // + bias DC intrínseco del MEMS, ambos absorbidos como referencia)
-        _gvx = sx / muestras
-        _gvy = sy / muestras
-        _gvz = sz / muestras
-        _gInit = true
-        // Bloqueamos el EMA: la referencia queda fija y el sensor mide
-        // exclusivamente las variaciones alrededor de ese punto de reposo.
-        // Esto garantiza el invariante "cuerpo quieto ⇒ 0 m/s²" y además
-        // impide que una aceleración sostenida sea absorbida por el filtro.
-        _gLocked = true
-    }
-
-    /**
-     * Fija el rango de medición del acelerómetro. Rangos mayores permiten
-     * medir golpes/impactos más fuertes, a cambio de menor resolución por bit.
-     *
-     * Resolución efectiva (API a 10 bits, ≈1024 cuentas por ±rango):
-     *      ±2 g  →  ≈3,9 mg/bit  →  0,038 m/s² por bit   (por defecto)
-     *      ±4 g  →  ≈7,8 mg/bit  →  0,077 m/s² por bit
-     *      ±8 g  →  ≈15,6 mg/bit →  0,153 m/s² por bit
-     *
-     * Regla: elegir el rango MÁS PEQUEÑO que no sature durante el experimento.
-     *
-     * @param rango Rango deseado (±2g, ±4g, ±8g)
-     */
-    //% block="set accelerometer range %rango"
-    //% blockId=fisicabit_accel_rango
-    //% group="Acceleration (m/s²)"
-    //% weight=97
-    //% rango.defl=RangoAcelerometro.Rango2G
-    export function fijarRangoAcelerometro(rango: RangoAcelerometro): void {
-        // La API nativa acepta 1, 2, 4, 8 (g)
-        input.setAccelerometerRange(rango as any)
-    }
-
-    /**
-     * Devuelve la aceleración LINEAL del cuerpo respecto al suelo, en
-     * METROS POR SEGUNDO AL CUADRADO (m/s²), sobre el eje elegido.
-     *
-     * INVARIANTE: cuerpo en reposo ⇒ 0,00 m/s² en todos los ejes.
-     *
-     * ALGORITMO:
-     *   1. Leer la aceleración propia cruda del sensor (a⃗_raw, en mg).
-     *   2. Si el estimador EMA no está bloqueado (no se calibró aún),
-     *      actualizarlo con la nueva muestra:
-     *            g⃗ ← (1−α)·g⃗ + α·a⃗_raw
-     *      Si el usuario ya calibró, g⃗ queda FIJO como referencia de reposo.
-     *   3. Calcular la aceleración lineal restando la referencia:
-     *            a⃗_lineal = a⃗_raw − g⃗
-     *      Esto elimina simultáneamente la gravedad aparente y el bias DC
-     *      intrínseco del sensor MEMS (ambos absorbidos en g⃗).
-     *   4. Si el eje solicitado es "Vertical", proyectar sobre −ĝ:
-     *            a_vert = −(a⃗_lineal · ĝ)
-     *      Así el signo positivo = "hacia arriba respecto al suelo" sin
-     *      importar la orientación física de la placa.
-     *   5. Si el eje es Magnitud, devolver |a⃗_lineal|.
-     *   6. Convertir de mg a m/s² con el factor CODATA 9,80665/1000 y
-     *      redondear a 2 decimales.
-     *
-     * JUSTIFICACIÓN DE CÓMO SE CUMPLE EL INVARIANTE:
-     *   Antes de calibrar, el EMA converge exponencialmente a ⟨a⃗_raw⟩,
-     *   por lo que a⃗_lineal → 0 en reposo. Después de calibrar, g⃗ queda
-     *   igual al promedio de N muestras en reposo, así que en cada lectura
-     *   posterior en reposo a⃗_lineal = (a⃗_raw − ⟨a⃗_raw⟩) = ruido gaussiano
-     *   con σ ≈ 3 mg ≈ 0,03 m/s². Para que ese ruido NO aparezca en la
-     *   salida como fluctuación de ±0,03 m/s² (y para filtrar picos
-     *   impulsivos aislados del sensor), el algoritmo combina DOS
-     *   defensas:
-     *     (a) MEDIANA DESLIZANTE de 3 muestras sobre la lectura cruda
-     *         → rechaza outliers de un solo sample (glitches I²C, EMI).
-     *     (b) DEADBAND de 5 mg sobre la aceleración lineal ya calculada
-     *         → absorbe el ruido gaussiano residual (≈3 mg σ) y fija la
-     *         salida a EXACTAMENTE 0,00 m/s² cuando el cuerpo está quieto.
-     *
-     * INTERPRETACIÓN FÍSICA (salida siempre en m/s²):
-     *   - En reposo: 0,00 m/s² en todos los ejes (garantía estricta).
-     *   - En caída libre: el eje Vertical devuelve ≈ −9,81 m/s²
-     *     (el cuerpo acelera hacia abajo respecto al suelo).
-     *   - Subiendo en ascensor a 2 m/s²: eje Vertical ≈ +2,00 m/s².
-     *   - Frenando al bajar: eje Vertical positivo (decelera la caída).
-     *
-     * @param eje Eje físico deseado (X, Y, Z, Magnitud o Vertical)
-     */
-    //% block="acceleration on axis %eje (m/s²)"
-    //% blockId=fisicabit_accel_lineal
-    //% group="Acceleration (m/s²)"
-    //% weight=96
-    //% eje.defl=EjeAceleracion.Vertical
-    export function leerAceleracionLineal(eje: EjeAceleracion): number {
-        // 1) Lectura cruda con filtro de mediana deslizante (anti-pico).
-        //    Rechaza outliers aislados del LSM303AGR que provocarían
-        //    picos espurios de 0,1-0,5 m/s² en reposo.
-        const m = _leerAcelRawFiltrado()
-        const ax = m[0]
-        const ay = m[1]
-        const az = m[2]
-
-        // 2) Actualizar estimador de gravedad SÓLO si no está bloqueado.
-        //    Tras calibrar, la referencia queda fija para preservar el
-        //    invariante "cuerpo quieto ⇒ 0 m/s²" y para no absorber
-        //    aceleraciones sostenidas.
-        if (!_gInit) {
-            _gvx = ax; _gvy = ay; _gvz = az; _gInit = true
-        } else if (!_gLocked) {
-            _gvx = (1 - _gAlpha) * _gvx + _gAlpha * ax
-            _gvy = (1 - _gAlpha) * _gvy + _gAlpha * ay
-            _gvz = (1 - _gAlpha) * _gvz + _gAlpha * az
-        }
-
-        // 3) Aceleración lineal en mg — se resta UNA sola vez la referencia
-        //    de reposo (que incluye gravedad + bias DC del MEMS).
-        const lx = ax - _gvx
-        const ly = ay - _gvy
-        const lz = az - _gvz
-
-        // 4) Selección de componente (aún en mg)
-        let valor_mg = 0
-        switch (eje) {
-            case EjeAceleracion.X:
-                valor_mg = lx; break
-            case EjeAceleracion.Y:
-                valor_mg = ly; break
-            case EjeAceleracion.Z:
-                valor_mg = lz; break
-            case EjeAceleracion.Magnitud:
-                valor_mg = Math.sqrt(lx * lx + ly * ly + lz * lz)
-                break
-            case EjeAceleracion.Vertical: {
-                // Proyección sobre el versor −ĝ  (arriba = positivo)
-                const modG = Math.sqrt(_gvx * _gvx + _gvy * _gvy + _gvz * _gvz)
-                if (modG < 1) { valor_mg = 0; break }
-                const dot = lx * _gvx + ly * _gvy + lz * _gvz
-                valor_mg = -dot / modG
-                break
-            }
-        }
-
-        // 5) Zona muerta: absorbe el ruido gaussiano residual (σ≈3 mg)
-        //    para que el reposo dé EXACTAMENTE 0,00 m/s². El umbral de
-        //    5 mg ≈ 0,05 m/s² es agresivo contra el ruido pero deja
-        //    pasar aceleraciones reales de ≥0,05 m/s². Para Magnitud
-        //    (siempre ≥ 0) basta comparar el valor absoluto.
-        if (valor_mg < DEADBAND_LINEAL_MG && valor_mg > -DEADBAND_LINEAL_MG) {
-            return 0
-        }
-
-        // 6) Conversión mg → m/s² con la gravedad estándar CODATA,
-        //    redondeada a 2 decimales.
-        return Math.round(valor_mg * MG_A_MS2 * 100) / 100
-    }
-
-    // ── Atajos por eje: un bloque dedicado por cada dirección ──
-    // Pedagógicamente más claros que el bloque paramétrico anterior,
-    // y siempre devuelven m/s². Todos comparten el mismo algoritmo.
-
-    /**
-     * Aceleración lineal del cuerpo sobre el eje X (izquierda/derecha de
-     * la placa), en m/s². Referencia de reposo descontada. 0,00 m/s² si
-     * el cuerpo está quieto.
-     */
-    //% block="acceleration X (m/s²)"
-    //% blockId=fisicabit_accel_x_ms2
-    //% group="Acceleration (m/s²)"
-    //% weight=93
-    export function aceleracionX(): number {
-        return leerAceleracionLineal(EjeAceleracion.X)
-    }
-
-    /**
-     * Aceleración lineal del cuerpo sobre el eje Y (adelante/atrás de la
-     * placa), en m/s². Referencia de reposo descontada. 0,00 m/s² si el
-     * cuerpo está quieto.
-     */
-    //% block="acceleration Y (m/s²)"
-    //% blockId=fisicabit_accel_y_ms2
-    //% group="Acceleration (m/s²)"
-    //% weight=92
-    export function aceleracionY(): number {
-        return leerAceleracionLineal(EjeAceleracion.Y)
-    }
-
-    /**
-     * Aceleración lineal del cuerpo sobre el eje Z (perpendicular a la
-     * placa), en m/s². Referencia de reposo descontada. 0,00 m/s² si el
-     * cuerpo está quieto.
-     */
-    //% block="acceleration Z (m/s²)"
-    //% blockId=fisicabit_accel_z_ms2
-    //% group="Acceleration (m/s²)"
-    //% weight=91
-    export function aceleracionZ(): number {
-        return leerAceleracionLineal(EjeAceleracion.Z)
-    }
-
-    /**
-     * Aceleración VERTICAL del cuerpo respecto al suelo, en m/s². Es la
-     * componente de la aceleración lineal proyectada sobre la dirección
-     * opuesta a la gravedad (arriba = positivo). Funciona incluso si la
-     * placa está inclinada sobre el cuerpo: se mide siempre respecto al
-     * suelo real, no al eje Z del sensor. 0,00 m/s² si el cuerpo está
-     * quieto.
-     */
-    //% block="vertical acceleration (m/s²)"
-    //% blockId=fisicabit_accel_vert_ms2
-    //% group="Acceleration (m/s²)"
-    //% weight=95
-    export function aceleracionVertical(): number {
-        return leerAceleracionLineal(EjeAceleracion.Vertical)
-    }
-
-    /**
-     * Magnitud del vector aceleración lineal |a⃗|, en m/s². Es invariante
-     * frente a rotaciones de la placa. 0,00 m/s² si el cuerpo está quieto.
-     */
-    //% block="acceleration magnitude (m/s²)"
-    //% blockId=fisicabit_accel_mag_ms2
-    //% group="Acceleration (m/s²)"
-    //% weight=90
-    export function aceleracionMagnitud(): number {
-        return leerAceleracionLineal(EjeAceleracion.Magnitud)
-    }
-
-    /**
-     * Aceleración PROPIA (proper acceleration) del sensor, en m/s². Es lo
-     * que el acelerómetro lee SIN restar la gravedad, es decir la fuerza
-     * por unidad de masa que el soporte ejerce sobre el cuerpo (N/kg).
-     *
-     * Uso pedagógico: si te paras sobre una balanza dentro de un ascensor,
-     * esta función devuelve lo que marca la balanza dividido por tu masa.
-     * En reposo sobre el suelo da ≈9,81 m/s² (|a⃗|), no 0.
-     *
-     * @param eje Eje físico (X, Y, Z, Magnitud o Vertical)
-     */
-    //% block="proper acceleration on axis %eje (m/s²)"
-    //% blockId=fisicabit_accel_propia
-    //% group="Acceleration (m/s²)"
-    //% weight=88
-    //% eje.defl=EjeAceleracion.Magnitud
-    export function leerAceleracionPropia(eje: EjeAceleracion): number {
-        // Lectura cruda con mediana deslizante (anti-pico). No se aplica
-        // deadband aquí: la aceleración propia en reposo vale ~1000 mg
-        // (gravedad), no 0, así que un umbral de 5 mg sería inofensivo
-        // pero conceptualmente incorrecto.
-        const m = _leerAcelRawFiltrado()
-        const ax = m[0]
-        const ay = m[1]
-        const az = m[2]
-
-        let valor_mg = 0
-        switch (eje) {
-            case EjeAceleracion.X: valor_mg = ax; break
-            case EjeAceleracion.Y: valor_mg = ay; break
-            case EjeAceleracion.Z: valor_mg = az; break
-            case EjeAceleracion.Magnitud:
-                valor_mg = Math.sqrt(ax * ax + ay * ay + az * az); break
-            case EjeAceleracion.Vertical: {
-                // Componente a lo largo de la vertical real (estimada por filtro)
-                const modG = Math.sqrt(_gvx * _gvx + _gvy * _gvy + _gvz * _gvz)
-                if (modG < 1) { valor_mg = 0; break }
-                const dot = ax * _gvx + ay * _gvy + az * _gvz
-                valor_mg = -dot / modG
-                break
-            }
-        }
-
-        return Math.round(valor_mg * MG_A_MS2 * 100) / 100
-    }
-
-    /**
-     * Devuelve el módulo del vector gravedad estimado actualmente, en mg.
-     * Herramienta de diagnóstico: en reposo debería valer ≈1000 mg. Si no
-     * lo hace, el cuerpo se está moviendo o la calibración es incorrecta.
-     */
-    //% block="|g estimated| (mg)"
-    //% blockId=fisicabit_accel_mod_gravedad
-    //% group="Acceleration (m/s²)"
-    //% weight=85
-    export function moduloGravedadEstimada(): number {
-        return Math.round(Math.sqrt(_gvx * _gvx + _gvy * _gvy + _gvz * _gvz))
-    }
-
-    /**
-     * Detecta caída libre con umbral físicamente motivado.
-     *
-     * FUNDAMENTO:
-     *   En caída libre la aceleración propia se anula porque desaparece
-     *   la fuerza normal. Matemáticamente: |a⃗_propia| → 0. En la práctica
-     *   el sensor no llega a 0 exacto por ruido y pequeñas vibraciones,
-     *   por lo que usamos un umbral (típico 100-300 mg).
-     *
-     * Esta función NO usa el filtro de gravedad (sería contraproducente:
-     * durante la caída la "gravedad estimada" apuntaría a 0). Usa la
-     * magnitud cruda del vector de aceleración propia.
-     *
-     * @param umbralMg Umbral en mg por debajo del cual se considera caída libre (def. 200)
-     */
-    //% block="free fall detected? (threshold %umbralMg mg)"
-    //% blockId=fisicabit_accel_caida_libre
-    //% group="Acceleration (m/s²)"
-    //% weight=84
-    //% umbralMg.min=50 umbralMg.max=500 umbralMg.defl=200
-    export function esCaidaLibre(umbralMg: number): boolean {
-        const ax = input.acceleration(Dimension.X)
-        const ay = input.acceleration(Dimension.Y)
-        const az = input.acceleration(Dimension.Z)
-        const mod = Math.sqrt(ax * ax + ay * ay + az * az)
-        return mod < umbralMg
-    }
-
-    /**
-     * Convierte un valor de miligravedades (mg) a m/s² usando la gravedad
-     * estándar CODATA g₀ = 9,80665 m/s². Devuelve con 2 decimales.
-     *
-     * @param mg Valor en miligravedades
-     */
-    //% block="convert %mg mg → m/s²"
-    //% blockId=fisicabit_accel_mg_a_ms2
-    //% group="Acceleration (m/s²)"
-    //% weight=70
-    export function convertirMgAMs2(mg: number): number {
-        return Math.round(mg * MG_A_MS2 * 100) / 100
-    }
-
+    // NOTE: All acceleration-related code (constants, state, filters and
+    // blocks) lives in the FisicaBitCinematica namespace below — this
+    // keeps the orange "FisicaBit Sensors" category focused on raw
+    // sensor reads and moves the derived kinematic magnitudes (a⃗, v⃗)
+    // to their own blue category.
 
     // =========================================================================
     // GRUPO 2: SENSORES EXTERNOS (conectados a los pines GPIO)
@@ -1615,8 +996,466 @@ namespace FisicaBit {
 //% color=#1E88E5
 //% icon="\uf1b2"
 //% block="FisicaBit Kinematics"
-//% groups="['Acceleration', 'Instantaneous velocity']"
+//% groups="['Acceleration', 'Calibration & gravity', 'Instantaneous velocity']"
 namespace FisicaBitCinematica {
+
+    // =========================================================================
+    // GRUPO A: ACELERACIÓN EN m/s² — ALGORITMO AVANZADO
+    // =========================================================================
+    //
+    //  TEORÍA DEL SENSOR (LSM303AGR en micro:bit v2 / MMA8653FC en v1):
+    //  ─────────────────────────────────────────────────────────────────
+    //  El chip es un MEMS capacitivo de 3 ejes. Dentro del die de silicio
+    //  hay una masa de prueba suspendida por muelles microscópicos.
+    //  Cuando el sistema acelera, la masa se desplaza respecto a electrodos
+    //  fijos y cambia la capacidad del condensador diferencial. Un ASIC
+    //  interno convierte ese desbalance capacitivo a un número digital
+    //  de 10 bits (escala ±2 g por defecto) que MakeCode expone en
+    //  miligravedades (1 g = 1000 mg ≈ 1024 en la API por redondeo).
+    //
+    //  PUNTO CRÍTICO — QUÉ MIDE REALMENTE EL ACELERÓMETRO:
+    //  ─────────────────────────────────────────────────────
+    //  NO mide "aceleración" en el sentido newtoniano (dv/dt). Mide
+    //  ACELERACIÓN PROPIA (proper acceleration): la aceleración sentida
+    //  por un observador en reposo relativo al sensor. Es la suma
+    //  vectorial de todas las fuerzas NO gravitatorias por unidad de masa.
+    //
+    //  Consecuencia: en reposo sobre el suelo el sensor NO mide 0. Mide
+    //  +1 g apuntando hacia ARRIBA, porque la normal del suelo ejerce
+    //  una fuerza igual y opuesta al peso. En caída libre mide 0 (no hay
+    //  normal), aunque el cuerpo está acelerando a 9,81 m/s² hacia abajo.
+    //
+    //       a_propia  =  a_coordenada  +  (−g⃗)
+    //  ⇒    a_coordenada  =  a_propia  −  (−g⃗)  =  a_propia  +  g⃗
+    //
+    //  ALGORITMO IMPLEMENTADO — "Gravity Tracking + Bias Cancellation":
+    //  ─────────────────────────────────────────────────────────────────
+    //       g⃗_{k+1}  =  (1−α)·g⃗_k  +  α·a⃗_{raw,k}        (LPF, fc≈0,5 Hz)
+    //       a⃗_lineal_k  =  a⃗_{raw,k}  −  g⃗_k  −  bias⃗   (HPF por diferencia)
+    //
+    //  Además, la aceleración "respecto al suelo" en la vertical real se
+    //  obtiene proyectando a⃗_lineal sobre el versor −ĝ:
+    //
+    //       ĝ  =  g⃗ / |g⃗|
+    //       a_vertical↑  =  − (a⃗_lineal · ĝ)
+    //
+    //  DEFENSAS CONTRA PICOS ESPURIOS EN REPOSO:
+    //  ─────────────────────────────────────────
+    //  (a) MEDIANA DESLIZANTE de 3 muestras sobre la lectura cruda
+    //      → rechaza outliers de un solo sample (glitches I²C, EMI).
+    //  (b) DEADBAND de 5 mg sobre la aceleración lineal ya calculada
+    //      → absorbe el ruido gaussiano residual (≈3 mg σ) y fija la
+    //      salida a EXACTAMENTE 0,00 m/s² cuando el cuerpo está quieto.
+    // =========================================================================
+
+    // ── Constantes físicas ──
+    const G0 = 9.80665               // m/s² — gravedad estándar (CODATA)
+    const MG_A_MS2 = 9.80665 / 1000  // factor mg → m/s²
+
+    // ── Estado del estimador de gravedad (filtro EMA) ──
+    let _gvx = 0        // componente X del vector gravedad estimado (mg)
+    let _gvy = 0        // componente Y                               (mg)
+    let _gvz = -1000    // componente Z (placa plana, cara arriba)     (mg)
+    let _gAlpha = 0.05  // constante del pasabajos (α) — fc ≈ 0.8 Hz a 100 Hz ODR
+    let _gInit = false  // ¿ya inicializamos la gravedad?
+    let _gLocked = false // tras calibrar, se congela el vector gravedad
+
+    // ── Filtro anti-pico sobre la lectura cruda del acelerómetro ────
+    // El LSM303AGR tira de forma ocasional "outliers" de un solo sample
+    // (10-50 mg de desviación súbita) por ruido eléctrico, jitter del
+    // bus I²C, EMI de los LED, etc. La MEDIANA DESLIZANTE de las 3
+    // últimas muestras por eje rechaza CUALQUIER outlier aislado sin
+    // añadir apenas latencia (retardo efectivo ≤ 1 muestra ≈ 10-20 ms
+    // a la ODR por defecto de 100 Hz). Se aplica ANTES del estimador
+    // EMA para que los outliers tampoco contaminen la referencia.
+    let _histAx: number[] = [0, 0, 0]
+    let _histAy: number[] = [0, 0, 0]
+    let _histAz: number[] = [0, 0, 0]
+    let _histIdx = 0
+    let _histInit = false
+
+    // Zona muerta (deadband) de la aceleración LINEAL, en mg. Bajo este
+    // umbral la salida se clampa a 0 para que el reposo dé EXACTAMENTE
+    // 0,00 m/s². 5 mg ≈ 0,05 m/s² absorbe el ruido gaussiano residual
+    // (σ ≈ 3 mg del LSM303AGR) sin tapar aceleraciones reales pequeñas.
+    // NO se aplica a la aceleración PROPIA (ahí el reposo vale ~1000 mg).
+    const DEADBAND_LINEAL_MG = 5
+
+    /**
+     * Mediana de tres valores sin ordenar: identidad
+     *   mediana(a,b,c) = a + b + c − max(a,b,c) − min(a,b,c).
+     */
+    function _median3(a: number, b: number, c: number): number {
+        const mn = Math.min(a, Math.min(b, c))
+        const mx = Math.max(a, Math.max(b, c))
+        return a + b + c - mn - mx
+    }
+
+    /**
+     * Lee el acelerómetro crudo, empuja la muestra a la ventana
+     * deslizante de 3 y devuelve [ax, ay, az] en mg YA filtrados por
+     * mediana. La primera llamada rellena la ventana con la muestra
+     * inicial para evitar un pico de arranque.
+     */
+    function _leerAcelRawFiltrado(): number[] {
+        const rx = input.acceleration(Dimension.X)
+        const ry = input.acceleration(Dimension.Y)
+        const rz = input.acceleration(Dimension.Z)
+
+        if (!_histInit) {
+            _histAx = [rx, rx, rx]
+            _histAy = [ry, ry, ry]
+            _histAz = [rz, rz, rz]
+            _histInit = true
+        } else {
+            _histAx[_histIdx] = rx
+            _histAy[_histIdx] = ry
+            _histAz[_histIdx] = rz
+            _histIdx = (_histIdx + 1) % 3
+        }
+
+        return [
+            _median3(_histAx[0], _histAx[1], _histAx[2]),
+            _median3(_histAy[0], _histAy[1], _histAy[2]),
+            _median3(_histAz[0], _histAz[1], _histAz[2])
+        ]
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // BLOQUES DE CALIBRACIÓN Y GRAVEDAD
+    // ─────────────────────────────────────────────────────────────────
+
+    /**
+     * Calibra el acelerómetro midiendo el vector gravedad del entorno
+     * mientras el cuerpo está en REPOSO absoluto. Toma N muestras,
+     * promedia y congela la referencia para que todas las lecturas
+     * posteriores de "acceleration on axis" le resten exactamente ese
+     * vector (en reposo ⇒ 0,00 m/s²).
+     *
+     * @param muestras Número de muestras a promediar (50-500). Def. 200.
+     */
+    //% block="calibrate accelerometer at rest (%muestras samples)"
+    //% blockId=fisicabit_cin_calibrar
+    //% group="Calibration & gravity"
+    //% weight=100
+    //% muestras.min=50 muestras.max=500 muestras.defl=200
+    export function calibrarAcelerometro(muestras: number): void {
+        let sx = 0, sy = 0, sz = 0
+        for (let i = 0; i < muestras; i++) {
+            sx += input.acceleration(Dimension.X)
+            sy += input.acceleration(Dimension.Y)
+            sz += input.acceleration(Dimension.Z)
+            basic.pause(10) // 100 Hz de muestreo → 10 ms por muestra
+        }
+        _gvx = sx / muestras
+        _gvy = sy / muestras
+        _gvz = sz / muestras
+        _gInit = true
+        // Bloqueamos el EMA: referencia fija → invariante "quieto ⇒ 0"
+        // y además no absorbe aceleraciones sostenidas.
+        _gLocked = true
+    }
+
+    /**
+     * Fuerza una actualización puntual del estimador EMA de gravedad
+     * a partir de la lectura cruda actual. Si la calibración está
+     * bloqueada, no hace nada.
+     */
+    //% block="update gravity estimate"
+    //% blockId=fisicabit_cin_actualizar_gravedad
+    //% group="Calibration & gravity"
+    //% weight=99
+    export function actualizarGravedad(): void {
+        const ax = input.acceleration(Dimension.X)
+        const ay = input.acceleration(Dimension.Y)
+        const az = input.acceleration(Dimension.Z)
+        if (!_gInit) {
+            _gvx = ax; _gvy = ay; _gvz = az
+            _gInit = true
+            return
+        }
+        if (_gLocked) return
+        _gvx = (1 - _gAlpha) * _gvx + _gAlpha * ax
+        _gvy = (1 - _gAlpha) * _gvy + _gAlpha * ay
+        _gvz = (1 - _gAlpha) * _gvz + _gAlpha * az
+    }
+
+    /**
+     * Fija la constante α del filtro pasabajos de gravedad.
+     *   α = 0.01 → fc ≈ 0,16 Hz (máxima limpieza, sin rotaciones).
+     *   α = 0.05 → fc ≈ 0,8 Hz  (por defecto, buen compromiso).
+     *   α = 0.20 → fc ≈ 3,5 Hz  (sólo si hay rotaciones frecuentes).
+     *
+     * @param alfa Constante del filtro (0,001-0,5). Def. 0,05.
+     */
+    //% block="set gravity filter α to %alfa"
+    //% blockId=fisicabit_cin_fijar_alfa
+    //% group="Calibration & gravity"
+    //% weight=98
+    //% alfa.min=0.001 alfa.max=0.5 alfa.defl=0.05
+    export function fijarAlfaGravedad(alfa: number): void {
+        if (alfa < 0.001) alfa = 0.001
+        if (alfa > 0.5) alfa = 0.5
+        _gAlpha = alfa
+    }
+
+    /**
+     * Vuelve a habilitar el seguimiento adaptativo del vector gravedad
+     * (desbloquea el EMA) tras una calibración. Usar sólo si el cuerpo
+     * va a cambiar de orientación durante el experimento.
+     */
+    //% block="unlock gravity tracking"
+    //% blockId=fisicabit_cin_unlock
+    //% group="Calibration & gravity"
+    //% weight=97
+    export function desbloquearGravedad(): void {
+        _gLocked = false
+    }
+
+    /**
+     * Fija el rango de medición del acelerómetro.
+     *      ±2 g  →  ≈3,9 mg/bit   (por defecto)
+     *      ±4 g  →  ≈7,8 mg/bit
+     *      ±8 g  →  ≈15,6 mg/bit
+     * Elegir el MÁS PEQUEÑO que no sature durante el experimento.
+     */
+    //% block="set accelerometer range %rango"
+    //% blockId=fisicabit_cin_rango
+    //% group="Calibration & gravity"
+    //% weight=96
+    //% rango.defl=RangoAcelerometro.Rango2G
+    export function fijarRangoAcelerometro(rango: RangoAcelerometro): void {
+        input.setAccelerometerRange(rango as any)
+    }
+
+    /**
+     * Módulo del vector gravedad estimado actualmente, en mg. En reposo
+     * debería valer ≈1000 mg. Diagnóstico: si no lo hace, el cuerpo se
+     * está moviendo o la calibración es incorrecta.
+     */
+    //% block="|g estimated| (mg)"
+    //% blockId=fisicabit_cin_mod_gravedad
+    //% group="Calibration & gravity"
+    //% weight=70
+    export function moduloGravedadEstimada(): number {
+        return Math.round(Math.sqrt(_gvx * _gvx + _gvy * _gvy + _gvz * _gvz))
+    }
+
+    /**
+     * Convierte un valor de miligravedades (mg) a m/s² usando g₀ CODATA.
+     * Devuelve con 2 decimales.
+     */
+    //% block="convert %mg mg → m/s²"
+    //% blockId=fisicabit_cin_mg_a_ms2
+    //% group="Calibration & gravity"
+    //% weight=60
+    export function convertirMgAMs2(mg: number): number {
+        return Math.round(mg * MG_A_MS2 * 100) / 100
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // BLOQUES DE ACELERACIÓN (en m/s²)
+    // ─────────────────────────────────────────────────────────────────
+
+    /**
+     * Devuelve la aceleración LINEAL del cuerpo respecto al suelo, en
+     * METROS POR SEGUNDO AL CUADRADO (m/s²), sobre el eje elegido.
+     *
+     * INVARIANTE: cuerpo en reposo ⇒ 0,00 m/s² en todos los ejes.
+     *
+     * ALGORITMO:
+     *   1. Leer cruda con mediana deslizante (anti-pico).
+     *   2. Actualizar EMA de gravedad si no está bloqueada.
+     *   3. Restar la referencia: a⃗_lineal = a⃗_raw − g⃗.
+     *   4. Para "Vertical", proyectar sobre −ĝ (arriba = positivo).
+     *      Para "Magnitud", devolver |a⃗_lineal|.
+     *   5. Aplicar deadband de 5 mg (reposo → 0,00 exacto).
+     *   6. Convertir mg → m/s² con g₀ CODATA y redondear a 2 decimales.
+     *
+     * @param eje Eje físico (X, Y, Z, Magnitud o Vertical)
+     */
+    //% block="acceleration on axis %eje (m/s²)"
+    //% blockId=fisicabit_cin_accel_lineal
+    //% group="Acceleration"
+    //% weight=100
+    //% eje.defl=EjeAceleracion.Vertical
+    export function leerAceleracionLineal(eje: EjeAceleracion): number {
+        // 1) Lectura cruda con filtro de mediana deslizante (anti-pico).
+        const m = _leerAcelRawFiltrado()
+        const ax = m[0]
+        const ay = m[1]
+        const az = m[2]
+
+        // 2) Actualizar estimador de gravedad SÓLO si no está bloqueado.
+        if (!_gInit) {
+            _gvx = ax; _gvy = ay; _gvz = az; _gInit = true
+        } else if (!_gLocked) {
+            _gvx = (1 - _gAlpha) * _gvx + _gAlpha * ax
+            _gvy = (1 - _gAlpha) * _gvy + _gAlpha * ay
+            _gvz = (1 - _gAlpha) * _gvz + _gAlpha * az
+        }
+
+        // 3) Aceleración lineal en mg (referencia de reposo descontada).
+        const lx = ax - _gvx
+        const ly = ay - _gvy
+        const lz = az - _gvz
+
+        // 4) Selección de componente (aún en mg)
+        let valor_mg = 0
+        switch (eje) {
+            case EjeAceleracion.X:
+                valor_mg = lx; break
+            case EjeAceleracion.Y:
+                valor_mg = ly; break
+            case EjeAceleracion.Z:
+                valor_mg = lz; break
+            case EjeAceleracion.Magnitud:
+                valor_mg = Math.sqrt(lx * lx + ly * ly + lz * lz)
+                break
+            case EjeAceleracion.Vertical: {
+                // Proyección sobre el versor −ĝ (arriba = positivo)
+                const modG = Math.sqrt(_gvx * _gvx + _gvy * _gvy + _gvz * _gvz)
+                if (modG < 1) { valor_mg = 0; break }
+                const dot = lx * _gvx + ly * _gvy + lz * _gvz
+                valor_mg = -dot / modG
+                break
+            }
+        }
+
+        // 5) Zona muerta: reposo → 0,00 exacto
+        if (valor_mg < DEADBAND_LINEAL_MG && valor_mg > -DEADBAND_LINEAL_MG) {
+            return 0
+        }
+
+        // 6) Conversión mg → m/s² (2 decimales)
+        return Math.round(valor_mg * MG_A_MS2 * 100) / 100
+    }
+
+    /**
+     * Aceleración lineal del cuerpo sobre el eje X (izquierda/derecha),
+     * en m/s². Referencia de reposo descontada. 0,00 m/s² en reposo.
+     */
+    //% block="acceleration X (m/s²)"
+    //% blockId=fisicabit_cin_accel_x
+    //% group="Acceleration"
+    //% weight=95
+    export function aceleracionX(): number {
+        return leerAceleracionLineal(EjeAceleracion.X)
+    }
+
+    /**
+     * Aceleración lineal del cuerpo sobre el eje Y (adelante/atrás),
+     * en m/s². Referencia de reposo descontada. 0,00 m/s² en reposo.
+     */
+    //% block="acceleration Y (m/s²)"
+    //% blockId=fisicabit_cin_accel_y
+    //% group="Acceleration"
+    //% weight=94
+    export function aceleracionY(): number {
+        return leerAceleracionLineal(EjeAceleracion.Y)
+    }
+
+    /**
+     * Aceleración lineal del cuerpo sobre el eje Z (perpendicular a
+     * la placa), en m/s². Referencia de reposo descontada. 0,00 m/s²
+     * en reposo.
+     */
+    //% block="acceleration Z (m/s²)"
+    //% blockId=fisicabit_cin_accel_z
+    //% group="Acceleration"
+    //% weight=93
+    export function aceleracionZ(): number {
+        return leerAceleracionLineal(EjeAceleracion.Z)
+    }
+
+    /**
+     * Aceleración VERTICAL del cuerpo respecto al suelo, en m/s².
+     * Componente de la aceleración lineal sobre −ĝ (arriba positivo).
+     * Funciona aunque la placa esté inclinada. 0,00 m/s² en reposo.
+     */
+    //% block="vertical acceleration (m/s²)"
+    //% blockId=fisicabit_cin_accel_vert
+    //% group="Acceleration"
+    //% weight=97
+    export function aceleracionVertical(): number {
+        return leerAceleracionLineal(EjeAceleracion.Vertical)
+    }
+
+    /**
+     * Magnitud del vector aceleración lineal |a⃗|, en m/s². Invariante
+     * frente a rotaciones de la placa. 0,00 m/s² en reposo.
+     */
+    //% block="acceleration magnitude (m/s²)"
+    //% blockId=fisicabit_cin_accel_mag
+    //% group="Acceleration"
+    //% weight=92
+    export function aceleracionMagnitud(): number {
+        return leerAceleracionLineal(EjeAceleracion.Magnitud)
+    }
+
+    /**
+     * Aceleración PROPIA (proper acceleration) del sensor, en m/s²:
+     * la fuerza por unidad de masa que el soporte ejerce sobre el
+     * cuerpo (N/kg), SIN restar la gravedad. En reposo sobre el suelo
+     * da ≈9,81 m/s² (no 0). En caída libre da ≈0.
+     *
+     * @param eje Eje físico (X, Y, Z, Magnitud o Vertical)
+     */
+    //% block="proper acceleration on axis %eje (m/s²)"
+    //% blockId=fisicabit_cin_accel_propia
+    //% group="Acceleration"
+    //% weight=85
+    //% eje.defl=EjeAceleracion.Magnitud
+    export function leerAceleracionPropia(eje: EjeAceleracion): number {
+        // Lectura cruda con mediana deslizante (anti-pico). SIN deadband:
+        // en reposo vale ~1000 mg (gravedad), no 0.
+        const m = _leerAcelRawFiltrado()
+        const ax = m[0]
+        const ay = m[1]
+        const az = m[2]
+
+        let valor_mg = 0
+        switch (eje) {
+            case EjeAceleracion.X: valor_mg = ax; break
+            case EjeAceleracion.Y: valor_mg = ay; break
+            case EjeAceleracion.Z: valor_mg = az; break
+            case EjeAceleracion.Magnitud:
+                valor_mg = Math.sqrt(ax * ax + ay * ay + az * az); break
+            case EjeAceleracion.Vertical: {
+                const modG = Math.sqrt(_gvx * _gvx + _gvy * _gvy + _gvz * _gvz)
+                if (modG < 1) { valor_mg = 0; break }
+                const dot = ax * _gvx + ay * _gvy + az * _gvz
+                valor_mg = -dot / modG
+                break
+            }
+        }
+
+        return Math.round(valor_mg * MG_A_MS2 * 100) / 100
+    }
+
+    /**
+     * Detecta caída libre: |a⃗_propia_cruda| < umbral (mg). NO usa el
+     * filtro de gravedad (durante la caída la "gravedad estimada"
+     * apuntaría a 0, desvirtuando la detección).
+     *
+     * @param umbralMg Umbral (50-500 mg). Def. 200.
+     */
+    //% block="free fall detected? (threshold %umbralMg mg)"
+    //% blockId=fisicabit_cin_caida_libre
+    //% group="Acceleration"
+    //% weight=80
+    //% umbralMg.min=50 umbralMg.max=500 umbralMg.defl=200
+    export function esCaidaLibre(umbralMg: number): boolean {
+        const ax = input.acceleration(Dimension.X)
+        const ay = input.acceleration(Dimension.Y)
+        const az = input.acceleration(Dimension.Z)
+        const mod = Math.sqrt(ax * ax + ay * ay + az * az)
+        return mod < umbralMg
+    }
+
+    // =========================================================================
+    // GRUPO B: VELOCIDAD INSTANTÁNEA — Integración numérica de a(t)
+    // =========================================================================
 
     // ── Estado interno del integrador de velocidad ─────────────────────
     // La velocidad instantánea se obtiene INTEGRANDO NUMÉRICAMENTE la
@@ -1655,25 +1494,6 @@ namespace FisicaBitCinematica {
     // inyectar un salto artificial que luego el alumnado vería como un
     // pico inexplicable en la gráfica.
     const _DT_MAX_MS = 100
-
-    /**
-     * Devuelve la aceleración LINEAL completa del cuerpo, en m/s², sobre
-     * el eje elegido. Es exactamente el mismo cálculo que el bloque
-     * "acceleration on axis" de FisicaBit Sensors (referencia de reposo
-     * descontada → 0,00 m/s² si el cuerpo está quieto), pero expuesto
-     * aquí como bloque independiente con COLOR DISTINTO para destacar
-     * visualmente la categoría cinemática.
-     *
-     * @param eje Eje físico (X, Y, Z, Magnitud o Vertical)
-     */
-    //% block="full acceleration (m/s²) axis %eje"
-    //% blockId=fisicabit_cin_aceleracion
-    //% group="Acceleration"
-    //% weight=100
-    //% eje.defl=EjeAceleracion.Magnitud
-    export function aceleracion(eje: EjeAceleracion): number {
-        return FisicaBit.leerAceleracionLineal(eje)
-    }
 
     /**
      * Velocidad INSTANTÁNEA del cuerpo sobre el eje elegido, en m/s,
@@ -1760,13 +1580,13 @@ namespace FisicaBitCinematica {
 
         const dt_s = dt_ms / 1000
 
-        // Leer las componentes de la aceleración lineal (m/s²) reusando
-        // el algoritmo completo de FisicaBit (resta de referencia de
-        // reposo + proyección sobre la vertical estimada).
-        const ax = FisicaBit.leerAceleracionLineal(EjeAceleracion.X)
-        const ay = FisicaBit.leerAceleracionLineal(EjeAceleracion.Y)
-        const az = FisicaBit.leerAceleracionLineal(EjeAceleracion.Z)
-        const aV = FisicaBit.leerAceleracionLineal(EjeAceleracion.Vertical)
+        // Leer las componentes de la aceleración lineal (m/s²) con el
+        // algoritmo completo local (mediana anti-pico + resta de
+        // referencia de reposo + deadband + proyección sobre vertical).
+        const ax = leerAceleracionLineal(EjeAceleracion.X)
+        const ay = leerAceleracionLineal(EjeAceleracion.Y)
+        const az = leerAceleracionLineal(EjeAceleracion.Z)
+        const aV = leerAceleracionLineal(EjeAceleracion.Vertical)
 
         // Integración rectangular (Riemann izquierda): v ← v + a·dt
         // Para dt pequeño el error O(dt²) es despreciable frente al
