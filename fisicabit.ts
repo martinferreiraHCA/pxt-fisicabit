@@ -249,6 +249,74 @@ namespace FisicaBit {
     let _gInit = false  // ¿ya inicializamos la gravedad?
     let _gLocked = false // tras calibrar, se congela el vector gravedad
 
+    // ── Filtro anti-pico sobre la lectura cruda del acelerómetro ────
+    // El LSM303AGR tira de forma ocasional "outliers" de un solo sample
+    // (10-50 mg de desviación súbita) por ruido eléctrico, jitter del
+    // bus I²C, EMI de los LED, etc. Sin filtrar, esos outliers aparecen
+    // como PICOS ESPURIOS en la aceleración lineal y, si se integra,
+    // también en la velocidad.
+    //
+    // Solución: MEDIANA DESLIZANTE de las 3 últimas muestras por eje.
+    // La mediana de 3 rechaza CUALQUIER outlier aislado sin añadir
+    // apenas latencia (retardo efectivo ≤ 1 muestra ≈ 10-20 ms a la ODR
+    // por defecto de 100 Hz). Es el filtro no-lineal óptimo para
+    // suprimir glitches impulsivos preservando escalones y rampas.
+    //
+    // Se aplica ANTES del estimador EMA de gravedad para que los
+    // outliers tampoco contaminen la referencia de reposo.
+    let _histAx: number[] = [0, 0, 0]
+    let _histAy: number[] = [0, 0, 0]
+    let _histAz: number[] = [0, 0, 0]
+    let _histIdx = 0
+    let _histInit = false
+
+    // Zona muerta (deadband) de la aceleración LINEAL, en mg. Bajo este
+    // umbral la salida se clampa a 0 para que el reposo dé EXACTAMENTE
+    // 0,00 m/s². 5 mg ≈ 0,05 m/s² absorbe el ruido gaussiano residual
+    // (σ ≈ 3 mg del LSM303AGR) sin tapar aceleraciones reales pequeñas.
+    // NO se aplica a la aceleración PROPIA (ahí el reposo vale ~1000 mg).
+    const DEADBAND_LINEAL_MG = 5
+
+    /**
+     * Mediana de tres valores sin necesidad de ordenar: aprovecha la
+     * identidad  mediana(a,b,c) = a + b + c − max(a,b,c) − min(a,b,c).
+     */
+    function _median3(a: number, b: number, c: number): number {
+        const mn = Math.min(a, Math.min(b, c))
+        const mx = Math.max(a, Math.max(b, c))
+        return a + b + c - mn - mx
+    }
+
+    /**
+     * Lee el acelerómetro crudo, empuja la muestra a la ventana
+     * deslizante de 3 y devuelve [ax, ay, az] en mg YA filtrados por
+     * mediana. La primera llamada rellena la ventana con la muestra
+     * inicial para evitar un pico de arranque.
+     */
+    function _leerAcelRawFiltrado(): number[] {
+        const rx = input.acceleration(Dimension.X)
+        const ry = input.acceleration(Dimension.Y)
+        const rz = input.acceleration(Dimension.Z)
+
+        if (!_histInit) {
+            _histAx = [rx, rx, rx]
+            _histAy = [ry, ry, ry]
+            _histAz = [rz, rz, rz]
+            _histInit = true
+        } else {
+            _histAx[_histIdx] = rx
+            _histAy[_histIdx] = ry
+            _histAz[_histIdx] = rz
+            _histIdx = (_histIdx + 1) % 3
+        }
+
+        return [
+            _median3(_histAx[0], _histAx[1], _histAx[2]),
+            _median3(_histAy[0], _histAy[1], _histAy[2]),
+            _median3(_histAz[0], _histAz[1], _histAz[2])
+        ]
+    }
+
     /**
      * Actualiza una vez el estimador de gravedad a partir de la lectura cruda
      * del acelerómetro. Esta función la llaman internamente los bloques de
@@ -438,8 +506,15 @@ namespace FisicaBit {
      *   por lo que a⃗_lineal → 0 en reposo. Después de calibrar, g⃗ queda
      *   igual al promedio de N muestras en reposo, así que en cada lectura
      *   posterior en reposo a⃗_lineal = (a⃗_raw − ⟨a⃗_raw⟩) = ruido gaussiano
-     *   con σ ≈ 3 mg ≈ 0,03 m/s². El redondeo a 2 decimales (m/s²) hace
-     *   que el resultado devuelto sea EXACTAMENTE 0,00 en reposo.
+     *   con σ ≈ 3 mg ≈ 0,03 m/s². Para que ese ruido NO aparezca en la
+     *   salida como fluctuación de ±0,03 m/s² (y para filtrar picos
+     *   impulsivos aislados del sensor), el algoritmo combina DOS
+     *   defensas:
+     *     (a) MEDIANA DESLIZANTE de 3 muestras sobre la lectura cruda
+     *         → rechaza outliers de un solo sample (glitches I²C, EMI).
+     *     (b) DEADBAND de 5 mg sobre la aceleración lineal ya calculada
+     *         → absorbe el ruido gaussiano residual (≈3 mg σ) y fija la
+     *         salida a EXACTAMENTE 0,00 m/s² cuando el cuerpo está quieto.
      *
      * INTERPRETACIÓN FÍSICA (salida siempre en m/s²):
      *   - En reposo: 0,00 m/s² en todos los ejes (garantía estricta).
@@ -456,10 +531,13 @@ namespace FisicaBit {
     //% weight=96
     //% eje.defl=EjeAceleracion.Vertical
     export function leerAceleracionLineal(eje: EjeAceleracion): number {
-        // 1) Lectura cruda
-        const ax = input.acceleration(Dimension.X)
-        const ay = input.acceleration(Dimension.Y)
-        const az = input.acceleration(Dimension.Z)
+        // 1) Lectura cruda con filtro de mediana deslizante (anti-pico).
+        //    Rechaza outliers aislados del LSM303AGR que provocarían
+        //    picos espurios de 0,1-0,5 m/s² en reposo.
+        const m = _leerAcelRawFiltrado()
+        const ax = m[0]
+        const ay = m[1]
+        const az = m[2]
 
         // 2) Actualizar estimador de gravedad SÓLO si no está bloqueado.
         //    Tras calibrar, la referencia queda fija para preservar el
@@ -501,7 +579,16 @@ namespace FisicaBit {
             }
         }
 
-        // 5) Conversión mg → m/s² con la gravedad estándar CODATA,
+        // 5) Zona muerta: absorbe el ruido gaussiano residual (σ≈3 mg)
+        //    para que el reposo dé EXACTAMENTE 0,00 m/s². El umbral de
+        //    5 mg ≈ 0,05 m/s² es agresivo contra el ruido pero deja
+        //    pasar aceleraciones reales de ≥0,05 m/s². Para Magnitud
+        //    (siempre ≥ 0) basta comparar el valor absoluto.
+        if (valor_mg < DEADBAND_LINEAL_MG && valor_mg > -DEADBAND_LINEAL_MG) {
+            return 0
+        }
+
+        // 6) Conversión mg → m/s² con la gravedad estándar CODATA,
         //    redondeada a 2 decimales.
         return Math.round(valor_mg * MG_A_MS2 * 100) / 100
     }
@@ -594,9 +681,14 @@ namespace FisicaBit {
     //% weight=88
     //% eje.defl=EjeAceleracion.Magnitud
     export function leerAceleracionPropia(eje: EjeAceleracion): number {
-        const ax = input.acceleration(Dimension.X)
-        const ay = input.acceleration(Dimension.Y)
-        const az = input.acceleration(Dimension.Z)
+        // Lectura cruda con mediana deslizante (anti-pico). No se aplica
+        // deadband aquí: la aceleración propia en reposo vale ~1000 mg
+        // (gravedad), no 0, así que un umbral de 5 mg sería inofensivo
+        // pero conceptualmente incorrecto.
+        const m = _leerAcelRawFiltrado()
+        const ax = m[0]
+        const ay = m[1]
+        const az = m[2]
 
         let valor_mg = 0
         switch (eje) {
