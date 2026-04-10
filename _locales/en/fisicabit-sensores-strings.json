@@ -129,6 +129,7 @@
     "DatosDHT11.Humedad|block": "humidity (%)",
     "DatosDHT11.Temperatura|block": "temperature (°C)",
 
+    "FisicaBitSerial|block": "FisicaBit Serial",
     "FisicaBitHCSR04|block": "HC-SR04 — Ultrasonic Distance",
     "FisicaBitToF|block": "ToF — Laser Distance",
     "FisicaBitBME280|block": "BME280 — Pressure/Temp/Humidity",
