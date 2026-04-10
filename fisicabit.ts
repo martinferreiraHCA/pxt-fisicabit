@@ -1553,6 +1553,17 @@ namespace FisicaBitCinematica {
     let _tPrevMs = 0       // instante de la última muestra, en ms
     let _vInit = false     // ¿se ha arrancado ya el reloj del integrador?
 
+    // Paso de integración máximo permitido, en ms. Si entre dos llamadas
+    // consecutivas pasan más de DT_MAX_MS el bucle del usuario se ha
+    // PAUSADO (p.ej. `basic.showNumber` scrollea ~600 ms, `basic.pause`,
+    // `serial.writeLine`, un `while` ajeno…) y multiplicar la aceleración
+    // actual por un Δt enorme produciría PICOS ESPURIOS en la velocidad
+    // (a_ruido · 0,6 s ≫ a_ruido · 0,01 s). En ese caso NO integramos,
+    // sólo re-armamos el reloj: es preferible "perderse" una muestra a
+    // inyectar un salto artificial que luego el alumnado vería como un
+    // pico inexplicable en la gráfica.
+    const _DT_MAX_MS = 100
+
     /**
      * Devuelve la aceleración LINEAL completa del cuerpo, en m/s², sobre
      * el eje elegido. Es exactamente el mismo cálculo que el bloque
@@ -1596,6 +1607,12 @@ namespace FisicaBitCinematica {
      *     cada experimento.
      *   - Mantén los experimentos cortos (unos pocos segundos) para que
      *     la deriva del sensor no domine el resultado.
+     *   - Evita bloquear el bucle con `basic.showNumber` (scrollea ~600
+     *     ms) o `basic.pause` LARGOS mientras integras: aunque el bloque
+     *     descarta automáticamente tramos de más de 100 ms para que la
+     *     velocidad no pegue picos artificiales, durante esos tramos
+     *     NO se mide, y pierdes el cambio real de velocidad que haya
+     *     ocurrido durante la pausa.
      *
      * @param eje Eje físico (X, Y, Z, Magnitud o Vertical)
      */
@@ -1616,9 +1633,40 @@ namespace FisicaBitCinematica {
             return 0
         }
 
-        // Paso dt REAL desde la llamada anterior, en segundos.
-        const dt_s = (ahoraMs - _tPrevMs) / 1000
+        // Paso dt REAL desde la llamada anterior, en ms.
+        const dt_ms = ahoraMs - _tPrevMs
         _tPrevMs = ahoraMs
+
+        // ── Salvaguardas anti-pico ────────────────────────────────────
+        //  1) dt negativo ⇒ rollover/corrección del reloj: descartar.
+        //  2) dt = 0 ⇒ dos llamadas en el mismo ms: no hay nada que
+        //     integrar, devolver el estado actual.
+        //  3) dt > DT_MAX_MS ⇒ el bucle estuvo BLOQUEADO (showNumber,
+        //     pause, serial…). Integrar ese tramo generaría un pico
+        //     artificial en v. Nos saltamos la muestra y sólo re-armamos
+        //     el reloj, que ya se hizo arriba.
+        // Devolvemos el valor ACTUAL de v sin modificarlo, para que la
+        // gráfica no dé un salto inexplicable al reanudarse el bucle.
+        if (dt_ms <= 0 || dt_ms > _DT_MAX_MS) {
+            switch (eje) {
+                case EjeAceleracion.X:
+                    return Math.round(_vx * 100) / 100
+                case EjeAceleracion.Y:
+                    return Math.round(_vy * 100) / 100
+                case EjeAceleracion.Z:
+                    return Math.round(_vz * 100) / 100
+                case EjeAceleracion.Magnitud:
+                    return Math.round(
+                        Math.sqrt(_vx * _vx + _vy * _vy + _vz * _vz) * 100
+                    ) / 100
+                case EjeAceleracion.Vertical:
+                    return Math.round(_vVert * 100) / 100
+                default:
+                    return 0
+            }
+        }
+
+        const dt_s = dt_ms / 1000
 
         // Leer las componentes de la aceleración lineal (m/s²) reusando
         // el algoritmo completo de FisicaBit (resta de referencia de
