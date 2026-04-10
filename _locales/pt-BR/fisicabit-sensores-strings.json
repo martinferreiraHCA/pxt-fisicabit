@@ -166,6 +166,7 @@
     "VelocidadMuestreo.Lento|block": "lento (500 ms)",
     "VelocidadMuestreo.MuyLento|block": "muito lento (1000 ms)",
 
+    "FisicaBitSerial|block": "FisicaBit Serial",
     "FisicaBitHCSR04|block": "HC-SR04 — Distância Ultrassônica",
     "FisicaBitToF|block": "ToF — Distância Laser",
     "FisicaBitBME280|block": "BME280 — Pressão/Temp/Umidade",
