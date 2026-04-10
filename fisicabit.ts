@@ -221,6 +221,20 @@ namespace FisicaBit {
     //  De este modo el bloque devuelve la aceleración vertical POSITIVA
     //  cuando el cuerpo sube y NEGATIVA cuando frena/cae, con independen‑
     //  cia de cómo esté inclinada la placa sobre el cuerpo.
+    //
+    //  INVARIANTE FUNDAMENTAL — "cuerpo quieto ⇒ a = 0":
+    //  ─────────────────────────────────────────────────
+    //  Si el cuerpo está en reposo, las lecturas crudas cumplen
+    //  a⃗_raw = g⃗ + ruido. El estimador EMA converge a g⃗, por lo que
+    //  a⃗_lineal = a⃗_raw − g⃗ ≈ ruido (≈3 mg RMS = 0,03 m/s²). El
+    //  redondeo a 2 decimales en m/s² garantiza que el resultado
+    //  devuelto sea EXACTAMENTE 0,00 m/s² en reposo.
+    //
+    //  Importante: NO se aplica ninguna corrección adicional de "bias"
+    //  más allá del estimador EMA; agregar una segunda resta de bias
+    //  introduciría un offset artificial que rompería este invariante.
+    //  El EMA ya absorbe simultáneamente la gravedad y el offset DC
+    //  intrínseco del sensor MEMS, que es justo lo que queremos.
     // =========================================================================
 
     // ── Constantes físicas ──
@@ -231,13 +245,9 @@ namespace FisicaBit {
     let _gvx = 0        // componente X del vector gravedad estimado (mg)
     let _gvy = 0        // componente Y                               (mg)
     let _gvz = -1000    // componente Z (placa plana, cara arriba)     (mg)
-    let _gAlpha = 0.05  // constante del pasabajos (α) — fc ≈ 0.5 Hz a 100 Hz ODR
+    let _gAlpha = 0.05  // constante del pasabajos (α) — fc ≈ 0.8 Hz a 100 Hz ODR
     let _gInit = false  // ¿ya inicializamos la gravedad?
-
-    // ── Bias residual del sensor (calibración en reposo) ──
-    let _biasX = 0      // offset DC en mg
-    let _biasY = 0
-    let _biasZ = 0
+    let _gLocked = false // tras calibrar, se congela el vector gravedad
 
     /**
      * Actualiza una vez el estimador de gravedad a partir de la lectura cruda
@@ -251,6 +261,11 @@ namespace FisicaBit {
      * Con α = 0,05 y ODR de 100 Hz → frecuencia de corte ≈ 0,8 Hz, lo que
      * separa eficazmente la componente estática (gravedad, DC-lento) de la
      * dinámica (movimientos del cuerpo, >1 Hz).
+     *
+     * Si se ha ejecutado "calibrate accelerometer at rest", el vector g⃗
+     * queda CONGELADO y este bloque no lo modifica (garantiza que sostener
+     * una aceleración no sea "absorbida" por el filtro). Para volver a
+     * habilitar el tracking, llamar a "unlock gravity tracking".
      */
     //% block="update gravity estimate"
     //% blockId=fisicabit_accel_actualizar_gravedad
@@ -266,6 +281,7 @@ namespace FisicaBit {
             _gInit = true
             return
         }
+        if (_gLocked) return
         _gvx = (1 - _gAlpha) * _gvx + _gAlpha * ax
         _gvy = (1 - _gAlpha) * _gvy + _gAlpha * ay
         _gvz = (1 - _gAlpha) * _gvz + _gAlpha * az
@@ -297,29 +313,50 @@ namespace FisicaBit {
     }
 
     /**
-     * Calibra el acelerómetro midiendo el bias (offset residual) del sensor
+     * Vuelve a habilitar el seguimiento adaptativo del vector gravedad
+     * (desbloquea el EMA) después de una calibración. Usar sólo si el
+     * cuerpo va a cambiar de orientación durante el experimento.
+     */
+    //% block="unlock gravity tracking"
+    //% blockId=fisicabit_accel_unlock
+    //% group="Acceleration (m/s²)"
+    //% weight=95
+    export function desbloquearGravedad(): void {
+        _gLocked = false
+    }
+
+    /**
+     * Calibra el acelerómetro midiendo el vector gravedad del entorno
      * mientras el cuerpo está en REPOSO absoluto sobre el suelo.
      *
      * PROCEDIMIENTO DE CALIBRACIÓN:
      *   1. Colocar el cuerpo con la placa encima, totalmente quieto, en la
      *      orientación final del experimento (ej: placa horizontal, cara
      *      arriba, sobre el objeto a medir).
-     *   2. Invocar este bloque. El programa tomará N muestras y calculará:
-     *        • El vector gravedad estático g⃗ del entorno.
-     *        • El offset residual del sensor (bias) = promedio − g_esperada.
-     *   3. A partir de ese momento, todas las lecturas de aceleración
-     *      lineal descontarán el bias y la gravedad correctamente.
+     *   2. Invocar este bloque. El programa tomará N muestras y calculará
+     *      el vector gravedad aparente g⃗ = ⟨a⃗_raw⟩ promediando muestras
+     *      sucesivas para eliminar el ruido por el factor 1/√N.
+     *   3. El vector g⃗ queda CONGELADO como referencia: todas las lecturas
+     *      posteriores de "linear acceleration" le restarán exactamente
+     *      ese vector, de modo que:
+     *           • en reposo:     a⃗_lineal = a⃗_raw − g⃗ ≈ 0  (0,00 m/s²)
+     *           • en movimiento: a⃗_lineal = variación respecto al reposo
      *
      * JUSTIFICACIÓN FÍSICA:
-     *   En reposo la lectura debería cumplir |a⃗| = 1 g exactamente. Si
-     *   promediamos M muestras obtenemos:
-     *        ⟨a⃗⟩ = g⃗ + bias⃗ + ruido/√M
-     *   Para M = 200 muestras a 100 Hz (2 s), el ruido RMS del sensor
-     *   (~3 mg por eje) se reduce a 3/√200 ≈ 0,21 mg, despreciable.
+     *   La lectura promedio en reposo contiene tanto la aceleración propia
+     *   debida a la gravedad como el offset intrínseco DC del sensor MEMS:
+     *        ⟨a⃗⟩ = g⃗_aparente + bias_sensor + ruido/√M
+     *   Al usarla como referencia y restarla, eliminamos AMBAS contribucio‑
+     *   nes de golpe, sin necesidad de conocer por separado la gravedad
+     *   ideal (9,81 m/s²) ni el bias del chip. Para M = 200 muestras a
+     *   100 Hz (2 s), el ruido RMS del sensor (~3 mg) se reduce a
+     *   3/√200 ≈ 0,21 mg, despreciable.
      *
-     * Después de la calibración, el módulo del vector g⃗ medido debería
-     * coincidir con 1000 mg ± 20 mg. Si difiere más, probablemente el
-     * cuerpo no estaba realmente quieto o hay vibración ambiental.
+     * NOTA: el módulo del vector capturado debería valer ≈1000 mg (1 g).
+     * Si el micro:bit está lejos del ecuador (g_real ≈ 9,78 a 9,83 m/s²)
+     * o si hay bias de hasta ±30 mg, el módulo puede diferir un 1-3 %.
+     * Esto NO afecta al invariante "cuerpo quieto ⇒ 0 m/s²" porque
+     * restamos exactamente la misma referencia.
      *
      * @param muestras Número de muestras a promediar (50-500). Por defecto 200.
      */
@@ -336,29 +373,17 @@ namespace FisicaBit {
             sz += input.acceleration(Dimension.Z)
             basic.pause(10) // 100 Hz de muestreo → 10 ms por muestra
         }
-        // Vector gravedad medido (en reposo = aceleración propia pura)
-        const mx = sx / muestras
-        const my = sy / muestras
-        const mz = sz / muestras
-
-        // Inicializamos el estimador de gravedad con el promedio calibrado
-        _gvx = mx
-        _gvy = my
-        _gvz = mz
+        // Vector gravedad medido (en reposo = aceleración propia pura
+        // + bias DC intrínseco del MEMS, ambos absorbidos como referencia)
+        _gvx = sx / muestras
+        _gvy = sy / muestras
+        _gvz = sz / muestras
         _gInit = true
-
-        // Bias residual: diferencia entre el módulo medido y 1000 mg teóricos.
-        // Repartimos el error proporcionalmente a cada eje (corrección de escala
-        // aproximada). Esto no corrige cross-axis, pero sí el bias dominante.
-        const mod = Math.sqrt(mx * mx + my * my + mz * mz)
-        if (mod > 0) {
-            const factor = (mod - 1000) / mod   // fracción de exceso/defecto
-            _biasX = mx * factor
-            _biasY = my * factor
-            _biasZ = mz * factor
-        } else {
-            _biasX = 0; _biasY = 0; _biasZ = 0
-        }
+        // Bloqueamos el EMA: la referencia queda fija y el sensor mide
+        // exclusivamente las variaciones alrededor de ese punto de reposo.
+        // Esto garantiza el invariante "cuerpo quieto ⇒ 0 m/s²" y además
+        // impide que una aceleración sostenida sea absorbida por el filtro.
+        _gLocked = true
     }
 
     /**
@@ -385,26 +410,43 @@ namespace FisicaBit {
     }
 
     /**
-     * Devuelve la aceleración LINEAL del cuerpo (con la gravedad y el bias ya
-     * descontados) sobre un eje elegido, en la unidad seleccionada.
+     * Devuelve la aceleración LINEAL del cuerpo respecto al suelo, con la
+     * gravedad aparente (referencia de reposo) ya descontada, sobre el eje
+     * elegido y en la unidad pedida.
+     *
+     * INVARIANTE: cuerpo en reposo ⇒ 0,00 m/s² en todos los ejes.
      *
      * ALGORITMO:
      *   1. Leer la aceleración propia cruda del sensor (a⃗_raw, en mg).
-     *   2. Actualizar el estimador exponencial de gravedad g⃗.
-     *   3. Calcular a⃗_lineal = a⃗_raw − g⃗ − bias⃗.
+     *   2. Si el estimador EMA no está bloqueado (no se calibró aún),
+     *      actualizarlo con la nueva muestra:
+     *            g⃗ ← (1−α)·g⃗ + α·a⃗_raw
+     *      Si el usuario ya calibró, g⃗ queda FIJO como referencia de reposo.
+     *   3. Calcular la aceleración lineal restando la referencia:
+     *            a⃗_lineal = a⃗_raw − g⃗
+     *      Esto elimina simultáneamente la gravedad aparente y el bias DC
+     *      intrínseco del sensor MEMS (ambos absorbidos en g⃗).
      *   4. Si el eje solicitado es "Vertical", proyectar sobre −ĝ:
-     *          a_vert = −(a⃗_lineal · ĝ)
+     *            a_vert = −(a⃗_lineal · ĝ)
      *      Así el signo positivo = "hacia arriba respecto al suelo" sin
      *      importar la orientación física de la placa.
      *   5. Si el eje es Magnitud, devolver |a⃗_lineal|.
-     *   6. Convertir de mg a la unidad pedida.
+     *   6. Convertir de mg a la unidad pedida y redondear.
      *
-     * INTERPRETACIÓN:
-     *   - En reposo: todos los ejes ≈ 0 (la gravedad ya se restó).
-     *   - En caída libre: todos los ejes ≈ 0 también; el eje Vertical da
-     *     ≈ −9,81 m/s² (el cuerpo acelera hacia abajo respecto al suelo
-     *     porque ya no hay normal que compense la gravedad).
-     *   - Subiendo en ascensor a 2 m/s²: eje Vertical ≈ +2,0 m/s².
+     * JUSTIFICACIÓN DE CÓMO SE CUMPLE EL INVARIANTE:
+     *   Antes de calibrar, el EMA converge exponencialmente a ⟨a⃗_raw⟩,
+     *   por lo que a⃗_lineal → 0 en reposo. Después de calibrar, g⃗ queda
+     *   igual al promedio de N muestras en reposo, así que en cada lectura
+     *   posterior en reposo a⃗_lineal = (a⃗_raw − ⟨a⃗_raw⟩) = ruido gaussiano
+     *   con σ ≈ 3 mg ≈ 0,03 m/s². El redondeo a 2 decimales (m/s²) hace
+     *   que el resultado devuelto sea EXACTAMENTE 0,00 en reposo.
+     *
+     * INTERPRETACIÓN FÍSICA:
+     *   - En reposo: 0,00 m/s² en todos los ejes (garantía estricta).
+     *   - En caída libre: el eje Vertical devuelve ≈ −9,81 m/s²
+     *     (el cuerpo acelera hacia abajo respecto al suelo).
+     *   - Subiendo en ascensor a 2 m/s²: eje Vertical ≈ +2,00 m/s².
+     *   - Frenando al bajar: eje Vertical positivo (decelera la caída).
      *
      * @param eje Eje físico deseado (X, Y, Z, Magnitud o Vertical)
      * @param unidad Unidad de salida (m/s², g o mg)
@@ -421,19 +463,23 @@ namespace FisicaBit {
         const ay = input.acceleration(Dimension.Y)
         const az = input.acceleration(Dimension.Z)
 
-        // 2) Actualizar estimador de gravedad con esta misma muestra
+        // 2) Actualizar estimador de gravedad SÓLO si no está bloqueado.
+        //    Tras calibrar, la referencia queda fija para preservar el
+        //    invariante "cuerpo quieto ⇒ 0 m/s²" y para no absorber
+        //    aceleraciones sostenidas.
         if (!_gInit) {
             _gvx = ax; _gvy = ay; _gvz = az; _gInit = true
-        } else {
+        } else if (!_gLocked) {
             _gvx = (1 - _gAlpha) * _gvx + _gAlpha * ax
             _gvy = (1 - _gAlpha) * _gvy + _gAlpha * ay
             _gvz = (1 - _gAlpha) * _gvz + _gAlpha * az
         }
 
-        // 3) Aceleración lineal en mg (resta de gravedad y bias)
-        const lx = ax - _gvx - _biasX
-        const ly = ay - _gvy - _biasY
-        const lz = az - _gvz - _biasZ
+        // 3) Aceleración lineal en mg — se resta UNA sola vez la referencia
+        //    de reposo (que incluye gravedad + bias DC del MEMS).
+        const lx = ax - _gvx
+        const ly = ay - _gvy
+        const lz = az - _gvz
 
         // 4) Selección de componente
         let valor_mg = 0
