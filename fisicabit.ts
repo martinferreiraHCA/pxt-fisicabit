@@ -410,9 +410,8 @@ namespace FisicaBit {
     }
 
     /**
-     * Devuelve la aceleración LINEAL del cuerpo respecto al suelo, con la
-     * gravedad aparente (referencia de reposo) ya descontada, sobre el eje
-     * elegido y en la unidad pedida.
+     * Devuelve la aceleración LINEAL del cuerpo respecto al suelo, en
+     * METROS POR SEGUNDO AL CUADRADO (m/s²), sobre el eje elegido.
      *
      * INVARIANTE: cuerpo en reposo ⇒ 0,00 m/s² en todos los ejes.
      *
@@ -431,7 +430,8 @@ namespace FisicaBit {
      *      Así el signo positivo = "hacia arriba respecto al suelo" sin
      *      importar la orientación física de la placa.
      *   5. Si el eje es Magnitud, devolver |a⃗_lineal|.
-     *   6. Convertir de mg a la unidad pedida y redondear.
+     *   6. Convertir de mg a m/s² con el factor CODATA 9,80665/1000 y
+     *      redondear a 2 decimales.
      *
      * JUSTIFICACIÓN DE CÓMO SE CUMPLE EL INVARIANTE:
      *   Antes de calibrar, el EMA converge exponencialmente a ⟨a⃗_raw⟩,
@@ -441,7 +441,7 @@ namespace FisicaBit {
      *   con σ ≈ 3 mg ≈ 0,03 m/s². El redondeo a 2 decimales (m/s²) hace
      *   que el resultado devuelto sea EXACTAMENTE 0,00 en reposo.
      *
-     * INTERPRETACIÓN FÍSICA:
+     * INTERPRETACIÓN FÍSICA (salida siempre en m/s²):
      *   - En reposo: 0,00 m/s² en todos los ejes (garantía estricta).
      *   - En caída libre: el eje Vertical devuelve ≈ −9,81 m/s²
      *     (el cuerpo acelera hacia abajo respecto al suelo).
@@ -449,15 +449,13 @@ namespace FisicaBit {
      *   - Frenando al bajar: eje Vertical positivo (decelera la caída).
      *
      * @param eje Eje físico deseado (X, Y, Z, Magnitud o Vertical)
-     * @param unidad Unidad de salida (m/s², g o mg)
      */
-    //% block="linear acceleration on axis %eje in %unidad"
+    //% block="acceleration on axis %eje (m/s²)"
     //% blockId=fisicabit_accel_lineal
     //% group="Acceleration (m/s²)"
     //% weight=96
     //% eje.defl=EjeAceleracion.Vertical
-    //% unidad.defl=UnidadAceleracion.MetroPorSegundo2
-    export function leerAceleracionLineal(eje: EjeAceleracion, unidad: UnidadAceleracion): number {
+    export function leerAceleracionLineal(eje: EjeAceleracion): number {
         // 1) Lectura cruda
         const ax = input.acceleration(Dimension.X)
         const ay = input.acceleration(Dimension.Y)
@@ -481,7 +479,7 @@ namespace FisicaBit {
         const ly = ay - _gvy
         const lz = az - _gvz
 
-        // 4) Selección de componente
+        // 4) Selección de componente (aún en mg)
         let valor_mg = 0
         switch (eje) {
             case EjeAceleracion.X:
@@ -503,39 +501,99 @@ namespace FisicaBit {
             }
         }
 
-        // 5) Conversión a la unidad pedida (2 decimales de redondeo)
-        switch (unidad) {
-            case UnidadAceleracion.MetroPorSegundo2:
-                return Math.round(valor_mg * MG_A_MS2 * 100) / 100
-            case UnidadAceleracion.G:
-                return Math.round(valor_mg / 10) / 100   // mg → g con 2 decimales
-            case UnidadAceleracion.Miligravedad:
-                return Math.round(valor_mg)
-            default:
-                return Math.round(valor_mg * MG_A_MS2 * 100) / 100
-        }
+        // 5) Conversión mg → m/s² con la gravedad estándar CODATA,
+        //    redondeada a 2 decimales.
+        return Math.round(valor_mg * MG_A_MS2 * 100) / 100
+    }
+
+    // ── Atajos por eje: un bloque dedicado por cada dirección ──
+    // Pedagógicamente más claros que el bloque paramétrico anterior,
+    // y siempre devuelven m/s². Todos comparten el mismo algoritmo.
+
+    /**
+     * Aceleración lineal del cuerpo sobre el eje X (izquierda/derecha de
+     * la placa), en m/s². Referencia de reposo descontada. 0,00 m/s² si
+     * el cuerpo está quieto.
+     */
+    //% block="acceleration X (m/s²)"
+    //% blockId=fisicabit_accel_x_ms2
+    //% group="Acceleration (m/s²)"
+    //% weight=93
+    export function aceleracionX(): number {
+        return leerAceleracionLineal(EjeAceleracion.X)
     }
 
     /**
-     * Aceleración PROPIA (lo que mide el sensor sin restar nada).
-     * Útil para estudiantes avanzados que quieren comparar el modelo
-     * de "peso aparente" con la teoría: esta función devuelve la fuerza
+     * Aceleración lineal del cuerpo sobre el eje Y (adelante/atrás de la
+     * placa), en m/s². Referencia de reposo descontada. 0,00 m/s² si el
+     * cuerpo está quieto.
+     */
+    //% block="acceleration Y (m/s²)"
+    //% blockId=fisicabit_accel_y_ms2
+    //% group="Acceleration (m/s²)"
+    //% weight=92
+    export function aceleracionY(): number {
+        return leerAceleracionLineal(EjeAceleracion.Y)
+    }
+
+    /**
+     * Aceleración lineal del cuerpo sobre el eje Z (perpendicular a la
+     * placa), en m/s². Referencia de reposo descontada. 0,00 m/s² si el
+     * cuerpo está quieto.
+     */
+    //% block="acceleration Z (m/s²)"
+    //% blockId=fisicabit_accel_z_ms2
+    //% group="Acceleration (m/s²)"
+    //% weight=91
+    export function aceleracionZ(): number {
+        return leerAceleracionLineal(EjeAceleracion.Z)
+    }
+
+    /**
+     * Aceleración VERTICAL del cuerpo respecto al suelo, en m/s². Es la
+     * componente de la aceleración lineal proyectada sobre la dirección
+     * opuesta a la gravedad (arriba = positivo). Funciona incluso si la
+     * placa está inclinada sobre el cuerpo: se mide siempre respecto al
+     * suelo real, no al eje Z del sensor. 0,00 m/s² si el cuerpo está
+     * quieto.
+     */
+    //% block="vertical acceleration (m/s²)"
+    //% blockId=fisicabit_accel_vert_ms2
+    //% group="Acceleration (m/s²)"
+    //% weight=95
+    export function aceleracionVertical(): number {
+        return leerAceleracionLineal(EjeAceleracion.Vertical)
+    }
+
+    /**
+     * Magnitud del vector aceleración lineal |a⃗|, en m/s². Es invariante
+     * frente a rotaciones de la placa. 0,00 m/s² si el cuerpo está quieto.
+     */
+    //% block="acceleration magnitude (m/s²)"
+    //% blockId=fisicabit_accel_mag_ms2
+    //% group="Acceleration (m/s²)"
+    //% weight=90
+    export function aceleracionMagnitud(): number {
+        return leerAceleracionLineal(EjeAceleracion.Magnitud)
+    }
+
+    /**
+     * Aceleración PROPIA (proper acceleration) del sensor, en m/s². Es lo
+     * que el acelerómetro lee SIN restar la gravedad, es decir la fuerza
      * por unidad de masa que el soporte ejerce sobre el cuerpo (N/kg).
      *
-     * Equivalente pedagógico: si te paras sobre una balanza dentro de
-     * un ascensor, esta función devuelve lo que marca la balanza
-     * dividido por tu masa.
+     * Uso pedagógico: si te paras sobre una balanza dentro de un ascensor,
+     * esta función devuelve lo que marca la balanza dividido por tu masa.
+     * En reposo sobre el suelo da ≈9,81 m/s² (|a⃗|), no 0.
      *
-     * @param eje Eje físico (X, Y, Z o Magnitud)
-     * @param unidad Unidad deseada
+     * @param eje Eje físico (X, Y, Z, Magnitud o Vertical)
      */
-    //% block="proper acceleration on axis %eje in %unidad"
+    //% block="proper acceleration on axis %eje (m/s²)"
     //% blockId=fisicabit_accel_propia
     //% group="Acceleration (m/s²)"
-    //% weight=94
+    //% weight=88
     //% eje.defl=EjeAceleracion.Magnitud
-    //% unidad.defl=UnidadAceleracion.MetroPorSegundo2
-    export function leerAceleracionPropia(eje: EjeAceleracion, unidad: UnidadAceleracion): number {
+    export function leerAceleracionPropia(eje: EjeAceleracion): number {
         const ax = input.acceleration(Dimension.X)
         const ay = input.acceleration(Dimension.Y)
         const az = input.acceleration(Dimension.Z)
@@ -557,16 +615,7 @@ namespace FisicaBit {
             }
         }
 
-        switch (unidad) {
-            case UnidadAceleracion.MetroPorSegundo2:
-                return Math.round(valor_mg * MG_A_MS2 * 100) / 100
-            case UnidadAceleracion.G:
-                return Math.round(valor_mg / 10) / 100
-            case UnidadAceleracion.Miligravedad:
-                return Math.round(valor_mg)
-            default:
-                return Math.round(valor_mg * MG_A_MS2 * 100) / 100
-        }
+        return Math.round(valor_mg * MG_A_MS2 * 100) / 100
     }
 
     /**
