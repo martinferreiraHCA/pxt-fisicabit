@@ -98,15 +98,6 @@ declare const enum EjeAceleracion {
     Vertical = 4
 }
 
-declare const enum UnidadAceleracion {
-    //% block="m/s²"
-    MetroPorSegundo2 = 0,
-    //% block="g (gravities)"
-    G = 1,
-    //% block="mg (milli-g)"
-    Miligravedad = 2
-}
-
 declare const enum ModoBarrera {
     //% block="digital"
     Digital = 0,
