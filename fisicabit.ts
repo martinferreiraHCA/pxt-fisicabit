@@ -1503,3 +1503,173 @@ namespace FisicaBit {
         basic.showString(etiqueta + ":" + Math.round(valor))
     }
 }
+
+
+// =============================================================================
+// NAMESPACE SECUNDARIO — "FisicaBit Kinematics"
+// =============================================================================
+//  Categoría independiente en la toolbox de MakeCode, con COLOR DISTINTO
+//  al del namespace principal "FisicaBit Sensors" (#E64322, naranja) para
+//  que los bloques de magnitudes CINEMÁTICAS derivadas (aceleración total
+//  y velocidad instantánea) se distingan visualmente de los bloques que
+//  sólo leen sensores.
+//
+//  Se usa un namespace aparte (y no un `group=` dentro de FisicaBit) porque
+//  en PXT el color de un bloque lo fija el namespace al que pertenece: la
+//  ÚNICA forma limpia de que un bloque tenga otro color es ponerlo en otro
+//  namespace.
+// =============================================================================
+//% weight=99
+//% color=#1E88E5
+//% icon="\uf1b2"
+//% block="FisicaBit Kinematics"
+//% groups="['Acceleration', 'Instantaneous velocity']"
+namespace FisicaBitCinematica {
+
+    // ── Estado interno del integrador de velocidad ─────────────────────
+    // La velocidad instantánea se obtiene INTEGRANDO NUMÉRICAMENTE la
+    // aceleración lineal del cuerpo respecto al tiempo:
+    //
+    //     v(t) = v(t₀) + ∫ₜ₀ᵗ a(τ) dτ
+    //
+    // En el micro:bit aproximamos la integral por una suma de Riemann
+    // con paso dt tan "infinitesimal" como el bucle del usuario permita:
+    //
+    //     vₙ₊₁ = vₙ + a(tₙ) · (tₙ₊₁ − tₙ)
+    //
+    // Cada llamada a `velocidadInstantanea` mide el dt REAL transcurrido
+    // desde la llamada anterior usando `control.millis()`, por lo que el
+    // paso de integración se adapta solo al ritmo del bucle `forever`.
+    //
+    // Limitación física bien conocida: el acelerómetro tiene ruido y un
+    // pequeño sesgo. Aunque se calibre en reposo, el error acumulado
+    // hace que la velocidad DERIVE con el tiempo. Por eso:
+    //   1) Hay que reiniciar la velocidad al empezar cada experimento.
+    //   2) Los experimentos deben durar POCOS SEGUNDOS.
+    let _vx = 0            // componente X de v⃗, en m/s
+    let _vy = 0            // componente Y de v⃗, en m/s
+    let _vz = 0            // componente Z de v⃗, en m/s
+    let _vVert = 0         // componente vertical de v⃗ (−ĝ), en m/s
+    let _tPrevMs = 0       // instante de la última muestra, en ms
+    let _vInit = false     // ¿se ha arrancado ya el reloj del integrador?
+
+    /**
+     * Devuelve la aceleración LINEAL completa del cuerpo, en m/s², sobre
+     * el eje elegido. Es exactamente el mismo cálculo que el bloque
+     * "acceleration on axis" de FisicaBit Sensors (referencia de reposo
+     * descontada → 0,00 m/s² si el cuerpo está quieto), pero expuesto
+     * aquí como bloque independiente con COLOR DISTINTO para destacar
+     * visualmente la categoría cinemática.
+     *
+     * @param eje Eje físico (X, Y, Z, Magnitud o Vertical)
+     */
+    //% block="full acceleration (m/s²) axis %eje"
+    //% blockId=fisicabit_cin_aceleracion
+    //% group="Acceleration"
+    //% weight=100
+    //% eje.defl=EjeAceleracion.Magnitud
+    export function aceleracion(eje: EjeAceleracion): number {
+        return FisicaBit.leerAceleracionLineal(eje)
+    }
+
+    /**
+     * Velocidad INSTANTÁNEA del cuerpo sobre el eje elegido, en m/s,
+     * obtenida integrando numéricamente la aceleración lineal:
+     *
+     *     v(t) ≈ Σᵢ aᵢ · Δtᵢ     con Δtᵢ → 0
+     *
+     * USO TÍPICO:
+     *   basic.forever(function () {
+     *       let v = FisicaBitCinematica.velocidadInstantanea(
+     *                   EjeAceleracion.Vertical)
+     *       basic.showNumber(v)
+     *   })
+     *
+     * Para que la aproximación sea válida hay que LLAMAR A ESTE BLOQUE
+     * REPETIDAMENTE (p.ej. dentro de un `forever`). Cuanto más rápido se
+     * llame, más "infinitesimal" es Δt y mejor es la estimación. La
+     * primera llamada devuelve 0,00 y arranca el reloj interno.
+     *
+     * RECOMENDACIONES:
+     *   - Calibra el acelerómetro en reposo antes de empezar.
+     *   - Usa el bloque "reset instantaneous velocity" al principio de
+     *     cada experimento.
+     *   - Mantén los experimentos cortos (unos pocos segundos) para que
+     *     la deriva del sensor no domine el resultado.
+     *
+     * @param eje Eje físico (X, Y, Z, Magnitud o Vertical)
+     */
+    //% block="instantaneous velocity (m/s) axis %eje"
+    //% blockId=fisicabit_cin_velocidad
+    //% group="Instantaneous velocity"
+    //% weight=90
+    //% eje.defl=EjeAceleracion.Vertical
+    export function velocidadInstantanea(eje: EjeAceleracion): number {
+        const ahoraMs = control.millis()
+
+        // Primera llamada: arranca el reloj del integrador y devuelve 0.
+        // Sin esto el primer Δt sería gigantesco (todo el uptime del
+        // micro:bit) y dispararía la velocidad a valores absurdos.
+        if (!_vInit) {
+            _tPrevMs = ahoraMs
+            _vInit = true
+            return 0
+        }
+
+        // Paso dt REAL desde la llamada anterior, en segundos.
+        const dt_s = (ahoraMs - _tPrevMs) / 1000
+        _tPrevMs = ahoraMs
+
+        // Leer las componentes de la aceleración lineal (m/s²) reusando
+        // el algoritmo completo de FisicaBit (resta de referencia de
+        // reposo + proyección sobre la vertical estimada).
+        const ax = FisicaBit.leerAceleracionLineal(EjeAceleracion.X)
+        const ay = FisicaBit.leerAceleracionLineal(EjeAceleracion.Y)
+        const az = FisicaBit.leerAceleracionLineal(EjeAceleracion.Z)
+        const aV = FisicaBit.leerAceleracionLineal(EjeAceleracion.Vertical)
+
+        // Integración rectangular (Riemann izquierda): v ← v + a·dt
+        // Para dt pequeño el error O(dt²) es despreciable frente al
+        // ruido del sensor, así que no merece la pena usar trapezoidal.
+        _vx    += ax * dt_s
+        _vy    += ay * dt_s
+        _vz    += az * dt_s
+        _vVert += aV * dt_s
+
+        // Devolver la componente solicitada redondeada a 2 decimales.
+        switch (eje) {
+            case EjeAceleracion.X:
+                return Math.round(_vx * 100) / 100
+            case EjeAceleracion.Y:
+                return Math.round(_vy * 100) / 100
+            case EjeAceleracion.Z:
+                return Math.round(_vz * 100) / 100
+            case EjeAceleracion.Magnitud:
+                return Math.round(
+                    Math.sqrt(_vx * _vx + _vy * _vy + _vz * _vz) * 100
+                ) / 100
+            case EjeAceleracion.Vertical:
+                return Math.round(_vVert * 100) / 100
+            default:
+                return 0
+        }
+    }
+
+    /**
+     * Reinicia el integrador de velocidad instantánea: pone v⃗ a cero
+     * en TODOS los ejes y vuelve a arrancar el reloj en la próxima
+     * llamada. Úsalo al principio de cada experimento, con el cuerpo
+     * REALMENTE en reposo, para que la velocidad inicial sea 0,00 m/s.
+     */
+    //% block="reset instantaneous velocity"
+    //% blockId=fisicabit_cin_reset
+    //% group="Instantaneous velocity"
+    //% weight=80
+    export function reiniciarVelocidad(): void {
+        _vx = 0
+        _vy = 0
+        _vz = 0
+        _vVert = 0
+        _vInit = false
+    }
+}
