@@ -996,7 +996,7 @@ namespace FisicaBit {
 //% color=#1E88E5
 //% icon="\uf1b2"
 //% block="FisicaBit Kinematics"
-//% groups="['Acceleration', 'Calibration & gravity', 'Instantaneous velocity']"
+//% groups="['Acceleration', 'Orientation', 'Calibration & gravity', 'Instantaneous velocity']"
 namespace FisicaBitCinematica {
 
     // =========================================================================
@@ -1081,6 +1081,44 @@ namespace FisicaBitCinematica {
     // NO se aplica a la aceleración PROPIA (ahí el reposo vale ~1000 mg).
     const DEADBAND_LINEAL_MG = 5
 
+    // ── Modo dual: acelerómetro + magnetómetro ──────────────────────
+    // Por defecto OFF: el bloque `leerAceleracionLineal` se comporta
+    // EXACTAMENTE igual que antes (EMA simple). Se activa automática-
+    // mente al llamar `calibrarMagnetometro()` o manualmente con
+    // `habilitarModoDual()`. Preserva retrocompatibilidad estricta:
+    // todos los programas existentes siguen funcionando idénticos.
+    let _dualModeEnabled = false
+
+    // ── Calibración del magnetómetro (hard-iron + soft-iron) ───────
+    let _magCalibrated = false
+    let _magOffX = 0, _magOffY = 0, _magOffZ = 0   // hard-iron (μT)
+    let _magScX = 1, _magScY = 1, _magScZ = 1      // soft-iron scales
+    let _magNominalNorm = 0                         // |m| nominal (μT)
+    let _magCalQuality = 0                          // 0-100 %
+
+    // ── Filtro EMA del magnetómetro (μT) ───────────────────────────
+    let _fmx = 0, _fmy = 0, _fmz = 0
+    let _magAlpha = 0.15
+    let _magFiltInit = false
+    let _magDisturbed = false
+
+    // ── Orientación estimada (radianes internamente; los bloques ──
+    // reporter la exponen en grados).
+    let _estPitch = 0, _estRoll = 0, _estYaw = 0
+
+    // ── Gravedad trigonométrica proyectada al marco sensor (mg) ────
+    let _gTrigX = 0, _gTrigY = 0, _gTrigZ = -1000
+
+    // ── LPF adaptativo de gravedad (mg) ────────────────────────────
+    // α grande (0,05) en reposo para converger rápido, y α muy pequeña
+    // (0,001) durante movimiento para que aceleraciones sostenidas no
+    // sean absorbidas por el filtro.
+    let _gLpfX = 0, _gLpfY = 0, _gLpfZ = -1000
+    let _gLpfInit = false
+    const _gLpfAlphaMax = 0.05
+    const _gLpfAlphaMin = 0.001
+    const _motionThresholdMg = 150
+
     /**
      * Mediana de tres valores sin ordenar: identidad
      *   mediana(a,b,c) = a + b + c − max(a,b,c) − min(a,b,c).
@@ -1119,6 +1157,163 @@ namespace FisicaBitCinematica {
             _median3(_histAy[0], _histAy[1], _histAy[2]),
             _median3(_histAz[0], _histAz[1], _histAz[2])
         ]
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // HELPERS DEL MODO DUAL (magnetómetro + orientación + LPF dual)
+    // ─────────────────────────────────────────────────────────────────
+
+    /**
+     * Lee el magnetómetro crudo, aplica hard-iron (offset) + soft-iron
+     * (escala) y un filtro EMA. Devuelve [mx, my, mz] en μT.
+     *
+     * Robustez: si el sensor devuelve 0 en los 3 ejes (no disponible),
+     * preserva el último estado para no contaminar con ceros. Si no hay
+     * calibración cargada, _magOff*=0 y _magSc*=1 hacen la calibración
+     * identidad (aunque el yaw no tendrá sentido sin calibrar).
+     */
+    function _leerMagFiltrado(): number[] {
+        const rx = input.magneticForce(Dimension.X)
+        const ry = input.magneticForce(Dimension.Y)
+        const rz = input.magneticForce(Dimension.Z)
+
+        // Sensor no disponible → mantener filtro
+        if (rx === 0 && ry === 0 && rz === 0 && _magFiltInit) {
+            return [_fmx, _fmy, _fmz]
+        }
+
+        // Aplicar calibración (identidad si no se calibró)
+        const cx = (rx - _magOffX) * _magScX
+        const cy = (ry - _magOffY) * _magScY
+        const cz = (rz - _magOffZ) * _magScZ
+
+        if (!_magFiltInit) {
+            _fmx = cx; _fmy = cy; _fmz = cz
+            _magFiltInit = true
+        } else {
+            _fmx = _magAlpha * cx + (1 - _magAlpha) * _fmx
+            _fmy = _magAlpha * cy + (1 - _magAlpha) * _fmy
+            _fmz = _magAlpha * cz + (1 - _magAlpha) * _fmz
+        }
+
+        // Detección de perturbación: |m_cal| se desvía >25% del nominal
+        if (_magCalibrated && _magNominalNorm > 0) {
+            const normM = Math.sqrt(_fmx * _fmx + _fmy * _fmy + _fmz * _fmz)
+            const devAbs = normM - _magNominalNorm
+            const dev = (devAbs < 0 ? -devAbs : devAbs) / _magNominalNorm
+            _magDisturbed = dev > 0.25
+        }
+
+        return [_fmx, _fmy, _fmz]
+    }
+
+    /**
+     * Pitch y roll desde el acelerómetro (ST DT0058 eq. 1-2) + yaw
+     * tilt-compensado desde el magnetómetro calibrado (ST DT0058
+     * eq. 3-5). Actualiza _estPitch / _estRoll / _estYaw en radianes,
+     * y _gTrig{X,Y,Z} en mg (gravedad proyectada al marco del sensor).
+     *
+     * Singularidad (NXP AN3461): cuando los ejes Y/Z se alinean con la
+     * gravedad (ay²+az² < 100), el pitch se degenera — forzamos ±π/2
+     * según el signo de ax. El umbral 100 mg² ≈ (10 mg)² está sobre
+     * el ruido del sensor (~3 mg RMS).
+     */
+    function _calcularOrientacion(ax: number, ay: number, az: number): void {
+        // 1) Pitch y roll desde accel
+        const yz2 = ay * ay + az * az
+        let pitch: number
+        if (yz2 < 100) {
+            pitch = ax > 0 ? -Math.PI / 2 : Math.PI / 2
+        } else {
+            pitch = Math.atan2(-ax, Math.sqrt(yz2))
+        }
+        const roll = Math.atan2(ay, az)
+        _estPitch = pitch
+        _estRoll = roll
+
+        // 2) Gravedad proyectada al marco sensor
+        const sinP = Math.sin(pitch), cosP = Math.cos(pitch)
+        const sinR = Math.sin(roll), cosR = Math.cos(roll)
+        _gTrigX = -sinP * 1000
+        _gTrigY = cosP * sinR * 1000
+        _gTrigZ = cosP * cosR * 1000
+
+        // 3) Yaw (tilt-compensated heading) sólo si mag calibrado y sin
+        //    perturbación detectada. Si no, _estYaw conserva el valor
+        //    previo (inicial 0).
+        if (_magCalibrated && !_magDisturbed) {
+            const mx = _fmx, my = _fmy, mz = _fmz
+            const mxp = mx * cosP + mz * sinP
+            const myp = mx * sinR * sinP + my * cosR - mz * sinR * cosP
+            _estYaw = Math.atan2(-myp, mxp)
+        }
+    }
+
+    /**
+     * LPF adaptativo de gravedad: α grande (0,05) cuando |a|≈1g para
+     * converger rápido, y α muy pequeña (0,001) cuando |a|≠1g para NO
+     * absorber aceleraciones sostenidas en el filtro — si integramos
+     * el filtro durante un tramo acelerado, la "gravedad estimada"
+     * se corrompería y la aceleración lineal saldría subestimada.
+     */
+    function _actualizarGravedadLPFAdaptativo(ax: number, ay: number, az: number): void {
+        const norm = Math.sqrt(ax * ax + ay * ay + az * az)
+        const diff = norm - 1000
+        const absErr = diff < 0 ? -diff : diff
+        const alpha = absErr > _motionThresholdMg ? _gLpfAlphaMin : _gLpfAlphaMax
+
+        if (!_gLpfInit) {
+            _gLpfX = ax; _gLpfY = ay; _gLpfZ = az
+            _gLpfInit = true
+        } else {
+            _gLpfX = alpha * ax + (1 - alpha) * _gLpfX
+            _gLpfY = alpha * ay + (1 - alpha) * _gLpfY
+            _gLpfZ = alpha * az + (1 - alpha) * _gLpfZ
+        }
+    }
+
+    /**
+     * Estimación DUAL de la gravedad: combina (a) proyección trigono-
+     * métrica pitch/roll — precisa y sigue rotaciones instantáneamente
+     * pero se corrompe cuando |a|≠1g — con (b) LPF adaptativo, robusto
+     * en movimiento pero lento a rotaciones.
+     *
+     * Crossfade automático según |norm_a − 1g|:
+     *   - Cuerpo quieto (error <100 mg) ⇒ 100 % trigonométrico
+     *   - Movimiento fuerte (error >250 mg) ⇒ 100 % LPF
+     *   - En medio: interpola linealmente.
+     *
+     * Escribe en _gvx/_gvy/_gvz (las mismas variables que el EMA
+     * simple) así `leerAceleracionLineal` no necesita cambiar nada más.
+     * Validación NaN con el truco `x === x` antes de asignar.
+     */
+    function _actualizarGravedadDual(ax: number, ay: number, az: number): void {
+        // Refrescar magnetómetro filtrado (también detecta disturbios)
+        _leerMagFiltrado()
+
+        // Pitch/roll/yaw + gravedad trigonométrica
+        _calcularOrientacion(ax, ay, az)
+
+        // LPF adaptativo
+        _actualizarGravedadLPFAdaptativo(ax, ay, az)
+
+        // Blend según cuánto se aleja |a| de 1 g
+        const norm = Math.sqrt(ax * ax + ay * ay + az * az)
+        const diff = norm - 1000
+        const absErr = diff < 0 ? -diff : diff
+        let blend = (absErr - 100) / 150
+        if (blend < 0) blend = 0
+        if (blend > 1) blend = 1
+
+        const gx = (1 - blend) * _gTrigX + blend * _gLpfX
+        const gy = (1 - blend) * _gTrigY + blend * _gLpfY
+        const gz = (1 - blend) * _gTrigZ + blend * _gLpfZ
+
+        // NaN-safe assignment
+        if (gx === gx) _gvx = gx
+        if (gy === gy) _gvy = gy
+        if (gz === gz) _gvz = gz
+        _gInit = true
     }
 
     // ─────────────────────────────────────────────────────────────────
@@ -1254,6 +1449,187 @@ namespace FisicaBitCinematica {
     }
 
     // ─────────────────────────────────────────────────────────────────
+    // BLOQUES DEL MODO DUAL (acelerómetro + magnetómetro)
+    // ─────────────────────────────────────────────────────────────────
+
+    /**
+     * Calibra el magnetómetro midiendo el campo durante ~10 s mientras
+     * el usuario rota el micro:bit en el aire en todas direcciones
+     * (figura "8"). Calcula offsets hard-iron (centro del elipsoide)
+     * y escalas soft-iron (para convertir el elipsoide en esfera),
+     * valida el rango y activa automáticamente el MODO DUAL.
+     *
+     * PROCEDIMIENTO PARA EL AULA:
+     *   1) Ejecutar este bloque. Aparece "8" en pantalla.
+     *   2) Rotar lentamente el micro:bit en el aire durante ~10 s
+     *      cubriendo todas las direcciones espaciales.
+     *   3) Al terminar aparece ✓ (calibración válida) o ✗ (inválida).
+     *
+     * VALIDACIÓN: rango por eje ≥ 20 μT (si no, se descarta).
+     */
+    //% block="calibrate magnetometer (rotate micro:bit)"
+    //% blockId=fisicabit_cin_cal_mag
+    //% group="Calibration & gravity"
+    //% weight=95
+    export function calibrarMagnetometro(): void {
+        const N = 300
+        let minX = 99999, maxX = -99999
+        let minY = 99999, maxY = -99999
+        let minZ = 99999, maxZ = -99999
+
+        basic.showString("8")
+        basic.pause(500)
+
+        for (let i = 0; i < N; i++) {
+            const mx = input.magneticForce(Dimension.X)
+            const my = input.magneticForce(Dimension.Y)
+            const mz = input.magneticForce(Dimension.Z)
+            if (mx < minX) minX = mx
+            if (mx > maxX) maxX = mx
+            if (my < minY) minY = my
+            if (my > maxY) maxY = my
+            if (mz < minZ) minZ = mz
+            if (mz > maxZ) maxZ = mz
+
+            // Barrido de progreso en la fila central (y=2): una LED
+            // cada ~60 muestras, 5 LEDs = ~300 muestras.
+            const col = Math.idiv(i, 60)
+            if (col < 5) led.plot(col, 2)
+            basic.pause(30)
+        }
+        basic.clearScreen()
+
+        // Hard-iron: centro del elipsoide por eje
+        const ox = (maxX + minX) / 2
+        const oy = (maxY + minY) / 2
+        const oz = (maxZ + minZ) / 2
+
+        // Soft-iron: semi-amplitud por eje (radio del elipsoide)
+        const rx = (maxX - minX) / 2
+        const ry = (maxY - minY) / 2
+        const rz = (maxZ - minZ) / 2
+
+        // Validación: rango mínimo por eje
+        if (rx < 20 || ry < 20 || rz < 20) {
+            basic.showIcon(IconNames.No)
+            basic.pause(800)
+            basic.clearScreen()
+            _magCalibrated = false
+            _magCalQuality = 0
+            serial.writeLine("#CAL:MAG:invalid range rx=" + rx + " ry=" + ry + " rz=" + rz)
+            return
+        }
+
+        // Escalas para transformar elipsoide → esfera de radio avgR
+        const avgR = (rx + ry + rz) / 3
+        _magOffX = ox; _magOffY = oy; _magOffZ = oz
+        _magScX = avgR / rx
+        _magScY = avgR / ry
+        _magScZ = avgR / rz
+        _magNominalNorm = avgR
+
+        // Score de calidad: uniformidad de los radios. rx=ry=rz → q=100.
+        const maxR = Math.max(rx, Math.max(ry, rz))
+        const minR = Math.min(rx, Math.min(ry, rz))
+        const uniformity = 1 - (maxR - minR) / avgR
+        let q = uniformity * 100
+        if (q < 0) q = 0
+        if (q > 100) q = 100
+        _magCalQuality = Math.round(q)
+
+        _magCalibrated = true
+        _dualModeEnabled = true
+        _magFiltInit = false     // re-inicializar filtro con cal nueva
+        _gLpfInit = false        // re-inicializar LPF de gravedad
+
+        basic.showIcon(IconNames.Yes)
+        basic.pause(800)
+        basic.clearScreen()
+    }
+
+    /**
+     * Carga una calibración de magnetómetro pre-existente sin ejecutar
+     * el procedimiento de rotación. Útil si ya calibraste una vez y
+     * guardaste los valores (por ejemplo por serial con `enviarCalMag`).
+     * Activa automáticamente el modo dual.
+     */
+    //% block="set manual magnetometer cal offX %ox offY %oy offZ %oz scX %sx scY %sy scZ %sz"
+    //% blockId=fisicabit_cin_cal_mag_manual
+    //% group="Calibration & gravity"
+    //% weight=60
+    //% advanced=true
+    export function calibracionManualMag(
+        ox: number, oy: number, oz: number,
+        sx: number, sy: number, sz: number
+    ): void {
+        _magOffX = ox; _magOffY = oy; _magOffZ = oz
+        _magScX = sx; _magScY = sy; _magScZ = sz
+        _magCalibrated = true
+        _dualModeEnabled = true
+        _magFiltInit = false
+        _gLpfInit = false
+    }
+
+    /**
+     * ¿El magnetómetro tiene una calibración válida cargada?
+     */
+    //% block="magnetometer calibrated?"
+    //% blockId=fisicabit_cin_mag_calibrado
+    //% group="Calibration & gravity"
+    //% weight=55
+    export function magnetometroCalibrado(): boolean {
+        return _magCalibrated
+    }
+
+    /**
+     * Calidad (0-100 %) de la calibración magnética actual, basada en
+     * la uniformidad de los radios del elipsoide medido.
+     */
+    //% block="magnetometer calibration score"
+    //% blockId=fisicabit_cin_mag_calidad
+    //% group="Calibration & gravity"
+    //% weight=50
+    export function calidadCalMag(): number {
+        return _magCalQuality
+    }
+
+    /**
+     * Activa manualmente el MODO DUAL (proyección trigonométrica + LPF
+     * adaptativo). `calibrarMagnetometro` ya lo activa automáticamente.
+     * Sin calibración del magnetómetro el modo dual sigue funcionando
+     * (usa sólo pitch/roll + LPF), pero el yaw queda a 0.
+     */
+    //% block="enable dual mode (accelerometer + magnetometer)"
+    //% blockId=fisicabit_cin_dual
+    //% group="Calibration & gravity"
+    //% weight=94
+    export function habilitarModoDual(): void {
+        _dualModeEnabled = true
+        _gLpfInit = false
+    }
+
+    /**
+     * Emite la calibración actual del magnetómetro por serial en
+     * formato `#CAL:MAG:...`. El `#` hace que fisicabit.com lo ignore
+     * como dato de medición pero queda visible en el monitor serial.
+     */
+    //% block="send magnetometer calibration via serial"
+    //% blockId=fisicabit_cin_enviar_cal_mag
+    //% group="Calibration & gravity"
+    //% weight=45
+    export function enviarCalMag(): void {
+        serial.writeLine(
+            "#CAL:MAG:ox=" + _magOffX
+            + ",oy=" + _magOffY
+            + ",oz=" + _magOffZ
+            + ",sx=" + _magScX
+            + ",sy=" + _magScY
+            + ",sz=" + _magScZ
+            + ",q=" + _magCalQuality
+        )
+    }
+
+    // ─────────────────────────────────────────────────────────────────
     // BLOQUES DE ACELERACIÓN (en m/s²)
     // ─────────────────────────────────────────────────────────────────
 
@@ -1287,9 +1663,17 @@ namespace FisicaBitCinematica {
         const az = m[2]
 
         // 2) Actualizar estimador de gravedad SÓLO si no está bloqueado.
-        if (!_gInit) {
+        //    Si el usuario habilitó MODO DUAL (llamando a
+        //    `calibrarMagnetometro` o `habilitarModoDual`), usamos
+        //    proyección trigonométrica + LPF adaptativo con crossfade.
+        //    Si no, caemos al EMA simple original — retrocompatible.
+        if (_gLocked) {
+            // Referencia fija tras calibración en reposo: no tocar.
+        } else if (_dualModeEnabled) {
+            _actualizarGravedadDual(ax, ay, az)
+        } else if (!_gInit) {
             _gvx = ax; _gvy = ay; _gvz = az; _gInit = true
-        } else if (!_gLocked) {
+        } else {
             _gvx = (1 - _gAlpha) * _gvx + _gAlpha * ax
             _gvy = (1 - _gAlpha) * _gvy + _gAlpha * ay
             _gvz = (1 - _gAlpha) * _gvz + _gAlpha * az
@@ -1453,8 +1837,70 @@ namespace FisicaBitCinematica {
         return mod < umbralMg
     }
 
+    /**
+     * ¿Hay perturbación magnética? Devuelve true cuando la magnitud
+     * del magnetómetro calibrado difiere más del 25 % del valor
+     * nominal registrado durante la calibración: indica que hay un
+     * objeto metálico cerca o un campo magnético externo que
+     * corrompería el heading. Durante esos tramos el yaw se congela
+     * automáticamente para no contaminar la orientación.
+     *
+     * Sólo tiene sentido con el magnetómetro calibrado.
+     */
+    //% block="magnetic disturbance detected?"
+    //% blockId=fisicabit_cin_mag_disturbed
+    //% group="Acceleration"
+    //% weight=79
+    export function magnetometroAlterado(): boolean {
+        return _magDisturbed
+    }
+
     // =========================================================================
-    // GRUPO B: VELOCIDAD INSTANTÁNEA — Integración numérica de a(t)
+    // GRUPO B: ORIENTACIÓN (pitch, roll, heading)
+    // =========================================================================
+
+    /**
+     * Ángulo de CABECEO (pitch) estimado, en grados. Rango [-90, +90].
+     * Requiere MODO DUAL activo; si no, devuelve 0.
+     */
+    //% block="pitch (°)"
+    //% blockId=fisicabit_cin_pitch
+    //% group="Orientation"
+    //% weight=70
+    export function pitch(): number {
+        return Math.round(_estPitch * 180 / Math.PI * 10) / 10
+    }
+
+    /**
+     * Ángulo de ALABEO (roll) estimado, en grados. Rango [-180, +180].
+     * Requiere MODO DUAL activo; si no, devuelve 0.
+     */
+    //% block="roll (°)"
+    //% blockId=fisicabit_cin_roll
+    //% group="Orientation"
+    //% weight=69
+    export function roll(): number {
+        return Math.round(_estRoll * 180 / Math.PI * 10) / 10
+    }
+
+    /**
+     * RUMBO (heading / yaw) tilt-compensado, en grados [0, 360).
+     * Requiere MAGNETÓMETRO CALIBRADO (ver `calibrarMagnetometro`).
+     * Si no hay calibración o hay perturbación, devuelve el último
+     * valor válido (0 al inicio).
+     */
+    //% block="heading (°)"
+    //% blockId=fisicabit_cin_heading
+    //% group="Orientation"
+    //% weight=68
+    export function heading(): number {
+        let deg = _estYaw * 180 / Math.PI
+        if (deg < 0) deg += 360
+        return Math.round(deg * 10) / 10
+    }
+
+    // =========================================================================
+    // GRUPO C: VELOCIDAD INSTANTÁNEA — Integración numérica de a(t)
     // =========================================================================
 
     // ── Estado interno del integrador de velocidad ─────────────────────
