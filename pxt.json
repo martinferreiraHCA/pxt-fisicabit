@@ -22,6 +22,7 @@
         "dht11_sensores.ts",
         "hcsr04_sensores.ts",
         "serial_sensores.ts",
+        "audio_shims.ts",
         "sonido_sensores.ts"
     ],
     "testFiles": [
