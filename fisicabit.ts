@@ -1094,12 +1094,18 @@ namespace FisicaBitCinematica {
     const DEADBAND_LINEAL_MG = 10
 
     // ── Modo dual: acelerómetro + magnetómetro ──────────────────────
-    // Por defecto OFF: el bloque `leerAceleracionLineal` se comporta
-    // EXACTAMENTE igual que antes (EMA simple). Se activa automática-
-    // mente al llamar `calibrarMagnetometro()` o manualmente con
-    // `habilitarModoDual()`. Preserva retrocompatibilidad estricta:
-    // todos los programas existentes siguen funcionando idénticos.
-    let _dualModeEnabled = false
+    // Por defecto ON: el bloque `leerAceleracionLineal` usa proyección
+    // trigonométrica pitch/roll desde el acelerómetro + LPF adaptativo
+    // con crossfade. Esto hace que la aceleración lineal sea INMUNE
+    // a inclinaciones lentas/moderadas de la placa: cada muestra
+    // recalcula la gravedad a partir de la orientación instantánea,
+    // sin el lag de ~1-2 s del EMA simple.
+    //
+    // Si el usuario calibra en reposo con `calibrarAcelerometro`,
+    // _gLocked=true y la referencia queda fija (caso de experimentos
+    // en orientación constante). En ese caso el modo dual se bypassa
+    // porque _gLocked tiene precedencia en leerAceleracionLineal.
+    let _dualModeEnabled = true
 
     // ── Calibración del magnetómetro (hard-iron + soft-iron) ───────
     let _magCalibrated = false
@@ -1300,8 +1306,15 @@ namespace FisicaBitCinematica {
      * Validación NaN con el truco `x === x` antes de asignar.
      */
     function _actualizarGravedadDual(ax: number, ay: number, az: number): void {
-        // Refrescar magnetómetro filtrado (también detecta disturbios)
-        _leerMagFiltrado()
+        // Refrescar magnetómetro SÓLO si está calibrado. Sin calibración,
+        // la proyección trigonométrica usa únicamente el acelerómetro
+        // (pitch/roll), así que las lecturas del mag serían trabajo
+        // perdido (~0.1 ms por llamada × frecuencia del loop). Con el
+        // mag calibrado, además del yaw activamos la detección de
+        // perturbación magnética.
+        if (_magCalibrated) {
+            _leerMagFiltrado()
+        }
 
         // Pitch/roll/yaw + gravedad trigonométrica
         _calcularOrientacion(ax, ay, az)
