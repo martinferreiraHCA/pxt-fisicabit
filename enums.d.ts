@@ -201,3 +201,63 @@ declare const enum EscaladoTCS230 {
     //% block="100%"
     Cien = 3
 }
+
+declare const enum FuenteMicrofono {
+    //% block="external electret (P0)"
+    ExternoP0 = 0,
+    //% block="external electret (P1)"
+    ExternoP1 = 1,
+    //% block="external electret (P2)"
+    ExternoP2 = 2,
+    //% block="internal microphone (v2, level only)"
+    InternoV2 = 3
+}
+
+declare const enum MetodoFrecuencia {
+    //% block="zero-crossing (fast)"
+    CrucesCero = 0,
+    //% block="autocorrelation (precise, single tone)"
+    Autocorrelacion = 1,
+    //% block="Goertzel (locked to target Hz)"
+    Goertzel = 2
+}
+
+declare const enum TasaMuestreoAudio {
+    //% block="2 kHz (low freq, DC–800 Hz)"
+    F2kHz = 2000,
+    //% block="4 kHz (40–1600 Hz)"
+    F4kHz = 4000,
+    //% block="8 kHz (recommended, 80–3200 Hz)"
+    F8kHz = 8000,
+    //% block="11 kHz (voice, 110–4400 Hz)"
+    F11kHz = 11000,
+    //% block="16 kHz (wide, 160–6400 Hz)"
+    F16kHz = 16000
+}
+
+declare const enum TamanoBufferAudio {
+    //% block="64 samples (fast)"
+    N64 = 64,
+    //% block="128 samples"
+    N128 = 128,
+    //% block="256 samples (recommended)"
+    N256 = 256,
+    //% block="512 samples"
+    N512 = 512,
+    //% block="1024 samples (max precision)"
+    N1024 = 1024
+}
+
+declare const enum VariableDoppler {
+    //% block="source velocity (+ approaching)"
+    VelocidadFuente = 0,
+    //% block="observer velocity (+ approaching)"
+    VelocidadObservador = 1
+}
+
+declare const enum UnidadVelocidad {
+    //% block="m/s"
+    MetrosPorSegundo = 0,
+    //% block="km/h"
+    KilometrosPorHora = 1
+}

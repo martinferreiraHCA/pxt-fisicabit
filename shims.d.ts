@@ -119,4 +119,72 @@ declare namespace fisicabit_native {
      */
     //% shim=fisicabit_native::tcs3200LeerRafagaUs
     function tcs3200LeerRafagaUs(pin: number, muestras: number, timeoutUs: number): number;
+
+    // ─────────────────────────────────────────────────────────────────────
+    // SONIDO — Captura y análisis de frecuencia del micrófono
+    // ─────────────────────────────────────────────────────────────────────
+
+    /**
+     * Captura N muestras del ADC de un pin analógico a un sample rate fijo
+     * y las almacena en un buffer interno de C++ (máx. 1024 muestras).
+     * Calcula además el offset DC (media).
+     *
+     * @param canal Número de pin (0=P0, 1=P1, 2=P2)
+     * @param sampleRateHz Frecuencia de muestreo en Hz (500..20000)
+     * @param numMuestras Número de muestras a capturar (16..1024)
+     * @returns Offset DC medido (>0) o -1 en caso de error
+     */
+    //% shim=fisicabit_native::audioMuestrear
+    function audioMuestrear(canal: number, sampleRateHz: number, numMuestras: number): number;
+
+    /** Lee una muestra del buffer de audio por índice. */
+    //% shim=fisicabit_native::audioLeerMuestra
+    function audioLeerMuestra(indice: number): number;
+
+    /** Número de muestras actualmente almacenadas en el buffer. */
+    //% shim=fisicabit_native::audioLongitudBuffer
+    function audioLongitudBuffer(): number;
+
+    /** Sample rate utilizado en la última captura. */
+    //% shim=fisicabit_native::audioTasaMuestreo
+    function audioTasaMuestreo(): number;
+
+    /** Offset DC de la última captura. */
+    //% shim=fisicabit_native::audioOffsetDC
+    function audioOffsetDC(): number;
+
+    /**
+     * Calcula la frecuencia fundamental del buffer contando cruces por cero.
+     * Rápido (O(N)) pero sensible al ruido.
+     * @returns Frecuencia en centi-Hz (Hz × 100)
+     */
+    //% shim=fisicabit_native::audioFrecuenciaZC
+    function audioFrecuenciaZC(): number;
+
+    /**
+     * Calcula la frecuencia fundamental por autocorrelación con
+     * interpolación parabólica sub-muestra. Más robusto al ruido.
+     * @param minHz Límite inferior del rango buscado (Hz)
+     * @param maxHz Límite superior del rango buscado (Hz)
+     * @returns Frecuencia en centi-Hz (Hz × 100)
+     */
+    //% shim=fisicabit_native::audioFrecuenciaAutocorr
+    function audioFrecuenciaAutocorr(minHz: number, maxHz: number): number;
+
+    /**
+     * Potencia (magnitud) del algoritmo de Goertzel en una frecuencia
+     * concreta. Equivalente a 1 bin de FFT, O(N).
+     * @param targetHzCenti Frecuencia objetivo en centi-Hz (Hz × 100)
+     * @returns Magnitud escalada del bin
+     */
+    //% shim=fisicabit_native::audioGoertzel
+    function audioGoertzel(targetHzCenti: number): number;
+
+    /** Amplitud RMS del buffer (tras restar DC). */
+    //% shim=fisicabit_native::audioRMS
+    function audioRMS(): number;
+
+    /** Rango pico-a-pico (max − min) del buffer. */
+    //% shim=fisicabit_native::audioPicoPico
+    function audioPicoPico(): number;
 }
