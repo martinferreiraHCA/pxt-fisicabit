@@ -33,21 +33,22 @@ namespace FisicaBitAudioNative {
 
     // ── Detección de modo (hardware vs simulador) ─────────────────────
     // 0 = sin determinar, 1 = hardware (shim nativo OK), 2 = simulador
+    //
+    // Usamos `control.deviceDalVersion()`, una función de pxt-microbit
+    // que SIEMPRE está resuelta en ambos entornos (tiene binding nativo
+    // en la placa y binding JS en el simulador). Devuelve literalmente
+    // la cadena "sim" cuando el programa se ejecuta en el simulador web
+    // de MakeCode, y la versión real de CODAL ("2.x.y"…) en hardware.
+    //
+    // Este enfoque evita tocar los shims de fisicabit_native que pxt no
+    // sabe resolver en el simulador — ésa es la causa del error
+    // "Cannot read properties of undefined".
     let _modo = 0
 
     function _detectarModo(): void {
         if (_modo != 0) return
-        // Probe barato: llamar a una función nativa sin efectos. Si pxt
-        // no encuentra el shim en el simulador, lanza una excepción que
-        // capturamos y nos quedamos en modo "simulador".
-        let ok = false
-        try {
-            fisicabit_native.audioLongitudBuffer()
-            ok = true
-        } catch (e) {
-            ok = false
-        }
-        _modo = ok ? 1 : 2
+        const ver = control.deviceDalVersion()
+        _modo = (ver == "sim") ? 2 : 1
     }
 
     function _isSim(): boolean {
