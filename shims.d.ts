@@ -120,10 +120,30 @@ declare namespace fisicabit_native {
     //% shim=fisicabit_native::tcs3200LeerRafagaUs
     function tcs3200LeerRafagaUs(pin: number, muestras: number, timeoutUs: number): number;
 
-    // NOTA: los shims nativos de audio se han eliminado intencionalmente.
-    // Toda la captura + DSP del módulo de sonido (FisicaBitSonido) se
-    // implementa en TypeScript puro dentro de `audio_shims.ts` para
-    // evitar incompatibilidades con el simulador de MakeCode, que no
-    // sabe resolver `pxsim.fisicabit_native.audioXxx` sin una carpeta
-    // `sim/` con bindings JS.
+    // ─────────────────────────────────────────────────────────────────────
+    // SONIDO — Micrófono interno v2 (único shim nativo de audio)
+    // ─────────────────────────────────────────────────────────────────────
+    //
+    // Sólo exponemos UN shim nativo para el audio, y únicamente para la ruta
+    // del micrófono interno PDM de la micro:bit v2 (el único caso en que
+    // TypeScript puro no llega — necesita el StreamSplitter de CODAL).
+    // El resto de la tubería de audio (electret externo en P0/P1/P2) está
+    // en TypeScript puro dentro de `audio_shims.ts`.
+    //
+    // El binding del simulador para este shim está en `sim/audio.ts` (ver
+    // pxt.json → simFiles), que devuelve un tono sintético de 440 Hz como
+    // fallback para que el simulador de MakeCode cargue y ejecute los
+    // bloques de detección sin errores.
+    //
+    // Captura una ventana del mic PDM interno, calcula el offset DC,
+    // corre autocorrelación con interpolación parabólica sub-muestra y
+    // devuelve la frecuencia fundamental en centi-Hz (Hz × 100). Devuelve
+    // 0 en silencio, error o si se ejecuta en v1 (sin mic interno).
+
+    //% shim=fisicabit_native::audioInternoDetectarFrecuencia
+    function audioInternoDetectarFrecuencia(
+        numMuestras: number,
+        minHzCenti: number,
+        maxHzCenti: number
+    ): number;
 }
