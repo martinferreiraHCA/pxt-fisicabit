@@ -416,6 +416,48 @@ namespace FisicaBitSonido {
     // =========================================================================
 
     /**
+     * Bloque "todo en uno" pensado para arrastrar directamente a un
+     * `forever`: captura del micrófono interno v2 y devuelve la frecuencia
+     * fundamental en Hz, sin parámetros.
+     *
+     *   forever:
+     *       let f = FisicaBitSonido.detectarFrecuencia()
+     *       basic.showNumber(f)
+     *
+     * Usa internamente:
+     *   • Micrófono interno PDM de la micro:bit v2
+     *   • 256 muestras @ 11 kHz (ventana de 23 ms)
+     *   • Autocorrelación con interpolación parabólica sub-muestra
+     *   • Rango de búsqueda 60–4500 Hz (rango útil del PDM)
+     *   • Umbral de ruido RMS = 40 (silencios devuelven 0)
+     *
+     * Devuelve 0 si no hay suficiente señal o si se ejecuta en v1.
+     */
+    //% blockId=fisicabit_snd_detectar_frecuencia
+    //% block="detect frequency (Hz)"
+    //% group="Frequency detection" weight=110
+    export function detectarFrecuencia(): number {
+        return frecuenciaInternaV2(40)
+    }
+
+    /**
+     * Bloque "todo en uno" para detectar la nota musical más cercana al
+     * sonido captado por el micrófono interno de la v2, sin parámetros.
+     *
+     *   forever:
+     *       basic.showString(FisicaBitSonido.detectarNota())
+     *
+     * Devuelve el nombre con notación MIDI estándar (A4, C#5, ...) o
+     * "—" si no hay señal suficiente.
+     */
+    //% blockId=fisicabit_snd_detectar_nota
+    //% block="detect musical note"
+    //% group="Frequency detection" weight=108
+    export function detectarNota(): string {
+        return notaInternaV2(40)
+    }
+
+    /**
      * Detecta la frecuencia dominante del sonido captado por el MICRÓFONO
      * INTERNO de la micro:bit v2, sin hardware adicional.
      *
