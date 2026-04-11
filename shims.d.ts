@@ -120,47 +120,10 @@ declare namespace fisicabit_native {
     //% shim=fisicabit_native::tcs3200LeerRafagaUs
     function tcs3200LeerRafagaUs(pin: number, muestras: number, timeoutUs: number): number;
 
-    // ─────────────────────────────────────────────────────────────────────
-    // SONIDO — Shims nativos de audio
-    // ─────────────────────────────────────────────────────────────────────
-    //
-    // Estos shims se invocan indirectamente a través de `FisicaBitAudioNative`
-    // (ver `audio_shims.ts`), que añade detección de simulador en runtime
-    // y un tono sintético de 440 Hz como fallback cuando el shim nativo no
-    // está disponible. NO llamar directamente a `fisicabit_native.audioXxx`
-    // desde `sonido_sensores.ts` — usar siempre los wrappers.
-    // ─────────────────────────────────────────────────────────────────────
-
-    //% shim=fisicabit_native::audioMuestrear
-    function audioMuestrear(canal: number, sampleRateHz: number, numMuestras: number): number;
-
-    //% shim=fisicabit_native::audioMuestrearInterno
-    function audioMuestrearInterno(numMuestras: number): number;
-
-    //% shim=fisicabit_native::audioLeerMuestra
-    function audioLeerMuestra(indice: number): number;
-
-    //% shim=fisicabit_native::audioLongitudBuffer
-    function audioLongitudBuffer(): number;
-
-    //% shim=fisicabit_native::audioTasaMuestreo
-    function audioTasaMuestreo(): number;
-
-    //% shim=fisicabit_native::audioOffsetDC
-    function audioOffsetDC(): number;
-
-    //% shim=fisicabit_native::audioFrecuenciaZC
-    function audioFrecuenciaZC(): number;
-
-    //% shim=fisicabit_native::audioFrecuenciaAutocorr
-    function audioFrecuenciaAutocorr(minHz: number, maxHz: number): number;
-
-    //% shim=fisicabit_native::audioGoertzel
-    function audioGoertzel(targetHzCenti: number): number;
-
-    //% shim=fisicabit_native::audioRMS
-    function audioRMS(): number;
-
-    //% shim=fisicabit_native::audioPicoPico
-    function audioPicoPico(): number;
+    // NOTA: los shims nativos de audio se han eliminado intencionalmente.
+    // Toda la captura + DSP del módulo de sonido (FisicaBitSonido) se
+    // implementa en TypeScript puro dentro de `audio_shims.ts` para
+    // evitar incompatibilidades con el simulador de MakeCode, que no
+    // sabe resolver `pxsim.fisicabit_native.audioXxx` sin una carpeta
+    // `sim/` con bindings JS.
 }

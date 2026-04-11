@@ -417,44 +417,50 @@ namespace FisicaBitSonido {
 
     /**
      * Bloque "todo en uno" pensado para arrastrar directamente a un
-     * `forever`: captura del micrófono interno v2 y devuelve la frecuencia
-     * fundamental en Hz, sin parámetros.
+     * `forever`: captura audio, busca la frecuencia fundamental y la
+     * devuelve en Hz. Sin parámetros.
      *
      *   forever:
      *       let f = FisicaBitSonido.detectarFrecuencia()
      *       basic.showNumber(f)
      *
-     * Usa internamente:
-     *   • Micrófono interno PDM de la micro:bit v2
-     *   • 256 muestras @ 11 kHz (ventana de 23 ms)
-     *   • Autocorrelación con interpolación parabólica sub-muestra
-     *   • Rango de búsqueda 60–4500 Hz (rango útil del PDM)
-     *   • Umbral de ruido RMS = 40 (silencios devuelven 0)
+     * CABLEADO RECOMENDADO:
+     *   Módulo electret (MAX4466 / MAX9814 / KY-037) → P0
+     *   VCC → 3V ; GND → GND
      *
-     * Devuelve 0 si no hay suficiente señal o si se ejecuta en v1.
+     * Usa internamente:
+     *   • Muestreo ADC del pin configurado (por defecto P0)
+     *   • 256 muestras @ 8 kHz (ventana de 32 ms)
+     *   • Autocorrelación con interpolación parabólica sub-muestra
+     *   • Umbral de ruido RMS = 8 (silencios devuelven 0)
+     *
+     * Devuelve 0 si no hay suficiente señal.
      */
     //% blockId=fisicabit_snd_detectar_frecuencia
     //% block="detect frequency (Hz)"
     //% group="Frequency detection" weight=110
     export function detectarFrecuencia(): number {
-        return frecuenciaInternaV2(40)
+        return frecuenciaAhora(MetodoFrecuencia.Autocorrelacion, 8)
     }
 
     /**
      * Bloque "todo en uno" para detectar la nota musical más cercana al
-     * sonido captado por el micrófono interno de la v2, sin parámetros.
+     * sonido captado por el micrófono conectado al pin configurado (por
+     * defecto P0).
      *
      *   forever:
      *       basic.showString(FisicaBitSonido.detectarNota())
      *
      * Devuelve el nombre con notación MIDI estándar (A4, C#5, ...) o
-     * "—" si no hay señal suficiente.
+     * "—" si no hay señal suficiente. Requiere módulo electret externo.
      */
     //% blockId=fisicabit_snd_detectar_nota
     //% block="detect musical note"
     //% group="Frequency detection" weight=108
     export function detectarNota(): string {
-        return notaInternaV2(40)
+        const f = detectarFrecuencia()
+        if (f <= 0) return "—"
+        return nombreNota(f)
     }
 
     /**
