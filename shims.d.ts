@@ -187,4 +187,16 @@ declare namespace fisicabit_native {
     /** Rango pico-a-pico (max − min) del buffer. */
     //% shim=fisicabit_native::audioPicoPico
     function audioPicoPico(): number;
+
+    /**
+     * Captura N muestras del MICRÓFONO INTERNO PDM del micro:bit v2 a
+     * través del StreamSplitter de CODAL. Sample rate efectivo ~11 kHz.
+     * Sólo funciona en v2 y requiere que el pipeline de audio esté activo
+     * (basta con haber llamado a `input.soundLevel()` al menos una vez).
+     *
+     * @param numMuestras número de muestras a capturar (16..1024)
+     * @returns Offset DC medido (>= 0) o -1 en caso de error
+     */
+    //% shim=fisicabit_native::audioMuestrearInterno
+    function audioMuestrearInterno(numMuestras: number): number;
 }
