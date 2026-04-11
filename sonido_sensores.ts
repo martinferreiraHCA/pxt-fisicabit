@@ -108,11 +108,14 @@ namespace FisicaBitSonido {
     }
 
     function _capturar(): boolean {
-        // El micrófono interno v2 no expone muestras crudas: sólo amplitud.
-        // Para frecuencia hay que usar un pin analógico.
         if (_fuente == FuenteMicrofono.InternoV2) {
-            _capturado = false
-            return false
+            // Mic interno PDM v2: primero forzamos arranque del pipeline de
+            // audio llamando a soundLevel(), y después capturamos muestras
+            // crudas desde el StreamSplitter de CODAL vía shim nativo.
+            input.soundLevel()
+            const r = fisicabit_native.audioMuestrearInterno(_numMuestras)
+            _capturado = (r >= 0)
+            return _capturado
         }
         const r = fisicabit_native.audioMuestrear(_canal, _sampleRate, _numMuestras)
         _capturado = (r >= 0)
@@ -383,6 +386,148 @@ namespace FisicaBitSonido {
             }
         }
         return Math.round(mejorHz * 100) / 100
+    }
+
+    // =========================================================================
+    // Bloques — Mic INTERNO v2 (detección de frecuencia y notas musicales)
+    // =========================================================================
+    //
+    // Estos bloques usan EXCLUSIVAMENTE el micrófono interno de la micro:bit
+    // v2 (no hacen falta mic externos ni cableado). Internamente capturan
+    // muestras crudas del pipeline PDM a través del StreamSplitter de CODAL.
+    //
+    // LÍMITES FÍSICOS del micrófono PDM interno:
+    //   • Sample rate ~11 kHz → Nyquist ~5.5 kHz
+    //   • Filtro pasa-alta del decimador → atenuación por debajo de ~80 Hz
+    //   • Rango ÚTIL en la práctica: 80 Hz – 4000 Hz
+    //
+    // Este rango cubre todas las notas musicales comunes:
+    //   E2 (82.4 Hz)  — cuerda Mi grave de guitarra/bajo
+    //   A2 (110 Hz)   — La grave
+    //   C4 (261.6 Hz) — Do central
+    //   A4 (440 Hz)   — La de afinación (diapasón)
+    //   C5 (523.3 Hz) — Do 5
+    //   A5 (880 Hz)
+    //   C7 (2093 Hz)  — Do agudo piano
+    //   C8 (4186 Hz)  — límite práctico superior
+    //
+    // No cubre 20 Hz (infrasonidos) ni 20 kHz (ultrasonidos): esas
+    // frecuencias son físicamente inaccesibles para el PDM de la placa.
+    // =========================================================================
+
+    /**
+     * Detecta la frecuencia dominante del sonido captado por el MICRÓFONO
+     * INTERNO de la micro:bit v2, sin hardware adicional.
+     *
+     * Captura una ventana de audio del pipeline PDM (~23 ms con 256 muestras
+     * a 11 kHz), aplica autocorrelación con interpolación parabólica y
+     * devuelve la frecuencia en Hz con 2 decimales.
+     *
+     * Rango útil ~80 Hz – 4000 Hz (limitado por el mic PDM interno).
+     * Si el nivel de sonido es inferior a `umbralRms`, devuelve 0.
+     *
+     * @param umbralRms umbral mínimo de amplitud para considerar la lectura
+     */
+    //% blockId=fisicabit_snd_freq_interna
+    //% block="internal mic frequency (Hz) ignore below RMS %umbralRms"
+    //% group="Frequency detection" weight=80
+    //% umbralRms.defl=40 umbralRms.min=0 umbralRms.max=2000
+    export function frecuenciaInternaV2(umbralRms: number): number {
+        // Forzar modo interno de captura
+        const fuenteAnterior = _fuente
+        _fuente = FuenteMicrofono.InternoV2
+        const ok = _capturar()
+        _fuente = fuenteAnterior
+        if (!ok) return 0
+        if (fisicabit_native.audioRMS() < umbralRms) return 0
+        // Rango de búsqueda fijado al rango útil del PDM interno
+        const centiHz = fisicabit_native.audioFrecuenciaAutocorr(60, 4500)
+        return Math.round(centiHz) / 100
+    }
+
+    /**
+     * Devuelve el nombre de la nota musical más cercana a una frecuencia
+     * dada (notación de notas occidentales con octavas, p. ej. "A4").
+     *
+     * Usa la referencia estándar A4 = 440 Hz y la fórmula:
+     *    n (MIDI) = 69 + 12 · log₂(f / 440)
+     *
+     * Devuelve "—" si la frecuencia está fuera de un rango razonable
+     * (<20 Hz o >10 kHz).
+     *
+     * @param frecuenciaHz frecuencia en Hz
+     */
+    //% blockId=fisicabit_snd_nombre_nota
+    //% block="note name for %frecuenciaHz Hz"
+    //% group="Frequency detection" weight=78
+    //% frecuenciaHz.defl=440
+    export function nombreNota(frecuenciaHz: number): string {
+        if (frecuenciaHz < 20 || frecuenciaHz > 10000) return "—"
+        const midi = 69 + 12 * Math.log(frecuenciaHz / 440) / Math.log(2)
+        const midiR = Math.round(midi)
+        if (midiR < 0 || midiR > 127) return "—"
+        const nombres = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
+        const octava = Math.floor(midiR / 12) - 1
+        return nombres[midiR % 12] + octava
+    }
+
+    /**
+     * Desviación en cents entre una frecuencia medida y la nota musical
+     * más cercana. 100 cents = 1 semitono. Positivo = sostenido (un poco
+     * por encima de la nota exacta), negativo = bemol.
+     *
+     * Rango típico: [-50, +50]. Útil para afinar instrumentos.
+     *
+     * @param frecuenciaHz frecuencia medida en Hz
+     */
+    //% blockId=fisicabit_snd_detune
+    //% block="detune (cents) for %frecuenciaHz Hz"
+    //% group="Frequency detection" weight=76
+    //% frecuenciaHz.defl=440
+    export function desafinacionCents(frecuenciaHz: number): number {
+        if (frecuenciaHz < 20) return 0
+        const midi = 69 + 12 * Math.log(frecuenciaHz / 440) / Math.log(2)
+        const cents = (midi - Math.round(midi)) * 100
+        return Math.round(cents)
+    }
+
+    /**
+     * Detecta la nota musical más cercana al sonido captado por el
+     * MICRÓFONO INTERNO de la micro:bit v2. Un solo paso: captura
+     * + autocorrelación + conversión a nombre de nota.
+     *
+     * Rango práctico: E2 (82 Hz) .. C8 (4186 Hz), que cubre todas las
+     * notas habituales en experimentos de acústica musical.
+     * Devuelve "—" si no hay suficiente señal.
+     *
+     * @param umbralRms amplitud mínima para considerar la lectura válida
+     */
+    //% blockId=fisicabit_snd_nota_interna
+    //% block="internal mic detected note (ignore below RMS %umbralRms)"
+    //% group="Frequency detection" weight=82
+    //% umbralRms.defl=40 umbralRms.min=0 umbralRms.max=2000
+    export function notaInternaV2(umbralRms: number): string {
+        const f = frecuenciaInternaV2(umbralRms)
+        if (f <= 0) return "—"
+        return nombreNota(f)
+    }
+
+    /**
+     * Frecuencia en Hz de una nota musical dada por su número MIDI.
+     *
+     * Mapeo MIDI estándar:
+     *   21 = A0 (27.5 Hz)   60 = C4 (261.6 Hz)   69 = A4 (440 Hz)
+     *   72 = C5             84 = C6              96 = C7
+     *
+     * @param midi número de nota MIDI (0..127)
+     */
+    //% blockId=fisicabit_snd_midi_a_hz
+    //% block="frequency (Hz) of MIDI note %midi"
+    //% group="Frequency detection" weight=74
+    //% midi.defl=69 midi.min=0 midi.max=127
+    export function frecuenciaDeNotaMIDI(midi: number): number {
+        const f = 440 * Math.pow(2, (midi - 69) / 12)
+        return Math.round(f * 100) / 100
     }
 
     // =========================================================================

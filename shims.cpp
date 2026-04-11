@@ -16,6 +16,12 @@
 #include "pxt.h"
 #include <math.h>
 
+#if MICROBIT_CODAL
+// Cabeceras necesarias para engancharse a la pipeline de audio del mic PDM v2
+#include "MicroBitAudio.h"
+#include "StreamSplitter.h"
+#endif
+
 namespace fisicabit_native {
 
     // ── Helper: obtener pin por número (0-20) ──
@@ -601,5 +607,153 @@ namespace fisicabit_native {
             if (v > mx) mx = v;
         }
         return (int)(mx - mn);
+    }
+
+    // =========================================================================
+    // SONIDO — Captura de muestras desde el micrófono interno PDM (v2)
+    // =========================================================================
+    //
+    // El micro:bit v2 lleva un micrófono MEMS con interfaz PDM. En CODAL,
+    // la cadena de audio es:
+    //
+    //   [PDM] → StreamNormalizer → StreamSplitter → (varios canales)
+    //                                      ├─► LevelDetectorSPL (→ soundLevel)
+    //                                      └─► canales creados on-demand
+    //
+    // Para leer muestras crudas sin pisar `input.soundLevel()`, creamos
+    // nuestro propio canal del splitter y conectamos un DataSink que las
+    // copia al buffer global de audio.
+    //
+    // Sample rate efectivo tras la decimación PDM: ~11 kHz (valor nominal
+    // expuesto por CODAL). Nyquist práctico: ~5.5 kHz; el filtro pasa-alta
+    // del decimador atenúa por debajo de ~80 Hz. Rango útil ~80–4000 Hz.
+    // =========================================================================
+
+    #if MICROBIT_CODAL
+
+    // Sink persistente: se crea una sola vez y permanece conectado al canal
+    // del splitter durante toda la ejecución. Cada llamada a la API de
+    // captura lo "arma" con un nuevo objetivo de muestras.
+    class _FisicabitMicSink : public DataSink {
+    public:
+        DataSource *src;
+        volatile int target;   // muestras que queremos capturar en este tiro
+        volatile int pos;      // muestras ya copiadas al buffer global
+        volatile bool armed;   // true = estamos capturando activamente
+
+        _FisicabitMicSink() {
+            src = NULL;
+            target = 0;
+            pos = 0;
+            armed = false;
+        }
+
+        void attach(DataSource *s) {
+            src = s;
+            if (src) src->connect(*this);
+        }
+
+        void arm(int n) {
+            pos = 0;
+            target = n;
+            armed = true;
+        }
+
+        virtual int pullRequest() {
+            if (src == NULL) return DEVICE_OK;
+            ManagedBuffer data = src->pull();
+            if (!armed) {
+                // Tragamos y descartamos — mantener el flujo limpio
+                return DEVICE_OK;
+            }
+            int n = data.length() / 2;
+            const int16_t *s = (const int16_t *)&data[0];
+            int localPos = pos;
+            int localTarget = target;
+            for (int i = 0; i < n && localPos < localTarget; i++) {
+                _audioBuffer[localPos++] = s[i];
+            }
+            pos = localPos;
+            if (pos >= localTarget) armed = false;
+            return DEVICE_OK;
+        }
+    };
+
+    static _FisicabitMicSink *_micSink = NULL;
+
+    #endif // MICROBIT_CODAL
+
+    // ---------------------------------------------------------------------
+    // audioMuestrearInterno — Captura N muestras del mic PDM interno v2
+    // ---------------------------------------------------------------------
+    // numMuestras → 64..1024
+    //
+    // Devuelve:
+    //   >= 0 → offset DC medido
+    //   -1   → error (v1, splitter no disponible, timeout, etc.)
+    //
+    // Prerequisito: `input.soundLevel()` debe haberse invocado al menos una
+    // vez desde TypeScript (lo hacemos en `_capturar()` en sonido_sensores.ts)
+    // para que el pipeline de audio arranque y el PDM esté produciendo datos.
+    // ---------------------------------------------------------------------
+
+    //%
+    int audioMuestrearInterno(int numMuestras) {
+        if (numMuestras < 16) numMuestras = 16;
+        if (numMuestras > FISICABIT_AUDIO_MAX_SAMPLES)
+            numMuestras = FISICABIT_AUDIO_MAX_SAMPLES;
+
+        _audioBufLen     = 0;
+        _audioDcOffset   = 0;
+        _audioSampleRate = 11000; // tasa nominal tras decimación PDM
+
+        #if MICROBIT_CODAL
+        // Configuración única: crear un canal nuevo del splitter y
+        // engancharle nuestro sink persistente.
+        if (_micSink == NULL) {
+            if (&uBit.audio == NULL) return -1;
+            StreamSplitter *sp = uBit.audio.splitter;
+            if (sp == NULL) return -1;
+            SplitterChannel *ch = sp->createChannel();
+            if (ch == NULL) return -1;
+            _micSink = new _FisicabitMicSink();
+            if (_micSink == NULL) return -1;
+            _micSink->attach(ch);
+        }
+
+        // Armar el sink para recoger exactamente numMuestras muestras
+        _micSink->arm(numMuestras);
+
+        // Esperar a que se llene con un timeout generoso (2 s)
+        uint64_t start = system_timer_current_time_us();
+        const uint64_t timeoutUs = 2000000;
+        while (_micSink->armed) {
+            if (system_timer_current_time_us() - start > timeoutUs) {
+                _micSink->armed = false;
+                break;
+            }
+            // fiber_sleep cede el CPU al scheduler — imprescindible para que
+            // la interrupción del PDM llegue y el splitter entregue muestras.
+            fiber_sleep(1);
+        }
+
+        int capturadas = _micSink->pos;
+        if (capturadas < 16) {
+            _audioBufLen = 0;
+            return -1;
+        }
+        _audioBufLen = capturadas;
+
+        // Calcular offset DC como media aritmética
+        int32_t suma = 0;
+        for (int i = 0; i < _audioBufLen; i++) {
+            suma += (int32_t)_audioBuffer[i];
+        }
+        _audioDcOffset = (int)(suma / _audioBufLen);
+        return _audioDcOffset;
+        #else
+        // v1 no tiene mic interno
+        return -1;
+        #endif
     }
 }
