@@ -113,11 +113,11 @@ namespace FisicaBitSonido {
             // audio llamando a soundLevel(), y después capturamos muestras
             // crudas desde el StreamSplitter de CODAL vía shim nativo.
             input.soundLevel()
-            const r = fisicabit_native.audioMuestrearInterno(_numMuestras)
+            const r = FisicaBitAudioNative.audioMuestrearInterno(_numMuestras)
             _capturado = (r >= 0)
             return _capturado
         }
-        const r = fisicabit_native.audioMuestrear(_canal, _sampleRate, _numMuestras)
+        const r = FisicaBitAudioNative.audioMuestrear(_canal, _sampleRate, _numMuestras)
         _capturado = (r >= 0)
         return _capturado
     }
@@ -236,7 +236,7 @@ namespace FisicaBitSonido {
     //% group="Sound level" weight=90
     export function amplitudRMS(): number {
         if (!_capturado) return 0
-        return fisicabit_native.audioRMS()
+        return FisicaBitAudioNative.audioRMS()
     }
 
     /**
@@ -247,7 +247,7 @@ namespace FisicaBitSonido {
     //% group="Sound level" weight=85
     export function amplitudPicoPico(): number {
         if (!_capturado) return 0
-        return fisicabit_native.audioPicoPico()
+        return FisicaBitAudioNative.audioPicoPico()
     }
 
     /**
@@ -258,7 +258,7 @@ namespace FisicaBitSonido {
     //% group="Sound level" weight=80
     export function amplitudRMSAhora(): number {
         if (!_capturar()) return 0
-        return fisicabit_native.audioRMS()
+        return FisicaBitAudioNative.audioRMS()
     }
 
     // =========================================================================
@@ -283,10 +283,10 @@ namespace FisicaBitSonido {
         let centiHz = 0
         switch (metodo) {
             case MetodoFrecuencia.CrucesCero:
-                centiHz = fisicabit_native.audioFrecuenciaZC()
+                centiHz = FisicaBitAudioNative.audioFrecuenciaZC()
                 break
             case MetodoFrecuencia.Autocorrelacion:
-                centiHz = fisicabit_native.audioFrecuenciaAutocorr(_minHz, _maxHz)
+                centiHz = FisicaBitAudioNative.audioFrecuenciaAutocorr(_minHz, _maxHz)
                 break
             case MetodoFrecuencia.Goertzel:
                 // Goertzel requiere target — devolvemos 0 si se usa aquí.
@@ -309,14 +309,14 @@ namespace FisicaBitSonido {
     //% umbralRms.defl=8 umbralRms.min=0 umbralRms.max=500
     export function frecuenciaAhora(metodo: MetodoFrecuencia, umbralRms: number): number {
         if (!_capturar()) return 0
-        if (fisicabit_native.audioRMS() < umbralRms) return 0
+        if (FisicaBitAudioNative.audioRMS() < umbralRms) return 0
         let centiHz = 0
         switch (metodo) {
             case MetodoFrecuencia.CrucesCero:
-                centiHz = fisicabit_native.audioFrecuenciaZC()
+                centiHz = FisicaBitAudioNative.audioFrecuenciaZC()
                 break
             case MetodoFrecuencia.Autocorrelacion:
-                centiHz = fisicabit_native.audioFrecuenciaAutocorr(_minHz, _maxHz)
+                centiHz = FisicaBitAudioNative.audioFrecuenciaAutocorr(_minHz, _maxHz)
                 break
             case MetodoFrecuencia.Goertzel:
                 return 0
@@ -337,7 +337,7 @@ namespace FisicaBitSonido {
     //% targetHz.defl=440 targetHz.min=20 targetHz.max=10000
     export function goertzelEnergia(targetHz: number): number {
         if (!_capturado) return 0
-        return fisicabit_native.audioGoertzel(Math.round(targetHz * 100))
+        return FisicaBitAudioNative.audioGoertzel(Math.round(targetHz * 100))
     }
 
     /**
@@ -367,7 +367,7 @@ namespace FisicaBitSonido {
         let mejorHz = centroHz
         let mejorMag = -1
         for (let f = desde; f <= hasta; f += pasoHz) {
-            const m = fisicabit_native.audioGoertzel(Math.round(f * 100))
+            const m = FisicaBitAudioNative.audioGoertzel(Math.round(f * 100))
             if (m > mejorMag) {
                 mejorMag = m
                 mejorHz = f
@@ -375,8 +375,8 @@ namespace FisicaBitSonido {
         }
         // Refinado parabólico: si tenemos vecinos válidos, ajustamos el pico.
         if (mejorHz > desde && mejorHz < hasta && pasoHz >= 1) {
-            const mM = fisicabit_native.audioGoertzel(Math.round((mejorHz - pasoHz) * 100))
-            const mP = fisicabit_native.audioGoertzel(Math.round((mejorHz + pasoHz) * 100))
+            const mM = FisicaBitAudioNative.audioGoertzel(Math.round((mejorHz - pasoHz) * 100))
+            const mP = FisicaBitAudioNative.audioGoertzel(Math.round((mejorHz + pasoHz) * 100))
             const denom = 2 * (2 * mejorMag - mM - mP)
             if (denom != 0) {
                 const delta = (mP - mM) / denom
@@ -481,9 +481,9 @@ namespace FisicaBitSonido {
         const ok = _capturar()
         _fuente = fuenteAnterior
         if (!ok) return 0
-        if (fisicabit_native.audioRMS() < umbralRms) return 0
+        if (FisicaBitAudioNative.audioRMS() < umbralRms) return 0
         // Rango de búsqueda fijado al rango útil del PDM interno
-        const centiHz = fisicabit_native.audioFrecuenciaAutocorr(60, 4500)
+        const centiHz = FisicaBitAudioNative.audioFrecuenciaAutocorr(60, 4500)
         return Math.round(centiHz) / 100
     }
 
@@ -683,7 +683,7 @@ namespace FisicaBitSonido {
     //% group="Advanced" weight=100
     //% advanced=true
     export function longitudBuffer(): number {
-        return fisicabit_native.audioLongitudBuffer()
+        return FisicaBitAudioNative.audioLongitudBuffer()
     }
 
     /**
@@ -697,7 +697,7 @@ namespace FisicaBitSonido {
     //% advanced=true
     //% i.min=0 i.max=1023
     export function muestraEn(i: number): number {
-        return fisicabit_native.audioLeerMuestra(i)
+        return FisicaBitAudioNative.audioLeerMuestra(i)
     }
 
     /**
@@ -708,7 +708,7 @@ namespace FisicaBitSonido {
     //% group="Advanced" weight=90
     //% advanced=true
     export function offsetDC(): number {
-        return fisicabit_native.audioOffsetDC()
+        return FisicaBitAudioNative.audioOffsetDC()
     }
 
     /**
@@ -719,6 +719,6 @@ namespace FisicaBitSonido {
     //% group="Advanced" weight=85
     //% advanced=true
     export function tasaMuestreoEfectiva(): number {
-        return fisicabit_native.audioTasaMuestreo()
+        return FisicaBitAudioNative.audioTasaMuestreo()
     }
 }
