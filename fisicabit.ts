@@ -1075,11 +1075,23 @@ namespace FisicaBitCinematica {
     let _histInit = false
 
     // Zona muerta (deadband) de la aceleración LINEAL, en mg. Bajo este
-    // umbral la salida se clampa a 0 para que el reposo dé EXACTAMENTE
-    // 0,00 m/s². 5 mg ≈ 0,05 m/s² absorbe el ruido gaussiano residual
-    // (σ ≈ 3 mg del LSM303AGR) sin tapar aceleraciones reales pequeñas.
+    // umbral (por cada eje) la componente se clampa a 0 para que el
+    // reposo dé EXACTAMENTE 0,00 m/s² en TODOS los modos (X, Y, Z,
+    // Magnitud y Vertical) y no sólo en los ejes individuales.
+    //
+    // 10 mg ≈ 0,10 m/s² está por encima del ruido típico (~3 mg RMS
+    // después del filtro de mediana), con un margen de ~3σ que cubre
+    // el 99,7% de las fluctuaciones gaussianas residuales.
+    //
+    // IMPORTANTE: se aplica POR EJE antes de combinarlos. Aplicar la
+    // deadband sólo al resultado final (Magnitud = √(lx²+ly²+lz²))
+    // fallaba porque la magnitud acumula ruido de los tres ejes y
+    // superaba los 5 mg con frecuencia aunque cada componente fuera
+    // sub-umbral. Con deadband por eje, cada componente se fuerza a 0
+    // y tanto Magnitud como Vertical dan 0 exacto garantizado en reposo.
+    //
     // NO se aplica a la aceleración PROPIA (ahí el reposo vale ~1000 mg).
-    const DEADBAND_LINEAL_MG = 5
+    const DEADBAND_LINEAL_MG = 10
 
     // ── Modo dual: acelerómetro + magnetómetro ──────────────────────
     // Por defecto OFF: el bloque `leerAceleracionLineal` se comporta
@@ -1680,9 +1692,18 @@ namespace FisicaBitCinematica {
         }
 
         // 3) Aceleración lineal en mg (referencia de reposo descontada).
-        const lx = ax - _gvx
-        const ly = ay - _gvy
-        const lz = az - _gvz
+        //    Aplicamos la deadband POR EJE ya aquí: si cada componente
+        //    está bajo el umbral, la forzamos a 0 antes de combinarlas.
+        //    Esto garantiza que en reposo TODOS los modos (X/Y/Z/
+        //    Magnitud/Vertical) devuelvan 0 exacto — en particular la
+        //    magnitud, que es √(lx²+ly²+lz²) y acumulaba ruido de los
+        //    tres ejes si la deadband se aplicaba sólo al resultado.
+        let lx = ax - _gvx
+        let ly = ay - _gvy
+        let lz = az - _gvz
+        if (lx < DEADBAND_LINEAL_MG && lx > -DEADBAND_LINEAL_MG) lx = 0
+        if (ly < DEADBAND_LINEAL_MG && ly > -DEADBAND_LINEAL_MG) ly = 0
+        if (lz < DEADBAND_LINEAL_MG && lz > -DEADBAND_LINEAL_MG) lz = 0
 
         // 4) Selección de componente (aún en mg)
         let valor_mg = 0
@@ -1694,10 +1715,14 @@ namespace FisicaBitCinematica {
             case EjeAceleracion.Z:
                 valor_mg = lz; break
             case EjeAceleracion.Magnitud:
+                // Si los 3 ejes fueron clampados a 0, la magnitud es 0
+                // exacto — reposo garantizado.
                 valor_mg = Math.sqrt(lx * lx + ly * ly + lz * lz)
                 break
             case EjeAceleracion.Vertical: {
-                // Proyección sobre el versor −ĝ (arriba = positivo)
+                // Proyección sobre el versor −ĝ  (arriba = positivo).
+                // Con lx=ly=lz=0 (reposo) el producto escalar es 0 y
+                // el vertical también.
                 const modG = Math.sqrt(_gvx * _gvx + _gvy * _gvy + _gvz * _gvz)
                 if (modG < 1) { valor_mg = 0; break }
                 const dot = lx * _gvx + ly * _gvy + lz * _gvz
@@ -1706,7 +1731,9 @@ namespace FisicaBitCinematica {
             }
         }
 
-        // 5) Zona muerta: reposo → 0,00 exacto
+        // 5) Segunda deadband sobre el resultado final, como cinturón
+        //    y tirantes: atrapa residuales sub-mg de la proyección
+        //    Vertical que no se eliminaron con la deadband por eje.
         if (valor_mg < DEADBAND_LINEAL_MG && valor_mg > -DEADBAND_LINEAL_MG) {
             return 0
         }
