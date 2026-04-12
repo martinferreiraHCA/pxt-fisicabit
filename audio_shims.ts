@@ -23,66 +23,52 @@ namespace FisicaBitAudioNative {
     const BIG_NEG = -2147483000     // valor inicial "mínimo" sin notación exp
 
     // =========================================================================
-    // Detección de simulador en tiempo de ejecución — múltiples capas
+    // SHIM NATIVO: captura PDM + autocorrelación (mic interno v2)
     // =========================================================================
     //
-    // El shim `fisicabit_native::audioInternoDetectarFrecuencia` SÓLO existe
-    // en hardware. En el simulador pxt no lo encuentra y llamarlo lanza
-    //     "Cannot read properties of undefined (reading 'audioInternoDetectarFrecuencia')"
+    // Este es el patrón canónico de pxt para funciones que tienen tanto
+    // implementación C++ (hardware) como fallback TS (simulador):
     //
-    // Como pxt evalúa las llamadas a shims de forma perezosa (sólo cuando
-    // realmente se ejecuta la línea), basta con detectar el entorno antes
-    // de llegar al shim y salir antes por un `return` con un valor sintético.
+    //   //% shim=fisicabit_native::audioInternoDetectarFrecuencia
+    //   function _hwDetectarFrecuencia(...): number {
+    //       return 44000   // ← cuerpo TS = fallback del simulador
+    //   }
     //
-    // Usamos dos capas de detección redundantes, cualquiera de las cuales
-    // vale para devolver true (sim):
+    // Cómo lo maneja pxt:
+    //   • En HARDWARE: pxt reemplaza el cuerpo TS con una llamada al C++
+    //     `fisicabit_native::audioInternoDetectarFrecuencia` de shims.cpp.
+    //   • En SIMULADOR: pxt usa el cuerpo TS tal cual (devuelve 44000
+    //     centi-Hz = 440 Hz = A4 como tono de prueba).
     //
-    //   1) `control.deviceDalVersion()` devuelve literalmente "sim" en el
-    //      simulador de pxt-microbit; en hardware devuelve la versión real
-    //      de CODAL (ej. "2.2.0"). Es el método oficial.
-    //
-    //   2) `control.deviceSerialNumber()` en hardware real devuelve un chip
-    //      ID de 32 bits (habitualmente > 10⁸); en el simulador devuelve
-    //      un valor pequeño o cero. Umbral 10⁸ para separar con margen.
-    //
-    // Si cualquiera de los dos indica "sim", nos quedamos en modo simulador
-    // y jamás llegamos a evaluar la línea del shim.
+    // Requisito clave: la declaración de esta función SÓLO está aquí.
+    // NO hay una segunda declaración en shims.d.ts con //% shim=.
+    // Duplicar la declaración confunde a pxt y rompe la resolución.
     // =========================================================================
-    let _isSimCache = -1   // -1 = sin determinar, 0 = hardware, 1 = simulador
 
-    function _isSim(): boolean {
-        if (_isSimCache >= 0) return _isSimCache == 1
-
-        // Capa 1: control.deviceDalVersion() == "sim"
-        const dal = control.deviceDalVersion()
-        if (dal == "sim" || dal == "") {
-            _isSimCache = 1
-            return true
-        }
-
-        // Capa 2: serial number con umbral amplio (10⁸)
-        const sn = control.deviceSerialNumber()
-        if (sn < 100000000) {
-            _isSimCache = 1
-            return true
-        }
-
-        _isSimCache = 0
-        return false
+    //% shim=fisicabit_native::audioInternoDetectarFrecuencia
+    function _hwDetectarFrecuencia(numMuestras: number, minHzCenti: number, maxHzCenti: number): number {
+        // ── Cuerpo TS: sólo se ejecuta en el simulador ──
+        // Devuelve 440 Hz (A4) en centi-Hz si el rango lo incluye,
+        // o el centro del rango buscado en caso contrario.
+        const A4 = 44000
+        if (A4 >= minHzCenti && A4 <= maxHzCenti) return A4
+        return Math.idiv(minHzCenti + maxHzCenti, 2)
     }
 
-    /**
-     * Bloque de diagnóstico: devuelve 1 si la extensión cree que está
-     * corriendo en el simulador, 0 si cree que está en hardware. Úsalo
-     * para verificar que la detección funciona antes de usar los bloques
-     * que llaman al shim nativo del mic interno.
-     */
-    //% blockId=fisicabit_snd_is_sim
-    //% block="is simulator?"
-    //% weight=5
-    //% advanced=true
-    export function esSimulador(): number {
-        return _isSim() ? 1 : 0
+    // ── Wrapper público: valida parámetros y arranca el pipeline ─────
+    export function detectarFrecuenciaMicInterno(minHz: number, maxHz: number, numMuestras: number): number {
+        if (numMuestras < 64) numMuestras = 64
+        if (numMuestras > 1024) numMuestras = 1024
+        if (minHz < 20) minHz = 20
+        if (maxHz <= minHz) maxHz = minHz + 1
+        // soundLevel() arranca el pipeline de audio la primera vez
+        input.soundLevel()
+        const centiHz = _hwDetectarFrecuencia(
+            numMuestras,
+            Math.round(minHz * 100),
+            Math.round(maxHz * 100)
+        )
+        return Math.round(centiHz) / 100
     }
 
     // Estado del buffer de muestreo
@@ -141,37 +127,6 @@ namespace FisicaBitAudioNative {
         }
         _dc = Math.idiv(suma, numMuestras)
         return _dc
-    }
-
-    // ── Detección de frecuencia con el mic INTERNO v2 ────────────────
-    // En HARDWARE: pasa por el shim nativo `audioInternoDetectarFrecuencia`
-    // (shims.cpp), que engancha el StreamSplitter de CODAL y corre
-    // autocorrelación en C++ sobre muestras PDM reales.
-    //
-    // En SIMULADOR: el shim no existe en `pxsim` y llamarlo explota. Por
-    // eso detectamos el entorno con `_isSim()` y devolvemos directamente
-    // 440 Hz (A4) — el `forever` sigue rodando y el alumno puede
-    // desarrollar su programa en la web antes de flashear la placa.
-    //
-    // Devuelve la frecuencia en Hz (con 2 decimales) o 0 si silencio.
-    export function detectarFrecuenciaMicInterno(minHz: number, maxHz: number, numMuestras: number): number {
-        // Simulador: devolver A4 sintético sin tocar el shim
-        if (_isSim()) {
-            return 440
-        }
-        // Hardware: llamar al shim nativo
-        if (numMuestras < 64) numMuestras = 64
-        if (numMuestras > 1024) numMuestras = 1024
-        if (minHz < 20) minHz = 20
-        if (maxHz <= minHz) maxHz = minHz + 1
-        // Arrancar el pipeline de audio (idempotente tras la primera vez)
-        input.soundLevel()
-        const centiHz = fisicabit_native.audioInternoDetectarFrecuencia(
-            numMuestras,
-            Math.round(minHz * 100),
-            Math.round(maxHz * 100)
-        )
-        return Math.round(centiHz) / 100
     }
 
     // ── Acceso al buffer ─────────────────────────────────────────────
