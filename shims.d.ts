@@ -130,10 +130,11 @@ declare namespace fisicabit_native {
     // El resto de la tubería de audio (electret externo en P0/P1/P2) está
     // en TypeScript puro dentro de `audio_shims.ts`.
     //
-    // El binding del simulador para este shim está en `sim/audio.ts` (ver
-    // pxt.json → simFiles), que devuelve un tono sintético de 440 Hz como
-    // fallback para que el simulador de MakeCode cargue y ejecute los
-    // bloques de detección sin errores.
+    // IMPORTANTE: esta función NO tiene binding para el simulador de
+    // MakeCode. En hardware real (v2) funciona perfecto. En el simulador
+    // web, si un `forever` la invoca, pxt lanzará
+    //     "Cannot read properties of undefined (reading 'audioInternoDetectarFrecuencia')"
+    // Se prioriza el hardware; el simulador queda como secundario.
     //
     // Captura una ventana del mic PDM interno, calcula el offset DC,
     // corre autocorrelación con interpolación parabólica sub-muestra y
