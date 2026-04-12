@@ -130,10 +130,10 @@ declare namespace fisicabit_native {
     // El resto de la tubería de audio (electret externo en P0/P1/P2) está
     // en TypeScript puro dentro de `audio_shims.ts`.
     //
-    // Binding del simulador: `audio_sim.ts` (en el array `files` de
-    // pxt.json). Contiene `namespace pxsim.fisicabit_native` con un
-    // stub que devuelve 44000 centi-Hz (A4 = 440 Hz), así el simulador
-    // de MakeCode no estalla al ejecutar los bloques de detección.
+    // Sin binding JS para el simulador: confiamos en la detección de
+    // entorno en `audio_shims.ts` (FisicaBitAudioNative._isSim, basada
+    // en control.deviceSerialNumber) para que esta función NUNCA se
+    // invoque desde el simulador. El shim sólo se ejecuta en hardware.
     //
     // Captura una ventana del mic PDM interno, calcula el offset DC,
     // corre autocorrelación con interpolación parabólica sub-muestra y

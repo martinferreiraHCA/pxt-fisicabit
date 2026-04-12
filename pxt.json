@@ -1,6 +1,6 @@
 {
     "name": "fisicabit-sensores",
-    "version": "0.5.2",
+    "version": "0.5.3",
     "description": "micro:bit extension for physics experiments — sensors, optical barriers, and Bluetooth data logging",
     "license": "MIT",
     "authors": ["FisicaBit"],
@@ -23,7 +23,6 @@
         "hcsr04_sensores.ts",
         "serial_sensores.ts",
         "audio_shims.ts",
-        "audio_sim.ts",
         "sonido_sensores.ts"
     ],
     "testFiles": [
