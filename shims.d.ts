@@ -120,30 +120,10 @@ declare namespace fisicabit_native {
     //% shim=fisicabit_native::tcs3200LeerRafagaUs
     function tcs3200LeerRafagaUs(pin: number, muestras: number, timeoutUs: number): number;
 
-    // ─────────────────────────────────────────────────────────────────────
-    // SONIDO — Micrófono interno v2 (único shim nativo de audio)
-    // ─────────────────────────────────────────────────────────────────────
-    //
-    // Sólo exponemos UN shim nativo para el audio, y únicamente para la ruta
-    // del micrófono interno PDM de la micro:bit v2 (el único caso en que
-    // TypeScript puro no llega — necesita el StreamSplitter de CODAL).
-    // El resto de la tubería de audio (electret externo en P0/P1/P2) está
-    // en TypeScript puro dentro de `audio_shims.ts`.
-    //
-    // Sin binding JS para el simulador: confiamos en la detección de
-    // entorno en `audio_shims.ts` (FisicaBitAudioNative._isSim, basada
-    // en control.deviceSerialNumber) para que esta función NUNCA se
-    // invoque desde el simulador. El shim sólo se ejecuta en hardware.
-    //
-    // Captura una ventana del mic PDM interno, calcula el offset DC,
-    // corre autocorrelación con interpolación parabólica sub-muestra y
-    // devuelve la frecuencia fundamental en centi-Hz (Hz × 100). Devuelve
-    // 0 en silencio, error o si se ejecuta en v1 (sin mic interno).
-
-    //% shim=fisicabit_native::audioInternoDetectarFrecuencia
-    function audioInternoDetectarFrecuencia(
-        numMuestras: number,
-        minHzCenti: number,
-        maxHzCenti: number
-    ): number;
+    // NOTA: el shim de audio del mic interno v2
+    // (fisicabit_native::audioInternoDetectarFrecuencia) se declara
+    // en `audio_shims.ts` con //% shim= Y un cuerpo TS, siguiendo
+    // el patrón canónico de pxt: en hardware pxt usa el C++, en el
+    // simulador usa el cuerpo TS como fallback. NO declarar aquí
+    // porque la doble declaración (ambient + con cuerpo) confunde a pxt.
 }
