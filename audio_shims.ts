@@ -22,6 +22,37 @@ namespace FisicaBitAudioNative {
     const PI2 = 6.283185307179586   // 2·π, evitamos Math.PI por portabilidad
     const BIG_NEG = -2147483000     // valor inicial "mínimo" sin notación exp
 
+    // =========================================================================
+    // Detección de simulador en tiempo de ejecución
+    // =========================================================================
+    //
+    // El shim nativo `fisicabit_native::audioInternoDetectarFrecuencia` vive
+    // en `shims.cpp` y SÓLO existe en la compilación de hardware. El
+    // simulador de MakeCode no sabe resolverlo (pxt sólo provee bindings
+    // pxsim para los namespaces del target, no para los de extensiones
+    // externas con shims propios) y lanza
+    //     "Cannot read properties of undefined (reading 'audioInternoDetectarFrecuencia')"
+    // en cuanto un `forever` intenta llamarlo.
+    //
+    // Solución definitiva: detectar en runtime si estamos en el simulador
+    // y, si es así, NO llamar al shim en absoluto. Devolvemos un valor
+    // sintético (440 Hz = A4) para que el `forever` siga ejecutándose
+    // y el alumno pueda validar su lógica antes de flashear la placa.
+    //
+    // Método de detección: `control.deviceSerialNumber()` devuelve un ID
+    // único de 32 bits en hardware real (típicamente > 10⁷) y un valor
+    // pequeño y fijo en el simulador de MakeCode. Umbral 1.000.000 separa
+    // ambos casos con amplio margen.
+    // =========================================================================
+    let _isSimCache = -1   // -1 = sin determinar, 0 = hardware, 1 = simulador
+
+    function _isSim(): boolean {
+        if (_isSimCache < 0) {
+            _isSimCache = (control.deviceSerialNumber() < 1000000) ? 1 : 0
+        }
+        return _isSimCache == 1
+    }
+
     // Estado del buffer de muestreo
     let _buf: number[] = []
     let _dc = 512
@@ -81,13 +112,22 @@ namespace FisicaBitAudioNative {
     }
 
     // ── Detección de frecuencia con el mic INTERNO v2 ────────────────
-    // Pasa por el shim nativo `audioInternoDetectarFrecuencia`, que en
-    // hardware engancha el StreamSplitter de CODAL y corre autocorrelación
-    // en C++. El simulador resuelve la llamada a través del binding JS
-    // definido en `sim/audio.ts` (devuelve 44000 centi-Hz ≈ A4).
+    // En HARDWARE: pasa por el shim nativo `audioInternoDetectarFrecuencia`
+    // (shims.cpp), que engancha el StreamSplitter de CODAL y corre
+    // autocorrelación en C++ sobre muestras PDM reales.
     //
-    // Devuelve la frecuencia en Hz (con 2 decimales) o 0 si silencio/error.
+    // En SIMULADOR: el shim no existe en `pxsim` y llamarlo explota. Por
+    // eso detectamos el entorno con `_isSim()` y devolvemos directamente
+    // 440 Hz (A4) — el `forever` sigue rodando y el alumno puede
+    // desarrollar su programa en la web antes de flashear la placa.
+    //
+    // Devuelve la frecuencia en Hz (con 2 decimales) o 0 si silencio.
     export function detectarFrecuenciaMicInterno(minHz: number, maxHz: number, numMuestras: number): number {
+        // Simulador: devolver A4 sintético sin tocar el shim
+        if (_isSim()) {
+            return 440
+        }
+        // Hardware: llamar al shim nativo
         if (numMuestras < 64) numMuestras = 64
         if (numMuestras > 1024) numMuestras = 1024
         if (minHz < 20) minHz = 20

@@ -1,6 +1,6 @@
 {
     "name": "fisicabit-sensores",
-    "version": "0.5.1",
+    "version": "0.5.3",
     "description": "micro:bit extension for physics experiments — sensors, optical barriers, and Bluetooth data logging",
     "license": "MIT",
     "authors": ["FisicaBit"],
