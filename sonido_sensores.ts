@@ -416,43 +416,40 @@ namespace FisicaBitSonido {
     // =========================================================================
 
     /**
-     * Bloque "todo en uno" pensado para arrastrar directamente a un
-     * `forever`: captura audio, busca la frecuencia fundamental y la
-     * devuelve en Hz. Sin parámetros.
+     * Bloque "todo en uno" para arrastrar directamente a un `forever`:
+     * captura audio del MICRÓFONO INTERNO de la micro:bit v2 y devuelve
+     * la frecuencia fundamental en Hz. Sin parámetros, sin cableado.
      *
      *   forever:
      *       let f = FisicaBitSonido.detectarFrecuencia()
      *       basic.showNumber(f)
      *
-     * CABLEADO RECOMENDADO:
-     *   Módulo electret (MAX4466 / MAX9814 / KY-037) → P0
-     *   VCC → 3V ; GND → GND
-     *
      * Usa internamente:
-     *   • Muestreo ADC del pin configurado (por defecto P0)
-     *   • 256 muestras @ 8 kHz (ventana de 32 ms)
+     *   • Micrófono PDM interno v2 (vía StreamSplitter de CODAL)
+     *   • 512 muestras @ ~11 kHz (ventana de ~46 ms)
      *   • Autocorrelación con interpolación parabólica sub-muestra
-     *   • Umbral de ruido RMS = 8 (silencios devuelven 0)
+     *   • Rango 60 – 4500 Hz (E2 grave hasta C8 agudo)
+     *   • Gating por RMS (silencios devuelven 0)
      *
-     * Devuelve 0 si no hay suficiente señal.
+     * Devuelve 0 si no hay suficiente señal o si corre en v1 (sin mic).
+     * En el simulador devuelve 440 Hz (A4) como tono de prueba.
      */
     //% blockId=fisicabit_snd_detectar_frecuencia
     //% block="detect frequency (Hz)"
     //% group="Frequency detection" weight=110
     export function detectarFrecuencia(): number {
-        return frecuenciaAhora(MetodoFrecuencia.Autocorrelacion, 8)
+        return frecuenciaInternaV2()
     }
 
     /**
      * Bloque "todo en uno" para detectar la nota musical más cercana al
-     * sonido captado por el micrófono conectado al pin configurado (por
-     * defecto P0).
+     * sonido captado por el micrófono INTERNO de la v2, sin cableado.
      *
      *   forever:
      *       basic.showString(FisicaBitSonido.detectarNota())
      *
      * Devuelve el nombre con notación MIDI estándar (A4, C#5, ...) o
-     * "—" si no hay señal suficiente. Requiere módulo electret externo.
+     * "—" si no hay señal suficiente. En el simulador devuelve "A4".
      */
     //% blockId=fisicabit_snd_detectar_nota
     //% block="detect musical note"
@@ -477,20 +474,13 @@ namespace FisicaBitSonido {
      * @param umbralRms umbral mínimo de amplitud para considerar la lectura
      */
     //% blockId=fisicabit_snd_freq_interna
-    //% block="internal mic frequency (Hz) ignore below RMS %umbralRms"
+    //% block="internal mic frequency (Hz)"
     //% group="Frequency detection" weight=80
-    //% umbralRms.defl=40 umbralRms.min=0 umbralRms.max=2000
-    export function frecuenciaInternaV2(umbralRms: number): number {
-        // Forzar modo interno de captura
-        const fuenteAnterior = _fuente
-        _fuente = FuenteMicrofono.InternoV2
-        const ok = _capturar()
-        _fuente = fuenteAnterior
-        if (!ok) return 0
-        if (FisicaBitAudioNative.audioRMS() < umbralRms) return 0
-        // Rango de búsqueda fijado al rango útil del PDM interno
-        const centiHz = FisicaBitAudioNative.audioFrecuenciaAutocorr(60, 4500)
-        return Math.round(centiHz) / 100
+    export function frecuenciaInternaV2(): number {
+        // Usa el shim nativo de audio (sim/audio.ts en el simulador,
+        // shims.cpp + StreamSplitter en hardware). Rango 60..4500 Hz —
+        // el rango útil del PDM interno (E2 grave .. C8 agudo).
+        return FisicaBitAudioNative.detectarFrecuenciaMicInterno(60, 4500, 512)
     }
 
     /**
@@ -541,21 +531,17 @@ namespace FisicaBitSonido {
 
     /**
      * Detecta la nota musical más cercana al sonido captado por el
-     * MICRÓFONO INTERNO de la micro:bit v2. Un solo paso: captura
+     * MICRÓFONO INTERNO de la micro:bit v2. Un solo paso: captura PDM
      * + autocorrelación + conversión a nombre de nota.
      *
-     * Rango práctico: E2 (82 Hz) .. C8 (4186 Hz), que cubre todas las
-     * notas habituales en experimentos de acústica musical.
+     * Rango práctico: E2 (82 Hz) .. C8 (4186 Hz).
      * Devuelve "—" si no hay suficiente señal.
-     *
-     * @param umbralRms amplitud mínima para considerar la lectura válida
      */
     //% blockId=fisicabit_snd_nota_interna
-    //% block="internal mic detected note (ignore below RMS %umbralRms)"
+    //% block="internal mic detected note"
     //% group="Frequency detection" weight=82
-    //% umbralRms.defl=40 umbralRms.min=0 umbralRms.max=2000
-    export function notaInternaV2(umbralRms: number): string {
-        const f = frecuenciaInternaV2(umbralRms)
+    export function notaInternaV2(): string {
+        const f = frecuenciaInternaV2()
         if (f <= 0) return "—"
         return nombreNota(f)
     }

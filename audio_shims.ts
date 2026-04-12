@@ -60,6 +60,9 @@ namespace FisicaBitAudioNative {
 
     // ── "Captura" del mic interno v2 (sólo amplitud) ─────────────────
     // soundLevel() devuelve 0..255 integrado en ~10 ms.
+    // Sigue aquí por compatibilidad con los bloques de amplitud. La
+    // detección de frecuencia con mic interno va por su propio camino
+    // (detectarFrecuenciaMicInterno), que llama al shim C++ real.
     export function audioMuestrearInterno(numMuestras: number): number {
         _rate = 100
         _buf = []
@@ -75,6 +78,28 @@ namespace FisicaBitAudioNative {
         }
         _dc = Math.idiv(suma, numMuestras)
         return _dc
+    }
+
+    // ── Detección de frecuencia con el mic INTERNO v2 ────────────────
+    // Pasa por el shim nativo `audioInternoDetectarFrecuencia`, que en
+    // hardware engancha el StreamSplitter de CODAL y corre autocorrelación
+    // en C++. El simulador resuelve la llamada a través del binding JS
+    // definido en `sim/audio.ts` (devuelve 44000 centi-Hz ≈ A4).
+    //
+    // Devuelve la frecuencia en Hz (con 2 decimales) o 0 si silencio/error.
+    export function detectarFrecuenciaMicInterno(minHz: number, maxHz: number, numMuestras: number): number {
+        if (numMuestras < 64) numMuestras = 64
+        if (numMuestras > 1024) numMuestras = 1024
+        if (minHz < 20) minHz = 20
+        if (maxHz <= minHz) maxHz = minHz + 1
+        // Arrancar el pipeline de audio (idempotente tras la primera vez)
+        input.soundLevel()
+        const centiHz = fisicabit_native.audioInternoDetectarFrecuencia(
+            numMuestras,
+            Math.round(minHz * 100),
+            Math.round(maxHz * 100)
+        )
+        return Math.round(centiHz) / 100
     }
 
     // ── Acceso al buffer ─────────────────────────────────────────────
