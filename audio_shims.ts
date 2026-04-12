@@ -23,34 +23,66 @@ namespace FisicaBitAudioNative {
     const BIG_NEG = -2147483000     // valor inicial "mínimo" sin notación exp
 
     // =========================================================================
-    // Detección de simulador en tiempo de ejecución
+    // Detección de simulador en tiempo de ejecución — múltiples capas
     // =========================================================================
     //
-    // El shim nativo `fisicabit_native::audioInternoDetectarFrecuencia` vive
-    // en `shims.cpp` y SÓLO existe en la compilación de hardware. El
-    // simulador de MakeCode no sabe resolverlo (pxt sólo provee bindings
-    // pxsim para los namespaces del target, no para los de extensiones
-    // externas con shims propios) y lanza
+    // El shim `fisicabit_native::audioInternoDetectarFrecuencia` SÓLO existe
+    // en hardware. En el simulador pxt no lo encuentra y llamarlo lanza
     //     "Cannot read properties of undefined (reading 'audioInternoDetectarFrecuencia')"
-    // en cuanto un `forever` intenta llamarlo.
     //
-    // Solución definitiva: detectar en runtime si estamos en el simulador
-    // y, si es así, NO llamar al shim en absoluto. Devolvemos un valor
-    // sintético (440 Hz = A4) para que el `forever` siga ejecutándose
-    // y el alumno pueda validar su lógica antes de flashear la placa.
+    // Como pxt evalúa las llamadas a shims de forma perezosa (sólo cuando
+    // realmente se ejecuta la línea), basta con detectar el entorno antes
+    // de llegar al shim y salir antes por un `return` con un valor sintético.
     //
-    // Método de detección: `control.deviceSerialNumber()` devuelve un ID
-    // único de 32 bits en hardware real (típicamente > 10⁷) y un valor
-    // pequeño y fijo en el simulador de MakeCode. Umbral 1.000.000 separa
-    // ambos casos con amplio margen.
+    // Usamos dos capas de detección redundantes, cualquiera de las cuales
+    // vale para devolver true (sim):
+    //
+    //   1) `control.deviceDalVersion()` devuelve literalmente "sim" en el
+    //      simulador de pxt-microbit; en hardware devuelve la versión real
+    //      de CODAL (ej. "2.2.0"). Es el método oficial.
+    //
+    //   2) `control.deviceSerialNumber()` en hardware real devuelve un chip
+    //      ID de 32 bits (habitualmente > 10⁸); en el simulador devuelve
+    //      un valor pequeño o cero. Umbral 10⁸ para separar con margen.
+    //
+    // Si cualquiera de los dos indica "sim", nos quedamos en modo simulador
+    // y jamás llegamos a evaluar la línea del shim.
     // =========================================================================
     let _isSimCache = -1   // -1 = sin determinar, 0 = hardware, 1 = simulador
 
     function _isSim(): boolean {
-        if (_isSimCache < 0) {
-            _isSimCache = (control.deviceSerialNumber() < 1000000) ? 1 : 0
+        if (_isSimCache >= 0) return _isSimCache == 1
+
+        // Capa 1: control.deviceDalVersion() == "sim"
+        const dal = control.deviceDalVersion()
+        if (dal == "sim" || dal == "") {
+            _isSimCache = 1
+            return true
         }
-        return _isSimCache == 1
+
+        // Capa 2: serial number con umbral amplio (10⁸)
+        const sn = control.deviceSerialNumber()
+        if (sn < 100000000) {
+            _isSimCache = 1
+            return true
+        }
+
+        _isSimCache = 0
+        return false
+    }
+
+    /**
+     * Bloque de diagnóstico: devuelve 1 si la extensión cree que está
+     * corriendo en el simulador, 0 si cree que está en hardware. Úsalo
+     * para verificar que la detección funciona antes de usar los bloques
+     * que llaman al shim nativo del mic interno.
+     */
+    //% blockId=fisicabit_snd_is_sim
+    //% block="is simulator?"
+    //% weight=5
+    //% advanced=true
+    export function esSimulador(): number {
+        return _isSim() ? 1 : 0
     }
 
     // Estado del buffer de muestreo
