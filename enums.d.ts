@@ -248,6 +248,22 @@ declare const enum TamanoBufferAudio {
     N1024 = 1024
 }
 
+declare const enum UnidadMasa {
+    //% block="g (grams)"
+    Gramos = 0,
+    //% block="kg (kilograms)"
+    Kilogramos = 1
+}
+
+declare const enum GananciaHX711 {
+    //% block="128 (channel A, default)"
+    G128 = 25,
+    //% block="64 (channel A)"
+    G64 = 27,
+    //% block="32 (channel B)"
+    G32 = 26
+}
+
 declare const enum VariableDoppler {
     //% block="source velocity (+ approaching)"
     VelocidadFuente = 0,

@@ -217,3 +217,44 @@ basic.forever(() => {
     )
 })
 */
+
+
+// =============================================================================
+// TEST 10: HX711 LOAD CELL — MASS AND FORCE MEASUREMENT
+// =============================================================================
+// HARDWARE: HX711 module DOUT→P0, SCK→P1, VCC→3V/5V, GND→GND
+//           Load cell connected to HX711 (E+, E-, A+, A-)
+// PASS: Press A → tare + calibrate with 100g, Press B → show mass (g)
+//       and force (N) via serial.
+// FAIL: Exception, always shows 0, or no serial output.
+// =============================================================================
+
+/*
+FisicaBitHX711.hx711Inicializar(DigitalPin.P0, DigitalPin.P1)
+
+input.onButtonPressed(Button.A, () => {
+    // Step 1: Tare (remove all weight first)
+    basic.showString("T")
+    FisicaBitHX711.hx711Tarar()
+    basic.showIcon(IconNames.Yes)
+    basic.pause(2000)
+
+    // Step 2: Place 100g weight, then press A again to calibrate
+    basic.showString("C")
+    basic.pause(3000)
+    FisicaBitHX711.hx711Calibrar(100)
+    basic.showIcon(IconNames.Yes)
+    basic.pause(1000)
+    basic.clearScreen()
+})
+
+input.onButtonPressed(Button.B, () => {
+    let masa = FisicaBitHX711.hx711Masa(UnidadMasa.Gramos)
+    let fuerza = FisicaBitHX711.hx711Fuerza(9.81)
+    basic.showNumber(Math.round(masa))
+    serial.writeValue("mass_g", masa)
+    serial.writeValue("force_N", fuerza)
+    serial.writeValue("raw", FisicaBitHX711.hx711Crudo())
+    serial.writeValue("cal_factor", FisicaBitHX711.hx711GetFactor())
+})
+*/
