@@ -36,34 +36,72 @@
 //       - 27 pulsos total → ganancia 64,  canal A
 //
 //    ⚠ Si PD_SCK permanece HIGH por >60μs, el HX711 entra en
-//      modo de bajo consumo (power-down). Se reactiva al poner LOW.
+//      modo de bajo consumo (power-down). El shim C++ deshabilita
+//      interrupciones durante la lectura para evitar esto.
 //
 //  TASA DE MUESTREO:
 //    - Pin RATE → GND: 10 Hz (por defecto en la mayoría de módulos)
 //    - Pin RATE → VCC: 80 Hz
 //
-//  RESOLUCIÓN:
-//    - ADC: 24 bits (valores de -8388608 a +8388607)
-//    - Ganancia 128: sensibilidad de ±20mV (típico para celdas de 5-10kg)
-//    - Ganancia 64:  sensibilidad de ±40mV
-//    - Ganancia 32:  sensibilidad de ±80mV (canal B)
+//  FILTRADO (basado en la librería olkal/HX711_ADC):
+//    Buffer circular de 18 muestras con media recortada (trimmed mean):
+//    - Se almacenan 18 lecturas en un buffer circular
+//    - Se descarta la lectura más alta y la más baja (rechazo de outliers)
+//    - Se promedian las 16 restantes usando bit-shift (÷16 = >>4)
+//    - Tiempo de llenado a 10 Hz: 18 × 100ms = 1.8 segundos
+//    - Esto rechaza automáticamente lecturas corruptas por interrupciones
 //
 //  CALIBRACIÓN:
 //    Para obtener valores en gramos/Newtons se necesita calibrar:
 //    1. Tarar la balanza (sin peso → establecer cero)
 //    2. Colocar un peso conocido (ej. 100g)
-//    3. Calcular factor = (lectura_cruda - tara) / peso_conocido
-//    4. masa (g) = (lectura_cruda - tara) / factor
+//    3. Calcular factor = (lectura_suavizada - tara) / peso_conocido
+//    4. masa (g) = (lectura_suavizada - tara) / factor
 //    5. fuerza (N) = masa (kg) × g (9.81 m/s²)
 //
-//  USO TÍPICO EN CLASE DE FÍSICA:
-//    - Medir masa de objetos (balanza digital)
-//    - Medir fuerza de un resorte (ley de Hooke)
-//    - Verificar F = m × a (segunda ley de Newton)
-//    - Medir fuerza de fricción
+//  USO EN FOREVER LOOP (no bloqueante):
+//    Los bloques de medición (masa, fuerza) son no-bloqueantes:
+//    - Verifican si hay un dato nuevo disponible (DOUT LOW)
+//    - Si hay dato: lo leen (~80μs) y lo agregan al buffer circular
+//    - Retornan el valor suavizado actual del buffer (media recortada)
+//    - Si no hay dato: retornan el último valor suavizado sin bloquear
+//
+//  REFERENCIAS:
+//    - olkal/HX711_ADC (Arduino): Buffer circular + trimmed mean
+//    - bogde/HX711 (Arduino): noInterrupts() durante bit-bang
+//    - Datasheet HX711: T3 max 50μs, power-down si SCK HIGH >60μs
 // =============================================================================
 
-// Módulo HX711 como bloque independiente
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Shim C++ — lectura de 24 bits con interrupciones deshabilitadas
+// En hardware usa fisicabit_native::hx711LeerCrudoNativo (shims.cpp).
+// En el simulador usa el cuerpo TS como fallback.
+// NO declarar en shims.d.ts (doble declaración confunde a pxt).
+// ─────────────────────────────────────────────────────────────────────────────
+namespace fisicabit_native {
+    /**
+     * Lee el ADC de 24 bits del HX711 con protección de interrupciones.
+     * Non-blocking: retorna 0 si DOUT está HIGH (dato no listo).
+     * Retorna [1..0xFFFFFF] (valor unsigned tras XOR 0x800000).
+     *
+     * @param pinDoutId ID del pin DOUT (valor del enum DigitalPin)
+     * @param pinSckId ID del pin SCK (valor del enum DigitalPin)
+     * @param ganExtra Pulsos extra: 1=gain128, 2=gain32, 3=gain64
+     */
+    //% shim=fisicabit_native::hx711LeerCrudoNativo
+    export function hx711LeerCrudoNativo(pinDoutId: number, pinSckId: number, ganExtra: number): number {
+        // ── Fallback para simulador ──
+        // Simula un sensor con lecturas alrededor del punto medio (0x800000)
+        // con un poco de ruido gaussiano para testing realista.
+        return 0x800000 + Math.randomRange(-200, 200)
+    }
+}
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Módulo HX711 — Namespace principal
+// ─────────────────────────────────────────────────────────────────────────────
 //% weight=87
 //% color=#4682B4
 //% icon="\uf24e"
@@ -71,121 +109,164 @@
 //% groups='["Configuration", "Calibration", "Measurement", "Diagnostics"]'
 namespace FisicaBitHX711 {
 
-    // ── Pines ──
+    // =========================================================================
+    // Constantes del filtro (basadas en olkal/HX711_ADC config.h)
+    // =========================================================================
+
+    const MUESTRAS = 16         // Muestras útiles para el promedio (potencia de 2)
+    const IGN_ALTA = 1          // Descartar la lectura más alta (outlier)
+    const IGN_BAJA = 1          // Descartar la lectura más baja (outlier)
+    const BUFFER_TOTAL = 18     // MUESTRAS + IGN_ALTA + IGN_BAJA
+    const DIV_BIT = 4           // log2(MUESTRAS) = log2(16) = 4
+    const GRAVEDAD = 9.81       // m/s²
+    const TIMEOUT_SIGNAL = 1500 // ms sin dato → sensor desconectado
+
+    // ── Pines (almacenados como DigitalPin para el shim C++) ──
     let _hxDout: DigitalPin = DigitalPin.P0
     let _hxSck: DigitalPin = DigitalPin.P1
 
     // ── Estado ──
     let _hxListo = false
     let _hxCalibrado = false
+    let _hxGananciaExtra = 1    // Pulsos extra: 1=128, 2=32, 3=64
 
-    // ── Ganancia (número de pulsos de reloj: 25, 26 o 27) ──
-    let _hxGanancia = 25  // 25 pulsos = ganancia 128, canal A
+    // ── Buffer circular (trimmed moving average) ──
+    let _hxBuffer: number[] = []
+    let _hxIndice = 0
+    let _hxBufferLleno = false
 
     // ── Calibración ──
-    let _hxTara: number = 0          // Offset de tara (valor crudo con peso cero)
-    let _hxFactorCal: number = 1.0   // Factor de calibración (unidades ADC por gramo)
+    let _hxTara: number = 0            // Offset de tara (en unidades unsigned)
+    let _hxFactorCal: number = 1.0     // Factor: unidades_ADC_unsigned / gramo
+    let _hxFactorCalRecip: number = 1.0 // 1.0 / factorCal (precomputado para velocidad)
 
-    // ── Última lectura ──
-    let _hxUltCrudo: number = 0
-    let _hxLecturaOk = false         // ¿Última lectura exitosa (no timeout)?
-
-    // ── Constante de gravedad ──
-    const GRAVEDAD = 9.81  // m/s²
+    // ── Timing ──
+    let _hxUltDatoMs = 0        // Timestamp del último dato válido
+    let _hxSinSenal = false     // Flag de timeout (sensor desconectado)
 
     // =========================================================================
-    // Protocolo de comunicación HX711
+    // Funciones internas
     // =========================================================================
 
     /**
      * Reinicia el HX711 mediante un ciclo de power-down/power-up.
      * PD_SCK HIGH por >60μs → power-down, luego LOW → power-up.
-     * Después del power-up se necesitan ~400ms para que el ADC estabilice.
+     * Espera 400ms para que el ADC interno estabilice (datasheet).
      */
     function _hxReset(): void {
         pins.digitalWritePin(_hxSck, 1)
-        control.waitMicros(100)  // >60μs → entra en power-down
+        control.waitMicros(120)  // >60μs → power-down garantizado
         pins.digitalWritePin(_hxSck, 0)
-        basic.pause(400)         // esperar estabilización del ADC
+        basic.pause(400)         // settling del ADC interno
     }
 
     /**
-     * Lee un valor crudo de 24 bits del HX711.
-     * Espera a que DOUT → LOW (dato listo), luego envía pulsos de reloj
-     * para leer los 24 bits y configurar la ganancia para la siguiente lectura.
+     * Lectura no-bloqueante del HX711 vía shim C++.
+     * - Si DOUT está LOW (dato listo): lee 24 bits con IRQ deshabilitadas,
+     *   aplica XOR 0x800000, retorna valor unsigned [1..0xFFFFFF].
+     * - Si DOUT está HIGH (no hay dato): retorna 0 inmediatamente.
      *
-     * Marca _hxLecturaOk = false si hay timeout.
+     * En hardware real ~80μs por lectura. En simulador retorna valor simulado.
      */
-    function _hxLeerCrudo(): number {
-        _hxLecturaOk = false
+    function _hxLeerShim(): number {
+        return fisicabit_native.hx711LeerCrudoNativo(
+            _hxDout as number,
+            _hxSck as number,
+            _hxGananciaExtra
+        )
+    }
 
-        // ── Esperar a que DOUT → LOW (dato listo) ──
-        // A 10 Hz, un dato nuevo llega cada ~100ms.
-        // Timeout: 100 intentos × 10ms = 1 segundo.
-        let timeout = 100
-        while (pins.digitalReadPin(_hxDout) == 1) {
-            if (timeout <= 0) return _hxUltCrudo  // timeout: devolver última lectura válida
-            basic.pause(10)
-            timeout--
-        }
+    /**
+     * Actualización no-bloqueante: intenta leer un dato nuevo.
+     * Si hay dato disponible, lo agrega al buffer circular.
+     * Retorna true si se leyó un dato nuevo.
+     *
+     * Diseñado para llamarse dentro de un forever loop.
+     * Si no hay dato nuevo, retorna false sin bloquear.
+     */
+    function _hxActualizar(): boolean {
+        if (!_hxListo) return false
 
-        // ── Leer 24 bits (MSB primero) usando shift-and-or ──
-        // Más robusto que calcular posiciones con (1 << (23-i))
-        let valor = 0
-        for (let i = 0; i < 24; i++) {
-            pins.digitalWritePin(_hxSck, 1)
-            control.waitMicros(10)
+        let dato = _hxLeerShim()
 
-            valor = valor << 1
-            if (pins.digitalReadPin(_hxDout) == 1) {
-                valor = valor | 1
+        if (dato > 0) {
+            // Dato válido: agregar al buffer circular
+            _hxBuffer[_hxIndice] = dato
+            _hxIndice++
+            if (_hxIndice >= BUFFER_TOTAL) {
+                _hxIndice = 0
+                _hxBufferLleno = true
             }
-
-            pins.digitalWritePin(_hxSck, 0)
-            control.waitMicros(10)
+            _hxUltDatoMs = input.runningTime()
+            _hxSinSenal = false
+            return true
         }
 
-        // ── Pulsos adicionales para configurar ganancia de próxima lectura ──
-        // 25 pulsos total → ganancia 128, canal A
-        // 26 pulsos total → ganancia 32,  canal B
-        // 27 pulsos total → ganancia 64,  canal A
-        for (let j = 24; j < _hxGanancia; j++) {
-            pins.digitalWritePin(_hxSck, 1)
-            control.waitMicros(10)
-            pins.digitalWritePin(_hxSck, 0)
-            control.waitMicros(10)
+        // No hay dato nuevo — verificar timeout
+        if (input.runningTime() - _hxUltDatoMs > TIMEOUT_SIGNAL) {
+            _hxSinSenal = true
         }
-
-        // ── Convertir de complemento a 2 (24 bits) a entero con signo ──
-        if (valor >= 0x800000) {
-            valor = valor - 0x1000000
-        }
-
-        _hxUltCrudo = valor
-        _hxLecturaOk = true
-        return valor
+        return false
     }
 
     /**
-     * Lee N muestras del HX711 y retorna el promedio.
-     * Reduce el ruido eléctrico promediando múltiples lecturas.
-     * A 10 Hz, N muestras toman ~N×100ms.
+     * Media recortada (trimmed mean) del buffer circular.
+     * Basada en smoothedData() de olkal/HX711_ADC:
+     * 1. Suma todos los valores del buffer (18 muestras)
+     * 2. Resta el valor más alto (rechazo de outlier superior)
+     * 3. Resta el valor más bajo (rechazo de outlier inferior)
+     * 4. Divide por 16 usando bit-shift (>>4)
      *
-     * Solo promedia lecturas exitosas (no timeout).
-     * Si todas fallan, retorna la última lectura válida.
+     * Esto rechaza automáticamente lecturas corruptas por interrupciones
+     * (que típicamente dan 0xFFFFFF = todos los bits en 1).
      */
-    function _hxLeerPromedio(muestras: number): number {
+    function _hxDatosSuavizados(): number {
+        let n = _hxBufferLleno ? BUFFER_TOTAL : _hxIndice
+        if (n == 0) return 0
+
         let suma = 0
-        let validas = 0
-        for (let i = 0; i < muestras; i++) {
-            _hxLeerCrudo()
-            if (_hxLecturaOk) {
-                suma += _hxUltCrudo
-                validas++
-            }
+        let minVal = 0xFFFFFF
+        let maxVal = 0
+
+        for (let i = 0; i < n; i++) {
+            let v = _hxBuffer[i]
+            suma += v
+            if (v < minVal) minVal = v
+            if (v > maxVal) maxVal = v
         }
-        if (validas == 0) return _hxUltCrudo
-        return suma / validas
+
+        // Recortar outliers solo si tenemos suficientes muestras
+        if (n > 2) {
+            suma -= minVal
+            suma -= maxVal
+            n -= 2
+        }
+
+        // Dividir: si el buffer está lleno usamos bit-shift (rápido),
+        // si no, división normal
+        if (_hxBufferLleno) {
+            return suma >> DIV_BIT  // ÷16 = >>4
+        } else {
+            return Math.idiv(suma, n)
+        }
+    }
+
+    /**
+     * Llena el buffer circular completamente (operación bloqueante).
+     * A 10 Hz, tarda ~1.8 segundos (18 muestras × 100ms).
+     * Se usa para tara y calibración donde necesitamos estabilidad máxima.
+     * Timeout de seguridad: 3 segundos.
+     */
+    function _hxLlenarBuffer(): void {
+        _hxIndice = 0
+        _hxBufferLleno = false
+        let timeout = input.runningTime() + 3000
+
+        while (!_hxBufferLleno) {
+            if (input.runningTime() > timeout) break
+            _hxActualizar()
+            basic.pause(5)  // no busy-wait: ceder al scheduler
+        }
     }
 
     // =========================================================================
@@ -194,7 +275,9 @@ namespace FisicaBitHX711 {
 
     /**
      * Inicializa el módulo HX711 con los pines indicados.
-     * Verifica que el sensor responda y muestra ✓ o ✗ en el LED.
+     * Realiza un power-cycle (reset), descarta las primeras lecturas
+     * inestables y llena el buffer circular (~2 segundos).
+     * Muestra ✓ si el sensor responde correctamente, ✗ si no.
      *
      * Conexión física HX711 → micro:bit:
      *   VCC  → 3V (o 5V según módulo)
@@ -215,28 +298,38 @@ namespace FisicaBitHX711 {
         _hxDout = dout
         _hxSck = sck
 
-        // Reset: power-cycle del HX711 para arrancar limpio
+        // Inicializar buffer circular con ceros
+        _hxBuffer = []
+        for (let i = 0; i < BUFFER_TOTAL; i++) {
+            _hxBuffer.push(0)
+        }
+        _hxIndice = 0
+        _hxBufferLleno = false
+
+        // Reset: power-cycle del HX711
         _hxReset()
 
-        // Descartar las primeras 5 lecturas (el ADC necesita estabilizarse)
-        _hxListo = true  // permitir lecturas temporalmente
-        let detectado = false
-        for (let i = 0; i < 5; i++) {
-            _hxLeerCrudo()
-            if (_hxLecturaOk) detectado = true
-        }
-        _hxListo = detectado
+        // Marcar como listo para poder leer
+        _hxListo = true
+        _hxUltDatoMs = input.runningTime()
 
-        // Resetear estado de calibración
+        // Llenar buffer con datos estabilizados (~1.8s a 10 Hz)
+        _hxLlenarBuffer()
+
+        // Verificar si recibimos datos válidos
+        if (!_hxBufferLleno) {
+            _hxListo = false
+            basic.showIcon(IconNames.No)
+        } else {
+            basic.showIcon(IconNames.Yes)
+        }
+
+        // Resetear calibración
         _hxTara = 0
         _hxFactorCal = 1.0
+        _hxFactorCalRecip = 1.0
         _hxCalibrado = false
 
-        if (_hxListo) {
-            basic.showIcon(IconNames.Yes)
-        } else {
-            basic.showIcon(IconNames.No)
-        }
         basic.pause(500)
         basic.clearScreen()
     }
@@ -248,7 +341,8 @@ namespace FisicaBitHX711 {
      * - 32 (canal B):  Menor sensibilidad, para celdas grandes
      *
      * La ganancia se aplica a partir de la SIGUIENTE lectura.
-     * Se recomienda configurar antes de tarar y calibrar.
+     * Se recomienda configurar ANTES de tarar y calibrar.
+     * Rellena el buffer con la nueva ganancia (~2 segundos).
      *
      * @param ganancia Ganancia del amplificador
      */
@@ -258,13 +352,14 @@ namespace FisicaBitHX711 {
     //% weight=98
     //% ganancia.defl=GananciaHX711.G128
     export function hx711SetGanancia(ganancia: GananciaHX711): void {
-        _hxGanancia = ganancia
+        // Convertir de pulsos totales (25,26,27) a pulsos extra (1,2,3)
+        _hxGananciaExtra = ganancia - 24
+
         if (_hxListo) {
-            // La ganancia se aplica en la PRÓXIMA lectura después de configurarla.
-            // Hacemos 2 lecturas descartables: la primera configura los pulsos,
-            // la segunda ya usa la nueva ganancia.
-            _hxLeerCrudo()
-            _hxLeerCrudo()
+            // La nueva ganancia se aplica en la PRÓXIMA conversión.
+            // Rellenamos el buffer para que todas las muestras usen
+            // la ganancia nueva.
+            _hxLlenarBuffer()
         }
     }
 
@@ -275,7 +370,7 @@ namespace FisicaBitHX711 {
     /**
      * Tara la balanza (establece el peso actual como cero).
      * Llama a este bloque SIN peso sobre la celda de carga.
-     * Promedia 10 lecturas para mayor estabilidad.
+     * Rellena el buffer completo (~2s) y calcula el offset promedio.
      *
      * ⚠ La tara es necesaria antes de medir masa o fuerza.
      *   Sin tara, los valores incluyen el offset propio de la celda.
@@ -286,13 +381,14 @@ namespace FisicaBitHX711 {
     //% weight=95
     export function hx711Tarar(): void {
         if (!_hxListo) return
-        _hxTara = _hxLeerPromedio(10)
+        _hxLlenarBuffer()
+        _hxTara = _hxDatosSuavizados()
     }
 
     /**
      * Calibra el HX711 con un peso conocido.
      * Coloca el peso de referencia sobre la celda de carga y luego
-     * ejecuta este bloque.
+     * ejecuta este bloque. Rellena el buffer (~2s) y calcula el factor.
      *
      * ⚠ La balanza debe estar tarada ANTES de calibrar.
      *   Pasos: 1) tarar sin peso → 2) colocar peso → 3) calibrar
@@ -309,11 +405,13 @@ namespace FisicaBitHX711 {
         if (!_hxListo) return
         if (pesoConocido <= 0) return
 
-        let lectura = _hxLeerPromedio(10)
-        let diferencia = lectura - _hxTara
+        _hxLlenarBuffer()
+        let lectura = _hxDatosSuavizados()
+        let diff = lectura - _hxTara
 
-        if (diferencia != 0) {
-            _hxFactorCal = diferencia / pesoConocido
+        if (diff != 0) {
+            _hxFactorCal = diff / pesoConocido
+            _hxFactorCalRecip = 1.0 / _hxFactorCal
             _hxCalibrado = true
         }
     }
@@ -321,11 +419,7 @@ namespace FisicaBitHX711 {
     /**
      * Establece el factor de calibración directamente.
      * Útil si ya conoces el factor de tu celda de carga
-     * (obtenido en una calibración previa).
-     *
-     * El factor se define como: unidades_ADC / gramo.
-     * Puedes obtenerlo con el bloque "HX711 calibration factor"
-     * después de una calibración exitosa.
+     * (obtenido en una calibración previa con "HX711 calibration factor").
      *
      * @param factor Factor de calibración (unidades ADC por gramo)
      */
@@ -336,19 +430,23 @@ namespace FisicaBitHX711 {
     export function hx711SetFactor(factor: number): void {
         if (factor == 0) return
         _hxFactorCal = factor
+        _hxFactorCalRecip = 1.0 / factor
         _hxCalibrado = true
     }
 
     // =========================================================================
-    // BLOQUES PÚBLICOS — Medición
+    // BLOQUES PÚBLICOS — Medición (no-bloqueantes, para usar en forever)
     // =========================================================================
 
     /**
-     * Lee la masa medida por la celda de carga en la unidad seleccionada.
-     * Promedia 10 lecturas para reducir ruido (~1s a 10 Hz).
+     * Lee la masa en la unidad seleccionada (no-bloqueante).
+     *
+     * Ideal para usar en un bloque "forever":
+     * - Si hay un dato nuevo del HX711 → lo lee y actualiza el buffer
+     * - Retorna la media recortada actual (trimmed mean de 16 muestras)
+     * - Si no hay dato nuevo → retorna el último valor sin bloquear
      *
      * Para resultados precisos: tarar y calibrar antes de medir.
-     * Sin calibración, retorna valores crudos (unidades ADC).
      *
      * @param unidad Unidad de masa (gramos o kilogramos)
      */
@@ -360,8 +458,11 @@ namespace FisicaBitHX711 {
     export function hx711Masa(unidad: UnidadMasa): number {
         if (!_hxListo) return 0
 
-        let lectura = _hxLeerPromedio(10)
-        let gramos = (lectura - _hxTara) / _hxFactorCal
+        // Actualización no-bloqueante: leer dato si está disponible
+        _hxActualizar()
+
+        let suavizado = _hxDatosSuavizados()
+        let gramos = (suavizado - _hxTara) * _hxFactorCalRecip
 
         switch (unidad) {
             case UnidadMasa.Gramos:
@@ -374,11 +475,10 @@ namespace FisicaBitHX711 {
     }
 
     /**
-     * Lee la fuerza medida por la celda de carga en Newtons.
-     * Calcula: F = m × g, donde g = 9.81 m/s².
-     * Promedia 10 lecturas para reducir ruido (~1s a 10 Hz).
+     * Lee la fuerza en Newtons (no-bloqueante).
+     * Calcula: F = m × g, donde g es configurable (por defecto 9.81 m/s²).
      *
-     * Para resultados precisos: tarar y calibrar antes de medir.
+     * Ideal para usar en un bloque "forever" — misma lógica que hx711Masa.
      *
      * Ejemplo: un objeto de 100g produce ~0.981 N.
      *
@@ -393,8 +493,11 @@ namespace FisicaBitHX711 {
         if (!_hxListo) return 0
         if (gravedad <= 0) gravedad = GRAVEDAD
 
-        let lectura = _hxLeerPromedio(10)
-        let gramos = (lectura - _hxTara) / _hxFactorCal
+        // Actualización no-bloqueante
+        _hxActualizar()
+
+        let suavizado = _hxDatosSuavizados()
+        let gramos = (suavizado - _hxTara) * _hxFactorCalRecip
         let kg = gramos / 1000
         let newtons = kg * gravedad
 
@@ -402,11 +505,9 @@ namespace FisicaBitHX711 {
     }
 
     /**
-     * Lee el valor crudo del ADC del HX711 (sin calibración).
-     * Útil para depuración, análisis personalizado o cuando
-     * se quiere medir sin calibrar.
-     *
-     * Retorna un valor de 24 bits con signo (-8388608 a +8388607).
+     * Lee el valor crudo del ADC (no-bloqueante).
+     * Retorna la media recortada del buffer sin calibración.
+     * Útil para depuración o análisis personalizado.
      */
     //% blockId=fisicabit_hx711_crudo
     //% block="HX711 raw value"
@@ -414,13 +515,13 @@ namespace FisicaBitHX711 {
     //% weight=85
     export function hx711Crudo(): number {
         if (!_hxListo) return 0
-        return _hxLeerCrudo()
+        _hxActualizar()
+        return _hxDatosSuavizados()
     }
 
     /**
-     * Lee el valor crudo del ADC ya compensado con la tara.
-     * Es decir: lectura_cruda - tara.
-     * Útil para observar el valor neto sin aplicar calibración.
+     * Lee el valor crudo neto (media recortada menos tara).
+     * Útil para observar el valor sin calibración pero con tara aplicada.
      */
     //% blockId=fisicabit_hx711_crudo_neto
     //% block="HX711 net raw value (tared)"
@@ -428,7 +529,8 @@ namespace FisicaBitHX711 {
     //% weight=84
     export function hx711CrudoNeto(): number {
         if (!_hxListo) return 0
-        return _hxLeerCrudo() - _hxTara
+        _hxActualizar()
+        return _hxDatosSuavizados() - _hxTara
     }
 
     // =========================================================================
@@ -443,12 +545,11 @@ namespace FisicaBitHX711 {
     //% group="Diagnostics"
     //% weight=80
     export function hx711Conectado(): boolean {
-        return _hxListo
+        return _hxListo && !_hxSinSenal
     }
 
     /**
-     * Indica si el HX711 ha sido calibrado (por calibración con peso
-     * conocido o por asignación manual del factor).
+     * Indica si el HX711 ha sido calibrado.
      */
     //% blockId=fisicabit_hx711_calibrado
     //% block="HX711 calibrated"
@@ -461,9 +562,6 @@ namespace FisicaBitHX711 {
     /**
      * Obtiene el factor de calibración actual.
      * Útil para guardarlo y reutilizarlo sin recalibrar.
-     *
-     * Después de calibrar, anota este valor y úsalo con
-     * "set HX711 calibration factor" en futuros programas.
      */
     //% blockId=fisicabit_hx711_get_factor
     //% block="HX711 calibration factor"
@@ -474,8 +572,7 @@ namespace FisicaBitHX711 {
     }
 
     /**
-     * Obtiene el valor de tara actual (offset crudo).
-     * Útil para diagnóstico.
+     * Obtiene el valor de tara actual (offset en unidades unsigned).
      */
     //% blockId=fisicabit_hx711_get_tara
     //% block="HX711 tare offset"

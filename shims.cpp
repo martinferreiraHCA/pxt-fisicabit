@@ -312,6 +312,73 @@ namespace fisicabit_native {
     }
 
     // =========================================================================
+    // hx711LeerCrudoNativo — Lectura de 24 bits del HX711 con protección IRQ
+    // =========================================================================
+    //  Lee el ADC de 24 bits del HX711 usando bit-bang con interrupciones
+    //  deshabilitadas para evitar que PD_SCK quede HIGH >60μs (lo que
+    //  pondría el chip en power-down y corrompería la lectura).
+    //
+    //  Parámetros:
+    //    pinDoutId   — ID del pin DOUT (valor del enum DigitalPin)
+    //    pinSckId    — ID del pin PD_SCK (valor del enum DigitalPin)
+    //    ganExtra    — Pulsos extra de ganancia: 1=128ch.A, 2=32ch.B, 3=64ch.A
+    //
+    //  Retorna:
+    //    Valor unsigned [1..0xFFFFFF] tras XOR 0x800000
+    //    0 = dato no listo (DOUT HIGH) o error
+    //
+    //  Duración con IRQ deshabilitadas: ~80μs (seguro para softdevice BLE)
+    // =========================================================================
+
+    //%
+    int hx711LeerCrudoNativo(int pinDoutId, int pinSckId, int ganExtra) {
+        #if MICROBIT_CODAL
+        MicroBitPin *dout = pxt::getPin(pinDoutId);
+        MicroBitPin *sck  = pxt::getPin(pinSckId);
+        if (!dout || !sck) return 0;
+        if (ganExtra < 1) ganExtra = 1;
+        if (ganExtra > 3) ganExtra = 3;
+
+        // Asegurar que DOUT esté en modo entrada
+        dout->getDigitalValue();
+
+        // Non-blocking: si DOUT está HIGH, no hay dato listo
+        if (dout->getDigitalValue() != 0) return 0;
+
+        // ── SECCIÓN CRÍTICA: deshabilitar interrupciones ──
+        // Impide que un ISR estire PD_SCK HIGH >60μs (power-down del HX711).
+        // Duración total: ~80μs para 27 pulsos — seguro para el softdevice BLE.
+        uint32_t primask = __get_PRIMASK();
+        __disable_irq();
+
+        uint32_t data = 0;
+        int totalPulsos = 24 + ganExtra;
+
+        for (int i = 0; i < totalPulsos; i++) {
+            sck->setDigitalValue(1);
+            // T3 min = 0.2μs — la llamada a getDigitalValue() ya toma ~1μs
+            if (i < 24) {
+                data = (data << 1) | (uint32_t)(dout->getDigitalValue());
+            }
+            sck->setDigitalValue(0);
+            // T4 min = 0.2μs — satisfecho por el overhead del for
+        }
+
+        __set_PRIMASK(primask);  // restaurar estado previo de interrupciones
+
+        // XOR 0x800000: convierte complemento a 2 → rango unsigned [0, 0xFFFFFF]
+        //   Original 0x800000 (más negativo) → 0x000000 (mínimo)
+        //   Original 0x000000 (cero)          → 0x800000 (medio)
+        //   Original 0x7FFFFF (más positivo)  → 0xFFFFFF (máximo)
+        data ^= 0x800000;
+
+        return (int)data;
+        #else
+        return 0;
+        #endif
+    }
+
+    // =========================================================================
     // SONIDO — Detección de frecuencia con el micrófono interno PDM v2
     // =========================================================================
     //
