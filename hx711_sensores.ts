@@ -88,6 +88,7 @@ namespace FisicaBitHX711 {
 
     // ── Última lectura ──
     let _hxUltCrudo: number = 0
+    let _hxLecturaOk = false         // ¿Última lectura exitosa (no timeout)?
 
     // ── Constante de gravedad ──
     const GRAVEDAD = 9.81  // m/s²
@@ -97,35 +98,51 @@ namespace FisicaBitHX711 {
     // =========================================================================
 
     /**
+     * Reinicia el HX711 mediante un ciclo de power-down/power-up.
+     * PD_SCK HIGH por >60μs → power-down, luego LOW → power-up.
+     * Después del power-up se necesitan ~400ms para que el ADC estabilice.
+     */
+    function _hxReset(): void {
+        pins.digitalWritePin(_hxSck, 1)
+        control.waitMicros(100)  // >60μs → entra en power-down
+        pins.digitalWritePin(_hxSck, 0)
+        basic.pause(400)         // esperar estabilización del ADC
+    }
+
+    /**
      * Lee un valor crudo de 24 bits del HX711.
      * Espera a que DOUT → LOW (dato listo), luego envía pulsos de reloj
      * para leer los 24 bits y configurar la ganancia para la siguiente lectura.
      *
-     * Retorna 0 si timeout (sensor no responde en ~1 segundo).
+     * Marca _hxLecturaOk = false si hay timeout.
      */
     function _hxLeerCrudo(): number {
+        _hxLecturaOk = false
+
         // ── Esperar a que DOUT → LOW (dato listo) ──
         // A 10 Hz, un dato nuevo llega cada ~100ms.
         // Timeout: 100 intentos × 10ms = 1 segundo.
         let timeout = 100
         while (pins.digitalReadPin(_hxDout) == 1) {
-            if (timeout <= 0) return 0
+            if (timeout <= 0) return _hxUltCrudo  // timeout: devolver última lectura válida
             basic.pause(10)
             timeout--
         }
 
-        // ── Leer 24 bits (MSB primero) ──
+        // ── Leer 24 bits (MSB primero) usando shift-and-or ──
+        // Más robusto que calcular posiciones con (1 << (23-i))
         let valor = 0
         for (let i = 0; i < 24; i++) {
             pins.digitalWritePin(_hxSck, 1)
-            control.waitMicros(1)
+            control.waitMicros(10)
 
+            valor = valor << 1
             if (pins.digitalReadPin(_hxDout) == 1) {
-                valor = valor + (1 << (23 - i))
+                valor = valor | 1
             }
 
             pins.digitalWritePin(_hxSck, 0)
-            control.waitMicros(1)
+            control.waitMicros(10)
         }
 
         // ── Pulsos adicionales para configurar ganancia de próxima lectura ──
@@ -134,9 +151,9 @@ namespace FisicaBitHX711 {
         // 27 pulsos total → ganancia 64,  canal A
         for (let j = 24; j < _hxGanancia; j++) {
             pins.digitalWritePin(_hxSck, 1)
-            control.waitMicros(1)
+            control.waitMicros(10)
             pins.digitalWritePin(_hxSck, 0)
-            control.waitMicros(1)
+            control.waitMicros(10)
         }
 
         // ── Convertir de complemento a 2 (24 bits) a entero con signo ──
@@ -145,6 +162,7 @@ namespace FisicaBitHX711 {
         }
 
         _hxUltCrudo = valor
+        _hxLecturaOk = true
         return valor
     }
 
@@ -152,18 +170,21 @@ namespace FisicaBitHX711 {
      * Lee N muestras del HX711 y retorna el promedio.
      * Reduce el ruido eléctrico promediando múltiples lecturas.
      * A 10 Hz, N muestras toman ~N×100ms.
+     *
+     * Solo promedia lecturas exitosas (no timeout).
+     * Si todas fallan, retorna la última lectura válida.
      */
     function _hxLeerPromedio(muestras: number): number {
         let suma = 0
         let validas = 0
         for (let i = 0; i < muestras; i++) {
-            let lectura = _hxLeerCrudo()
-            if (lectura != 0 || validas == 0) {
-                suma += lectura
+            _hxLeerCrudo()
+            if (_hxLecturaOk) {
+                suma += _hxUltCrudo
                 validas++
             }
         }
-        if (validas == 0) return 0
+        if (validas == 0) return _hxUltCrudo
         return suma / validas
     }
 
@@ -194,19 +215,22 @@ namespace FisicaBitHX711 {
         _hxDout = dout
         _hxSck = sck
 
-        // Asegurar que SCK empiece en LOW (evitar power-down)
-        pins.digitalWritePin(_hxSck, 0)
-        basic.pause(100)
+        // Reset: power-cycle del HX711 para arrancar limpio
+        _hxReset()
 
-        // Intentar una lectura para verificar conexión
-        let lectura = _hxLeerCrudo()
-        _hxListo = true
-
-        // Si la lectura es exactamente 0 y DOUT sigue HIGH, probablemente
-        // no hay sensor conectado
-        if (lectura == 0 && pins.digitalReadPin(_hxDout) == 1) {
-            _hxListo = false
+        // Descartar las primeras 5 lecturas (el ADC necesita estabilizarse)
+        _hxListo = true  // permitir lecturas temporalmente
+        let detectado = false
+        for (let i = 0; i < 5; i++) {
+            _hxLeerCrudo()
+            if (_hxLecturaOk) detectado = true
         }
+        _hxListo = detectado
+
+        // Resetear estado de calibración
+        _hxTara = 0
+        _hxFactorCal = 1.0
+        _hxCalibrado = false
 
         if (_hxListo) {
             basic.showIcon(IconNames.Yes)
@@ -235,8 +259,11 @@ namespace FisicaBitHX711 {
     //% ganancia.defl=GananciaHX711.G128
     export function hx711SetGanancia(ganancia: GananciaHX711): void {
         _hxGanancia = ganancia
-        // Hacer una lectura descartable para que la nueva ganancia se aplique
         if (_hxListo) {
+            // La ganancia se aplica en la PRÓXIMA lectura después de configurarla.
+            // Hacemos 2 lecturas descartables: la primera configura los pulsos,
+            // la segunda ya usa la nueva ganancia.
+            _hxLeerCrudo()
             _hxLeerCrudo()
         }
     }
@@ -318,7 +345,7 @@ namespace FisicaBitHX711 {
 
     /**
      * Lee la masa medida por la celda de carga en la unidad seleccionada.
-     * Promedia 3 lecturas para reducir ruido.
+     * Promedia 10 lecturas para reducir ruido (~1s a 10 Hz).
      *
      * Para resultados precisos: tarar y calibrar antes de medir.
      * Sin calibración, retorna valores crudos (unidades ADC).
@@ -333,7 +360,7 @@ namespace FisicaBitHX711 {
     export function hx711Masa(unidad: UnidadMasa): number {
         if (!_hxListo) return 0
 
-        let lectura = _hxLeerPromedio(3)
+        let lectura = _hxLeerPromedio(10)
         let gramos = (lectura - _hxTara) / _hxFactorCal
 
         switch (unidad) {
@@ -349,7 +376,7 @@ namespace FisicaBitHX711 {
     /**
      * Lee la fuerza medida por la celda de carga en Newtons.
      * Calcula: F = m × g, donde g = 9.81 m/s².
-     * Promedia 3 lecturas para reducir ruido.
+     * Promedia 10 lecturas para reducir ruido (~1s a 10 Hz).
      *
      * Para resultados precisos: tarar y calibrar antes de medir.
      *
@@ -366,7 +393,7 @@ namespace FisicaBitHX711 {
         if (!_hxListo) return 0
         if (gravedad <= 0) gravedad = GRAVEDAD
 
-        let lectura = _hxLeerPromedio(3)
+        let lectura = _hxLeerPromedio(10)
         let gramos = (lectura - _hxTara) / _hxFactorCal
         let kg = gramos / 1000
         let newtons = kg * gravedad
