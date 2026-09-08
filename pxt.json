@@ -1,9 +1,11 @@
 {
     "name": "fisicabit-sensores",
-    "version": "0.6.0",
-    "description": "micro:bit extension for physics experiments — sensors, optical barriers, and Bluetooth data logging",
+    "version": "0.7.0",
+    "description": "micro:bit extension for physics experiments — sensors, optical barriers, and one-block data streaming to fisicabit.com over USB or Bluetooth",
     "license": "MIT",
-    "authors": ["FisicaBit"],
+    "authors": [
+        "FisicaBit"
+    ],
     "public": true,
     "dependencies": {
         "core": "*",
@@ -12,6 +14,8 @@
     "files": [
         "README.md",
         "fisicabit.ts",
+        "fisicabit_datos.ts",
+        "serial_sensores.ts",
         "bluetooth_sensores.ts",
         "tof_sensores.ts",
         "enums.d.ts",
@@ -21,7 +25,6 @@
         "bme280_sensores.ts",
         "dht11_sensores.ts",
         "hcsr04_sensores.ts",
-        "serial_sensores.ts",
         "audio_shims.ts",
         "sonido_sensores.ts",
         "hx711_sensores.ts"
