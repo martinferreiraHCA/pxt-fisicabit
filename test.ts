@@ -1,27 +1,27 @@
 // =============================================================================
-// test.ts — Functional tests for the FisicaBit extension
+// test.ts — Pruebas funcionales de la extensión FisicaBit
 // =============================================================================
-// HOW TO TEST:
-//   1. Import this extension in MakeCode
-//   2. This file runs automatically in the simulator
-//   3. For hardware tests, download the .hex to a micro:bit
+// CÓMO PROBAR:
+//   1. Importar esta extensión en MakeCode
+//   2. Este archivo se ejecuta automáticamente en el simulador
+//   3. Para probar en hardware, descargar el .hex a un micro:bit
 //
-// PASS CRITERIA:
-//   - All code compiles without errors in MakeCode
-//   - The simulator runs without throwing exceptions
-//   - Button A shows temperature reading (number on LED)
-//   - Button B shows Fahrenheit conversion (number on LED)
+// CRITERIOS DE ÉXITO:
+//   - Todo el código compila sin errores en MakeCode
+//   - El simulador corre sin lanzar excepciones
+//   - El botón A muestra la temperatura (número en los LED)
+//   - El botón B muestra la conversión a Fahrenheit (número en los LED)
 //
-// NOTE: Only Test 1 runs by default. Uncomment other tests one at a time.
+// NOTA: Sólo la Prueba 1 corre por defecto. Descomentar las demás de a una.
 // =============================================================================
 
 
 // =============================================================================
-// TEST 1: INTERNAL SENSORS + TEMPERATURE CONVERSION
+// PRUEBA 1: SENSORES INTERNOS + CONVERSIÓN DE TEMPERATURA
 // =============================================================================
-// PASS: Pressing A shows a number (Celsius), pressing B shows Fahrenheit.
-//       No simulator errors.
-// FAIL: Exception thrown or no display output.
+// ÉXITO: Al apretar A se muestra un número (Celsius), al apretar B Fahrenheit.
+//        Sin errores en el simulador.
+// FALLA: Excepción o nada en la pantalla.
 // =============================================================================
 
 let currentUnit = UnidadTemperatura.Celsius
@@ -43,11 +43,11 @@ input.onButtonPressed(Button.B, () => {
 
 
 // =============================================================================
-// TEST 2: ANALOG SENSOR READING + VALUE MAPPING
+// PRUEBA 2: LECTURA DE SENSOR ANALÓGICO + MAPEO DE VALORES
 // =============================================================================
-// HARDWARE: Potentiometer on P0 (left→GND, center→P0, right→3V)
-// PASS: Shows 0-100% on LED as you turn the pot. Serial outputs CSV data.
-// FAIL: Exception or values outside 0-100 range.
+// HARDWARE: Potenciómetro en P0 (izquierda→GND, centro→P0, derecha→3V)
+// ÉXITO: Muestra 0-100% en los LED al girar el potenciómetro. Salen datos CSV por serial.
+// FALLA: Excepción o valores fuera del rango 0-100.
 // =============================================================================
 
 /*
@@ -61,11 +61,11 @@ basic.forever(() => {
 
 
 // =============================================================================
-// TEST 3: ULTRASONIC SENSOR (HC-SR04)
+// PRUEBA 3: SENSOR ULTRASÓNICO (HC-SR04)
 // =============================================================================
 // HARDWARE: HC-SR04 TRIG→P1, ECHO→P2, VCC→3V, GND→GND
-// PASS: Shows distance in cm on LED. Reasonable values (2-300cm).
-// FAIL: Always shows 0, negative values, or exception.
+// ÉXITO: Muestra la distancia en cm en los LED. Valores razonables (2-300 cm).
+// FALLA: Siempre 0, valores negativos o excepción.
 // =============================================================================
 
 /*
@@ -80,11 +80,11 @@ basic.forever(() => {
 
 
 // =============================================================================
-// TEST 4: DIGITAL SENSOR (PIR)
+// PRUEBA 4: SENSOR DIGITAL (PIR)
 // =============================================================================
-// HARDWARE: PIR OUT→P8, VCC→3V, GND→GND (wait 30s for calibration)
-// PASS: Shows surprised face on motion, happy face when still.
-// FAIL: Exception or no face change when motion detected.
+// HARDWARE: PIR OUT→P8, VCC→3V, GND→GND (esperar 30 s de calibración)
+// ÉXITO: Cara de sorpresa al detectar movimiento, cara feliz en reposo.
+// FALLA: Excepción o la cara no cambia al haber movimiento.
 // =============================================================================
 
 /*
@@ -101,12 +101,12 @@ basic.forever(() => {
 
 
 // =============================================================================
-// TEST 5: OPTICAL BARRIER — DIGITAL (FC-33)
+// PRUEBA 5: BARRERA ÓPTICA — DIGITAL (FC-33)
 // =============================================================================
-// HARDWARE: FC-33 #1 OUT→P1, FC-33 #2 OUT→P2, both VCC→3V, GND→GND
-// PASS: Press A, pass object through barriers, shows time in ms.
-//       Returns -1 on timeout (10s). Positive ms value on success.
-// FAIL: Exception, always returns 0, or incorrect timing.
+// HARDWARE: FC-33 #1 OUT→P1, FC-33 #2 OUT→P2, ambos VCC→3V, GND→GND
+// ÉXITO: Apretar A, pasar un objeto por las barreras, muestra el tiempo en ms.
+//        Devuelve -1 si vence el timeout (10 s). Valor positivo en ms si funciona.
+// FALLA: Excepción, siempre devuelve 0 o tiempos incorrectos.
 // =============================================================================
 
 /*
@@ -129,12 +129,12 @@ input.onButtonPressed(Button.A, () => {
 
 
 // =============================================================================
-// TEST 6: OPTICAL BARRIER — NATIVE C++ (high precision)
+// PRUEBA 6: BARRERA ÓPTICA — C++ NATIVO (alta precisión)
 // =============================================================================
-// HARDWARE: Same as Test 5
-// PASS: Press A, pass object, shows time. Returns microseconds (>0).
-//       In simulator, falls back to TypeScript version (returns ms*1000).
-// FAIL: Returns 0 when object passes, or exception.
+// HARDWARE: Igual que la Prueba 5
+// ÉXITO: Apretar A, pasar un objeto, muestra el tiempo. Devuelve microsegundos (>0).
+//        En el simulador usa la versión TypeScript (devuelve ms*1000).
+// FALLA: Devuelve 0 al pasar el objeto, o excepción.
 // =============================================================================
 
 /*
@@ -158,13 +158,13 @@ input.onButtonPressed(Button.A, () => {
 
 
 // =============================================================================
-// TEST 7: NATIVE C++ ADC READING
+// PRUEBA 7: LECTURA ADC EN C++ NATIVO
 // =============================================================================
-// HARDWARE: Potentiometer on P0
-// PASS: Shows three readings via serial: standard (0-1023),
-//       native 12-bit (0-4095), averaged (0-4095). All > 0 when pot turned.
-//       In simulator, native returns analogRead fallback.
-// FAIL: Native always returns 0 or exception.
+// HARDWARE: Potenciómetro en P0
+// ÉXITO: Muestra tres lecturas por serial: estándar (0-1023),
+//        nativa 12 bits (0-4095), promediada (0-4095). Todas > 0 al girar el pote.
+//        En el simulador la nativa usa analogRead como respaldo.
+// FALLA: La nativa siempre devuelve 0 o excepción.
 // =============================================================================
 
 /*
@@ -178,12 +178,12 @@ basic.forever(() => {
 
 
 // =============================================================================
-// TEST 8: USB STREAMING TO fisicabit.com (one block + sampling rate)
+// PRUEBA 8: ENVÍO POR USB A fisicabit.com (un bloque + frecuencia de muestreo)
 // =============================================================================
-// PASS: Open fisicabit.com, connect via USB. Lines arrive as CSV with the
-//       micro:bit timestamp first: "0,23,120", "100,23,121", ... at 10 Hz.
-//       Time starts at 0 and advances by ~100 ms per line.
-// FAIL: No serial output, malformed CSV, or wrong sampling interval.
+// ÉXITO: Abrir fisicabit.com, conectar por USB. Llegan líneas CSV con el
+//        tiempo del micro:bit primero: "0,23,120", "100,23,121", ... a 10 Hz.
+//        El tiempo arranca en 0 y avanza ~100 ms por línea.
+// FALLA: Sin salida serial, CSV malformado o intervalo de muestreo incorrecto.
 // =============================================================================
 
 /*
@@ -195,10 +195,10 @@ basic.forever(() => {
 
 
 // =============================================================================
-// TEST 8b: USB FAST SAMPLING LOOP (50 Hz, no forever overhead)
+// PRUEBA 8b: BUCLE DE MUESTREO RÁPIDO POR USB (50 Hz, sin retardo de forever)
 // =============================================================================
-// PASS: fisicabit.com shows ~50 Hz sampling rate with steady 20 ms steps.
-// FAIL: Rate well below 50 Hz or irregular timestamps.
+// ÉXITO: fisicabit.com muestra ~50 Hz con pasos estables de 20 ms.
+// FALLA: Frecuencia muy por debajo de 50 Hz o tiempos irregulares.
 // =============================================================================
 
 /*
@@ -209,14 +209,14 @@ FisicaBitSerial.bucleMuestreo(FrecuenciaMuestreo.Hz50, () => {
 
 
 // =============================================================================
-// TEST 9: BLUETOOTH STREAMING TO fisicabit.com
+// PRUEBA 9: ENVÍO POR BLUETOOTH A fisicabit.com
 // =============================================================================
-// PASS: LED shows target icon while waiting, heart when fisicabit.com
-//       connects (Chrome/Edge, Web Bluetooth). CSV data arrives at 10 Hz with
-//       time starting at 0 on each connection. Nothing is sent while
-//       disconnected; data resumes automatically after reconnecting.
-// FAIL: No BLE advertisement, no data received, or exception.
-// NOTE: Bluetooth and Radio cannot coexist in the same program.
+// ÉXITO: Los LED muestran la diana mientras espera y el corazón cuando
+//        fisicabit.com se conecta (Chrome/Edge, Web Bluetooth). Llegan datos CSV
+//        a 10 Hz con el tiempo arrancando en 0 en cada conexión. No se envía nada
+//        desconectado; los datos vuelven solos al reconectar.
+// FALLA: No se anuncia por BLE, no llegan datos o excepción.
+// NOTA: Bluetooth y Radio no pueden convivir en el mismo programa.
 // =============================================================================
 
 /*
@@ -229,23 +229,23 @@ basic.forever(() => {
 
 
 // =============================================================================
-// TEST 10: HX711 LOAD CELL — MASS AND FORCE MEASUREMENT
+// PRUEBA 10: CELDA DE CARGA HX711 — MEDICIÓN DE MASA Y FUERZA
 // =============================================================================
-// HARDWARE: HX711 module DOUT→P0, SCK→P1, VCC→3V/5V, GND→GND
-//           Load cell connected to HX711 (E+, E-, A+, A-)
-// PASS: Initialize (~2s) shows ✓. Press A → tare (~2s) shows ✓.
-//       Press A+B → calibrate with 100g (~2s).
-//       Forever loop shows mass & force on serial continuously.
-//       After tare, values near 0g / 0N. After calibration, accurate.
-// FAIL: Exception, ✗ on init, no serial output, or random/drifting values.
+// HARDWARE: Módulo HX711 DOUT→P0, SCK→P1, VCC→3V/5V, GND→GND
+//           Celda de carga conectada al HX711 (E+, E-, A+, A-)
+// ÉXITO: Inicializar (~2 s) muestra ✓. Apretar A → tara (~2 s) muestra ✓.
+//        Apretar A+B → calibrar con 100 g (~2 s).
+//        El bucle muestra masa y fuerza por serial continuamente.
+//        Tras la tara, valores cerca de 0 g / 0 N. Tras calibrar, exactos.
+// FALLA: Excepción, ✗ al iniciar, sin salida serial o valores aleatorios/derivando.
 // =============================================================================
 
 /*
-// on start: initialize + auto-tare
+// al iniciar: inicializar + tara automática
 FisicaBitHX711.hx711Inicializar(DigitalPin.P0, DigitalPin.P1)
 FisicaBitHX711.hx711Tarar()
 
-// Button A: re-tare (remove all weight first)
+// Botón A: volver a tarar (quitar todo el peso antes)
 input.onButtonPressed(Button.A, () => {
     basic.showString("T")
     FisicaBitHX711.hx711Tarar()
@@ -254,7 +254,7 @@ input.onButtonPressed(Button.A, () => {
     basic.clearScreen()
 })
 
-// Button A+B: calibrate with 100g (place weight, then press)
+// Botón A+B: calibrar con 100 g (poner el peso y después apretar)
 input.onButtonPressed(Button.AB, () => {
     basic.showString("C")
     FisicaBitHX711.hx711Calibrar(100)
@@ -264,7 +264,7 @@ input.onButtonPressed(Button.AB, () => {
     basic.clearScreen()
 })
 
-// Forever loop: non-blocking continuous measurement
+// Bucle para siempre: medición continua no bloqueante
 basic.forever(() => {
     let masa = FisicaBitHX711.hx711Masa(UnidadMasa.Gramos)
     let fuerza = FisicaBitHX711.hx711Fuerza(9.81)
