@@ -1,6 +1,6 @@
 # FisicaBit Sensors — micro:bit Extension
 
-> MakeCode extension for physics experiments with micro:bit — sensors, optical barriers, and Bluetooth data logging.
+> MakeCode extension for physics experiments with micro:bit — sensors, optical barriers, and one-block data streaming to [fisicabit.com](https://fisicabit.com) over USB or Bluetooth.
 > Project: [fisicabit.com](https://fisicabit.com)
 
 ## Use this extension
@@ -12,6 +12,34 @@ https://github.com/martinferreiraHCA/pxt-fisicabit
 ```
 
 Or search for **fisicabit-sensores** in the Extensions dialog.
+
+## Inicio rápido (español) — enviar datos a fisicabit.com
+
+**Por USB (cable):** un solo bloque envía `tiempo,valor` y respeta la frecuencia configurada.
+
+```blocks
+FisicaBitSerial.fijarFrecuencia(FrecuenciaMuestreo.Hz10)
+basic.forever(function () {
+    FisicaBitSerial.enviar1(input.acceleration(Dimension.X))
+})
+```
+
+**Por Bluetooth (sin cable):** el primer bloque deja el micro:bit listo para que fisicabit.com lo encuentre; el segundo envía los datos sólo mientras la página está conectada.
+
+```blocks
+FisicaBitBT.inicioRapido()
+FisicaBitBT.fijarFrecuencia(FrecuenciaMuestreo.Hz10)
+basic.forever(function () {
+    FisicaBitBT.enviar2(input.acceleration(Dimension.X), input.acceleration(Dimension.Y))
+})
+```
+
+En fisicabit.com: elegí **USB** o **Bluetooth**, poné el **número de variables** igual a la cantidad de valores del bloque (sin contar el tiempo) y dejá activada la opción **"Micro:bit envía timestamp"**.
+
+| Pantalla LED (Bluetooth) | Significado |
+|---------------------------|-------------|
+| ◎ diana | Esperando que fisicabit.com se conecte |
+| ♥ corazón | Conectado, enviando datos |
 
 ## Available blocks
 
@@ -55,20 +83,28 @@ let velocity = FisicaBit.calcularVelocidad(timeMs * 1000, 100)
 | `velocity with time [μs] distance [mm]` | Calculate velocity (returns m/s x100) |
 | `blocking time on [P1]` | How long an object blocks one barrier |
 
-### Serial Sampling (USB)
+### FisicaBit USB — stream to fisicabit.com over the cable
 
 ```blocks
+FisicaBitSerial.fijarFrecuencia(FrecuenciaMuestreo.Hz10)
 basic.forever(function () {
-    FisicaBit.serialMuestrear2(FisicaBit.tiempoSerial(), input.acceleration(Dimension.X), 100)
+    FisicaBitSerial.enviar2(input.acceleration(Dimension.X), input.acceleration(Dimension.Y))
 })
 ```
 
+Each `send to fisicabit.com` block does everything: it takes the micro:bit time (starting at 0), writes one CSV line (`time,v1,v2,...`) at 115200 baud, and waits until the next sample is due. The wait is deadline-based, so the real period matches the configured rate even with the hidden ~20 ms delay of `forever`.
+
 | Block | Description |
 |-------|-------------|
-| `serial time (ms)` | Timestamp starting from 0 |
-| `serial sample [value] every [100] ms` | Send 1 value via USB serial |
-| `serial sample [v1] and [v2] every [100] ms` | Send 2 values (CSV) |
-| `serial sample [v1], [v2] and [v3] every [100] ms` | Send 3 values (CSV) |
+| `send to fisicabit.com [value]` | Send 1 value (also 2, 3 and 4-value variants) |
+| `set sampling rate [10 Hz]` | 1, 2, 5, 10, 20, 50 or 100 Hz (default 10 Hz) |
+| `set sampling interval [100] ms` | Any interval from 5 to 60000 ms |
+| `fisicabit.com sampling loop at [50 Hz]` | Runs its body at a precise rate without `forever` overhead — use for 50 / 100 Hz |
+| `USB time (ms)` | Time sent in each line, starts at 0 |
+| `reset USB time to 0` | Start a new run at t = 0 |
+| `USB send micro:bit timestamp [on]` | *(advanced)* Turn the time column off if the page option "Micro:bit sends timestamp" is disabled |
+| `USB set decimals [2]` | *(advanced)* Decimals for non-integer values |
+| `USB send line [text]` | *(advanced)* Raw text line |
 
 ### Conversions
 
@@ -85,24 +121,35 @@ basic.forever(function () {
 | `[C++] read ADC average channel [0] samples [16]` | Oversampled ADC to reduce noise |
 | `[C++] measure pulse pin P[2] level [HIGH] timeout [25000] μs` | Precise pulse timing |
 
-### Bluetooth (BLE UART)
+### FisicaBit Bluetooth — stream to fisicabit.com wirelessly
 
 ```blocks
-FisicaBitBT.iniciarUART()
-FisicaBitBT.configurarIndicadorConexion()
+FisicaBitBT.inicioRapido()
+FisicaBitBT.fijarFrecuencia(FrecuenciaMuestreo.Hz10)
 basic.forever(function () {
-    FisicaBitBT.muestrear2(FisicaBitBT.tiempo(), input.temperature(), 1000)
+    FisicaBitBT.enviar1(input.acceleration(Dimension.X))
 })
 ```
 
 | Block | Description |
 |-------|-------------|
-| `start Bluetooth UART` | Initialize BLE UART service |
-| `setup BT connection indicator` | Show icon on connect/disconnect |
-| `BT sample [value] every [ms] ms` | Send 1 value via Bluetooth |
-| `BT sample [v1] and [v2] every [ms] ms` | Send 2 values via Bluetooth |
-| `BT sample [v1], [v2] and [v3] every [ms] ms` | Send 3 values via Bluetooth |
-| `BT send text [text]` | Send free text via Bluetooth |
+| `start Bluetooth for fisicabit.com` | Put this **first** in `on start`: UART service, max TX power, LED status icons |
+| `send to fisicabit.com via Bluetooth [value]` | Send 1 value (also 2, 3 and 4-value variants); only transmits while connected |
+| `set Bluetooth sampling rate [10 Hz]` | Default 10 Hz; up to 20 Hz recommended over BLE |
+| `Bluetooth connected?` | True while fisicabit.com is connected |
+| `on fisicabit.com Bluetooth connected / disconnected` | Event blocks |
+| `Bluetooth show connection icons [on]` | Turn the ◎ / ♥ icons off to use the display yourself |
+| `set Bluetooth sampling interval [ms]`, `Bluetooth sampling loop`, `Bluetooth time (ms)`, `reset Bluetooth time to 0` | Same sampling tools as USB |
+| `Bluetooth send micro:bit timestamp`, `Bluetooth set decimals`, `Bluetooth send text` | *(advanced)* |
+| `start Bluetooth for fisicabit.com with all BLE services` | *(advanced)* Also exposes accelerometer, temperature, magnetometer, buttons, LED and pin services — slower to connect |
+
+Why these blocks connect reliably:
+
+* Only the UART service is started by default. Every extra BLE service slows down discovery (especially on Windows) and can trip the firmware's 4 s supervision timeout.
+* Transmit power is set to the maximum (7).
+* Lines are short (time starts at 0, 2 decimals, `\n` terminator), so a sample fits in a single 20-byte BLE packet.
+* Nothing is sent while no page is connected; sampling keeps its rhythm and data resumes automatically after a reconnect. Time restarts at 0 on every connection.
+* If BLE falls behind, the sampler resynchronises instead of bursting stale samples.
 
 ## Wiring examples
 
@@ -130,19 +177,26 @@ Receiver: 3V → Phototransistor → Pin (signal)
 
 ## Bluetooth setup
 
-1. In MakeCode: **Settings → Project Settings → enable "No Pairing Required"**
-2. In `pxt.json`, ensure: `"bluetooth": { "open": 1, "pairing_mode": 0, "whitelist": 0 }`
-3. Note: Bluetooth disables USB serial and Radio extension
+1. This extension already ships with `"bluetooth": { "open": 1, "pairing_mode": 0, "whitelist": 0 }` in `pxt.json` ("No Pairing Required"). If you copy the code into your own project, set the same in **Settings → Project Settings**.
+2. Put `start Bluetooth for fisicabit.com` as the first block in `on start`.
+3. Flash the program, wait for the ◎ icon, then click **Bluetooth** on fisicabit.com and pick `BBC micro:bit [xxxxx]`.
+4. If a previously paired micro:bit refuses to connect, remove ("forget") it from the operating system's Bluetooth settings and try again.
+
+Notes:
+
+* Bluetooth and the **Radio** extension cannot be used in the same program. USB serial keeps working alongside Bluetooth.
+* Practical BLE rate is up to ~20 Hz; for 50–100 Hz use USB.
+* The old `BT sample ... every ... ms` and `serial sample ... every ... ms` blocks still compile but are hidden; use the new `send to fisicabit.com` blocks.
 
 ### Browser compatibility
 
-| Platform | Browser | Works |
-|----------|---------|-------|
-| Windows / macOS / Linux | Chrome, Edge | Yes |
-| Android | Chrome | Yes |
-| iOS / iPadOS | Safari | No (Apple does not support Web Bluetooth) |
+| Platform | Browser | USB (Web Serial) | Bluetooth (Web Bluetooth) |
+|----------|---------|------------------|---------------------------|
+| Windows / macOS / Linux / ChromeOS | Chrome, Edge | Yes | Yes |
+| Android | Chrome | No | Yes |
+| iOS / iPadOS | Safari | No | No (Apple does not support Web Serial or Web Bluetooth) |
 
-Data is received on [fisicasimple.com](https://fisicasimple.com) in real time using the Web Bluetooth API.
+Data is received on [fisicabit.com](https://fisicabit.com) in real time.
 
 ## micro:bit pin reference
 

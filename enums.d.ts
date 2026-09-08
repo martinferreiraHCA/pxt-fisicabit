@@ -128,6 +128,23 @@ declare const enum UnidadTiempo {
     Segundos = 2
 }
 
+declare const enum FrecuenciaMuestreo {
+    //% block="1 Hz (1 sample per second)"
+    Hz1 = 1000,
+    //% block="2 Hz"
+    Hz2 = 500,
+    //% block="5 Hz"
+    Hz5 = 200,
+    //% block="10 Hz (recommended)"
+    Hz10 = 100,
+    //% block="20 Hz"
+    Hz20 = 50,
+    //% block="50 Hz (USB, fast loop)"
+    Hz50 = 20,
+    //% block="100 Hz (USB, fast loop)"
+    Hz100 = 10
+}
+
 declare const enum ModeloToF {
     //% block="TOF050C (50 cm)"
     TOF050C = 0,

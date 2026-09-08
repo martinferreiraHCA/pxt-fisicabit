@@ -992,7 +992,7 @@ namespace FisicaBit {
 //  ÚNICA forma limpia de que un bloque tenga otro color es ponerlo en otro
 //  namespace.
 // =============================================================================
-//% weight=99
+//% weight=97
 //% color=#1E88E5
 //% icon="\uf1b2"
 //% block="FisicaBit Kinematics"

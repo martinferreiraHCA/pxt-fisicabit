@@ -55,7 +55,7 @@ basic.forever(() => {
     let reading = FisicaBit.leerSensorAnalogico(PinAnalogico.P0)
     let percent = FisicaBit.mapearValor(reading, 0, 1023, 0, 100)
     FisicaBit.mostrarEnLED("%", percent)
-    FisicaBit.serialMuestrear2(FisicaBit.tiempoSerial(), reading, 200)
+    FisicaBitSerial.enviar1(reading)
 })
 */
 
@@ -74,7 +74,7 @@ basic.forever(() => {
         DigitalPin.P1, DigitalPin.P2, UnidadDistancia.Centimetros
     )
     FisicaBit.mostrarEnLED("d", dist)
-    FisicaBit.serialMuestrear2(FisicaBit.tiempoSerial(), dist, 500)
+    FisicaBitSerial.enviar1(dist)
 })
 */
 
@@ -95,7 +95,7 @@ basic.forever(() => {
     } else {
         basic.showIcon(IconNames.Happy)
     }
-    FisicaBit.serialMuestrear2(FisicaBit.tiempoSerial(), pir, 100)
+    FisicaBitSerial.enviar1(pir)
 })
 */
 
@@ -172,49 +172,58 @@ basic.forever(() => {
     let standard = FisicaBit.leerSensorAnalogico(PinAnalogico.P0)
     let native12 = FisicaBit.leerADCNativo(0)
     let averaged = FisicaBit.leerADCPromedio(0, 16)
-    FisicaBit.serialMuestrear3(standard, native12, averaged, 200)
+    FisicaBitSerial.enviar3(standard, native12, averaged)
 })
 */
 
 
 // =============================================================================
-// TEST 8: SERIAL SAMPLING (all variants)
+// TEST 8: USB STREAMING TO fisicabit.com (one block + sampling rate)
 // =============================================================================
-// PASS: Serial output shows CSV lines at the specified rate.
-//       1-value: "23\n", 2-value: "0,23\n", 3-value: "0,23,512\n"
-// FAIL: No serial output or malformed CSV.
+// PASS: Open fisicabit.com, connect via USB. Lines arrive as CSV with the
+//       micro:bit timestamp first: "0,23,120", "100,23,121", ... at 10 Hz.
+//       Time starts at 0 and advances by ~100 ms per line.
+// FAIL: No serial output, malformed CSV, or wrong sampling interval.
 // =============================================================================
 
 /*
+FisicaBitSerial.fijarFrecuencia(FrecuenciaMuestreo.Hz10)
 basic.forever(() => {
-    FisicaBit.serialMuestrear3(
-        FisicaBit.tiempoSerial(),
-        input.temperature(),
-        input.lightLevel(),
-        500
-    )
+    FisicaBitSerial.enviar2(input.temperature(), input.lightLevel())
 })
 */
 
 
 // =============================================================================
-// TEST 9: BLUETOOTH UART SAMPLING
+// TEST 8b: USB FAST SAMPLING LOOP (50 Hz, no forever overhead)
 // =============================================================================
-// PASS: Connects via Web Bluetooth in Chrome. Receives CSV data.
-//       Connection indicator shows heart on connect, X on disconnect.
+// PASS: fisicabit.com shows ~50 Hz sampling rate with steady 20 ms steps.
+// FAIL: Rate well below 50 Hz or irregular timestamps.
+// =============================================================================
+
+/*
+FisicaBitSerial.bucleMuestreo(FrecuenciaMuestreo.Hz50, () => {
+    FisicaBitSerial.enviar1(input.acceleration(Dimension.X))
+})
+*/
+
+
+// =============================================================================
+// TEST 9: BLUETOOTH STREAMING TO fisicabit.com
+// =============================================================================
+// PASS: LED shows target icon while waiting, heart when fisicabit.com
+//       connects (Chrome/Edge, Web Bluetooth). CSV data arrives at 10 Hz with
+//       time starting at 0 on each connection. Nothing is sent while
+//       disconnected; data resumes automatically after reconnecting.
 // FAIL: No BLE advertisement, no data received, or exception.
-// NOTE: Bluetooth disables USB serial. Cannot run with serial tests.
+// NOTE: Bluetooth and Radio cannot coexist in the same program.
 // =============================================================================
 
 /*
-FisicaBitBT.iniciarUART()
-FisicaBitBT.configurarIndicadorConexion()
+FisicaBitBT.inicioRapido()
+FisicaBitBT.fijarFrecuencia(FrecuenciaMuestreo.Hz10)
 basic.forever(() => {
-    FisicaBitBT.muestrear2(
-        FisicaBitBT.tiempo(),
-        input.temperature(),
-        1000
-    )
+    FisicaBitBT.enviar2(input.temperature(), input.lightLevel())
 })
 */
 
