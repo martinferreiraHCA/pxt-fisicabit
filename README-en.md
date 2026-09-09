@@ -15,6 +15,15 @@ https://github.com/martinferreiraHCA/pxt-fisicabit
 
 Or search for **fisicabit-sensores** in the Extensions dialog.
 
+## Step-by-step tutorials
+
+Open these links in MakeCode. The tutorial shows up in the editor language (Spanish, English or Portuguese) and already includes the FisicaBit blocks:
+
+* **USB:** https://makecode.microbit.org/#tutorial:https://github.com/martinferreiraHCA/pxt-fisicabit/tutorial-usb
+* **Bluetooth:** https://makecode.microbit.org/#tutorial:https://github.com/martinferreiraHCA/pxt-fisicabit/tutorial-bluetooth
+
+The tutorials live in `tutorial-usb.md` and `tutorial-bluetooth.md` (English, base language) with translations under `_locales/es/` and `_locales/pt-BR/`. To test recent changes open the link in an incognito window, since MakeCode caches tutorials.
+
 ## Available blocks
 
 ### Internal Sensors

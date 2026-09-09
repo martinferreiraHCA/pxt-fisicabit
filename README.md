@@ -45,6 +45,15 @@ En fisicabit.com: elegí **USB** o **Bluetooth**, poné el **número de variable
 | ◎ diana | Esperando que fisicabit.com se conecte |
 | ♥ corazón | Conectado, enviando datos |
 
+## Tutoriales paso a paso
+
+Abrí estos enlaces en MakeCode. El tutorial aparece en el idioma del editor (español, inglés o portugués) y ya incluye los bloques de FisicaBit:
+
+* **USB:** https://makecode.microbit.org/#tutorial:https://github.com/martinferreiraHCA/pxt-fisicabit/tutorial-usb
+* **Bluetooth:** https://makecode.microbit.org/#tutorial:https://github.com/martinferreiraHCA/pxt-fisicabit/tutorial-bluetooth
+
+Los tutoriales viven en `tutorial-usb.md` y `tutorial-bluetooth.md` (inglés, idioma base) con sus traducciones en `_locales/es/` y `_locales/pt-BR/`. Para probar cambios recientes abrí el enlace en una ventana de incógnito, porque MakeCode guarda los tutoriales en caché.
+
 ## Bloques disponibles
 
 ### Sensores internos
