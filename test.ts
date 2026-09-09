@@ -187,7 +187,6 @@ basic.forever(() => {
 // =============================================================================
 
 /*
-FisicaBitSerial.fijarFrecuencia(FrecuenciaMuestreo.Hz10)
 basic.forever(() => {
     FisicaBitSerial.enviar2(input.temperature(), input.lightLevel())
 })
@@ -202,8 +201,8 @@ basic.forever(() => {
 // =============================================================================
 
 /*
-FisicaBitSerial.bucleMuestreo(FrecuenciaMuestreo.Hz50, () => {
-    FisicaBitSerial.enviar1(input.acceleration(Dimension.X))
+FisicaBitSerial.bucleMuestreo(20, () => {
+    FisicaBitSerial.enviar1(input.acceleration(Dimension.X), 20)
 })
 */
 
@@ -221,7 +220,6 @@ FisicaBitSerial.bucleMuestreo(FrecuenciaMuestreo.Hz50, () => {
 
 /*
 FisicaBitBT.inicioRapido()
-FisicaBitBT.fijarFrecuencia(FrecuenciaMuestreo.Hz10)
 basic.forever(() => {
     FisicaBitBT.enviar2(input.temperature(), input.lightLevel())
 })

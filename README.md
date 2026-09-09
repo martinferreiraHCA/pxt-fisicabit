@@ -19,12 +19,11 @@ Los bloques aparecen en el idioma del editor: en español si MakeCode está en e
 
 ## Inicio rápido: enviar datos a fisicabit.com
 
-**Por USB (cable):** un solo bloque envía `tiempo,valor` y respeta la frecuencia configurada.
+**Por USB (cable):** un solo bloque envía `tiempo,valor` cada 100 ms (10 muestras por segundo).
 
 ```blocks
-FisicaBitSerial.fijarFrecuencia(FrecuenciaMuestreo.Hz10)
 basic.forever(function () {
-    FisicaBitSerial.enviar1(input.acceleration(Dimension.X))
+    FisicaBitSerial.enviar1(input.acceleration(Dimension.X), 100)
 })
 ```
 
@@ -32,9 +31,8 @@ basic.forever(function () {
 
 ```blocks
 FisicaBitBT.inicioRapido()
-FisicaBitBT.fijarFrecuencia(FrecuenciaMuestreo.Hz10)
 basic.forever(function () {
-    FisicaBitBT.enviar2(input.acceleration(Dimension.X), input.acceleration(Dimension.Y))
+    FisicaBitBT.enviar2(input.acceleration(Dimension.X), input.acceleration(Dimension.Y), 100)
 })
 ```
 
@@ -99,25 +97,20 @@ let velocidad = FisicaBit.calcularVelocidad(tiempoMs * 1000, 100)
 ### FisicaBit USB: enviar a fisicabit.com por cable
 
 ```blocks
-FisicaBitSerial.fijarFrecuencia(FrecuenciaMuestreo.Hz10)
 basic.forever(function () {
-    FisicaBitSerial.enviar2(input.acceleration(Dimension.X), input.acceleration(Dimension.Y))
+    FisicaBitSerial.enviar2(input.acceleration(Dimension.X), input.acceleration(Dimension.Y), 100)
 })
 ```
 
-Cada bloque `enviar a fisicabit.com` hace todo: toma el tiempo del micro:bit (arranca en 0), escribe una línea CSV (`tiempo,v1,v2,...`) a 115200 baudios y espera hasta que toque la próxima muestra. La espera se calcula sobre el instante previsto, así el período real coincide con la frecuencia configurada aunque `para siempre` agregue su retardo oculto de ~20 ms.
+Un solo bloque lo configura todo: `enviar a fisicabit.com tiempo y [valor] cada [100] ms`. En cada vuelta toma el tiempo del micro:bit (arranca en 0), escribe una línea CSV (`tiempo,valor`) a 115200 baudios y espera hasta que se cumplan los ms indicados. La espera se calcula sobre el instante previsto, así el período real coincide aunque `para siempre` agregue su retardo oculto de ~20 ms. Los bloques aparecen en el orden en que se usan.
 
-| Bloque | Descripción |
-|--------|-------------|
-| `enviar a fisicabit.com [valor]` | Envía 1 valor (también hay variantes de 2, 3 y 4 valores) |
-| `configurar frecuencia de muestreo [10 Hz]` | 1, 2, 5, 10, 20, 50 o 100 Hz (por defecto 10 Hz) |
-| `configurar intervalo de muestreo [100] ms` | Cualquier intervalo de 5 a 60000 ms |
-| `muestrear para fisicabit.com a [50 Hz]` | Ejecuta su contenido a una frecuencia precisa sin el retardo de `para siempre`; usar para 50 / 100 Hz |
-| `tiempo USB (ms)` | Tiempo que viaja en cada línea, arranca en 0 |
-| `reiniciar tiempo USB a 0` | Empezar una nueva medición en t = 0 |
-| `USB enviar tiempo del micro:bit [activado]` | *(avanzado)* Desactivar la columna de tiempo si en la página está apagada la opción "Micro:bit envía timestamp" |
-| `USB fijar decimales [2]` | *(avanzado)* Decimales para valores no enteros |
-| `USB enviar línea [texto]` | *(avanzado)* Línea de texto libre |
+| Paso | Bloque | Descripción |
+|------|--------|-------------|
+| 1. Enviar | `enviar a fisicabit.com tiempo y [valor] cada [100] ms` | Dentro de `para siempre`. Variantes de 2, 3 y 4 valores. 100 ms = 10 muestras por segundo |
+| 2. Opcional | `bucle rápido para fisicabit.com cada [20] ms` | En lugar de `para siempre`, para 50 / 100 Hz sin el retardo oculto; el bloque de envío va adentro |
+| 2. Opcional | `reiniciar tiempo USB a 0` | Empezar una nueva medición en t = 0 (por ejemplo al apretar A) |
+| 2. Opcional | `tiempo USB (ms)` | El tiempo que viaja en cada línea |
+| Avanzado | `USB enviar tiempo del micro:bit [activado]`, `USB fijar decimales [2]`, `USB enviar línea [texto]`, `configurar frecuencia / intervalo` | Sólo si hace falta |
 
 ### Conversiones
 
@@ -138,23 +131,17 @@ Cada bloque `enviar a fisicabit.com` hace todo: toma el tiempo del micro:bit (ar
 
 ```blocks
 FisicaBitBT.inicioRapido()
-FisicaBitBT.fijarFrecuencia(FrecuenciaMuestreo.Hz10)
 basic.forever(function () {
-    FisicaBitBT.enviar1(input.acceleration(Dimension.X))
+    FisicaBitBT.enviar1(input.acceleration(Dimension.X), 100)
 })
 ```
 
-| Bloque | Descripción |
-|--------|-------------|
-| `iniciar Bluetooth para fisicabit.com` | Ponerlo **primero** en `al iniciar`: servicio UART, potencia máxima, íconos de estado en la pantalla |
-| `enviar a fisicabit.com por Bluetooth [valor]` | Envía 1 valor (también 2, 3 y 4 valores); sólo transmite mientras hay conexión |
-| `configurar frecuencia de muestreo Bluetooth [10 Hz]` | Por defecto 10 Hz; por BLE se recomienda hasta 20 Hz |
-| `¿Bluetooth conectado?` | Verdadero mientras fisicabit.com está conectado |
-| `al conectar / al desconectar fisicabit.com por Bluetooth` | Bloques de evento |
-| `Bluetooth mostrar íconos de conexión [activado]` | Apagar los íconos ◎ / ♥ para usar la pantalla en otra cosa |
-| `configurar intervalo de muestreo Bluetooth [ms]`, `muestrear para fisicabit.com por Bluetooth`, `tiempo Bluetooth (ms)`, `reiniciar tiempo Bluetooth a 0` | Las mismas herramientas de muestreo que USB |
-| `Bluetooth enviar tiempo del micro:bit`, `Bluetooth fijar decimales`, `Bluetooth enviar texto` | *(avanzado)* |
-| `iniciar Bluetooth para fisicabit.com con todos los servicios BLE` | *(avanzado)* Expone además acelerómetro, temperatura, magnetómetro, botones, LED y pines; tarda más en conectar |
+| Paso | Bloque | Descripción |
+|------|--------|-------------|
+| 1. Iniciar | `iniciar Bluetooth para fisicabit.com` | **Primero** en `al iniciar`: servicio UART, potencia máxima, íconos ◎ / ♥ en la pantalla |
+| 2. Enviar | `enviar a fisicabit.com por Bluetooth tiempo y [valor] cada [100] ms` | Dentro de `para siempre`. Variantes de 2, 3 y 4 valores; sólo transmite mientras hay conexión. Por BLE, 50 ms o más |
+| 3. Opcional | `¿Bluetooth conectado?`, `al conectar / al desconectar`, `reiniciar tiempo Bluetooth a 0`, `tiempo Bluetooth (ms)`, `bucle rápido ... por Bluetooth cada [50] ms`, `mostrar íconos de conexión` | Estado de la conexión y control del tiempo |
+| Avanzado | `enviar tiempo del micro:bit`, `fijar decimales`, `enviar texto`, `iniciar con todos los servicios BLE`, `configurar frecuencia / intervalo` | Sólo si hace falta |
 
 Por qué estos bloques conectan sin problemas:
 
@@ -199,7 +186,7 @@ Notas:
 
 * Bluetooth y la extensión **Radio** no pueden usarse en el mismo programa. El serial USB sí sigue funcionando junto con Bluetooth.
 * La velocidad práctica por BLE es de hasta ~20 Hz; para 50–100 Hz usá USB.
-* Los bloques viejos `BT muestrear ... cada ... ms` y `Serial muestrear ... cada ... ms` siguen compilando pero están ocultos; usá los nuevos bloques `enviar a fisicabit.com`.
+* Los bloques viejos `BT muestrear ... cada ... ms` y `Serial muestrear ... cada ... ms` siguen compilando pero están ocultos; usá los nuevos bloques `enviar a fisicabit.com tiempo y ... cada ... ms`.
 
 ### Compatibilidad de navegadores
 

@@ -69,25 +69,20 @@ let velocity = FisicaBit.calcularVelocidad(timeMs * 1000, 100)
 ### FisicaBit USB — stream to fisicabit.com over the cable
 
 ```blocks
-FisicaBitSerial.fijarFrecuencia(FrecuenciaMuestreo.Hz10)
 basic.forever(function () {
-    FisicaBitSerial.enviar2(input.acceleration(Dimension.X), input.acceleration(Dimension.Y))
+    FisicaBitSerial.enviar2(input.acceleration(Dimension.X), input.acceleration(Dimension.Y), 100)
 })
 ```
 
-Each `send to fisicabit.com` block does everything: it takes the micro:bit time (starting at 0), writes one CSV line (`time,v1,v2,...`) at 115200 baud, and waits until the next sample is due. The wait is deadline-based, so the real period matches the configured rate even with the hidden ~20 ms delay of `forever`.
+One block configures everything: `send to fisicabit.com time and [value] every [100] ms`. On each pass it takes the micro:bit time (starting at 0), writes one CSV line (`time,value`) at 115200 baud and waits until the given interval has elapsed. The wait is deadline-based, so the real period matches even with the hidden ~20 ms delay of `forever`. Blocks are listed in the order they are used.
 
-| Block | Description |
-|-------|-------------|
-| `send to fisicabit.com [value]` | Send 1 value (also 2, 3 and 4-value variants) |
-| `set sampling rate [10 Hz]` | 1, 2, 5, 10, 20, 50 or 100 Hz (default 10 Hz) |
-| `set sampling interval [100] ms` | Any interval from 5 to 60000 ms |
-| `fisicabit.com sampling loop at [50 Hz]` | Runs its body at a precise rate without `forever` overhead — use for 50 / 100 Hz |
-| `USB time (ms)` | Time sent in each line, starts at 0 |
-| `reset USB time to 0` | Start a new run at t = 0 |
-| `USB send micro:bit timestamp [on]` | *(advanced)* Turn the time column off if the page option "Micro:bit sends timestamp" is disabled |
-| `USB set decimals [2]` | *(advanced)* Decimals for non-integer values |
-| `USB send line [text]` | *(advanced)* Raw text line |
+| Step | Block | Description |
+|------|-------|-------------|
+| 1. Send | `send to fisicabit.com time and [value] every [100] ms` | Inside `forever`. 2, 3 and 4-value variants. 100 ms = 10 samples per second |
+| 2. Optional | `fisicabit.com fast loop every [20] ms` | Instead of `forever`, for 50 / 100 Hz without the hidden delay; put the send block inside |
+| 2. Optional | `reset USB time to 0` | Start a new run at t = 0 (for example on button A) |
+| 2. Optional | `USB time (ms)` | The time sent in each line |
+| Advanced | `USB send micro:bit timestamp [on]`, `USB set decimals [2]`, `USB send line [text]`, `set sampling rate / interval` | Only if needed |
 
 ### Conversions
 
@@ -108,23 +103,17 @@ Each `send to fisicabit.com` block does everything: it takes the micro:bit time 
 
 ```blocks
 FisicaBitBT.inicioRapido()
-FisicaBitBT.fijarFrecuencia(FrecuenciaMuestreo.Hz10)
 basic.forever(function () {
-    FisicaBitBT.enviar1(input.acceleration(Dimension.X))
+    FisicaBitBT.enviar1(input.acceleration(Dimension.X), 100)
 })
 ```
 
-| Block | Description |
-|-------|-------------|
-| `start Bluetooth for fisicabit.com` | Put this **first** in `on start`: UART service, max TX power, LED status icons |
-| `send to fisicabit.com via Bluetooth [value]` | Send 1 value (also 2, 3 and 4-value variants); only transmits while connected |
-| `set Bluetooth sampling rate [10 Hz]` | Default 10 Hz; up to 20 Hz recommended over BLE |
-| `Bluetooth connected?` | True while fisicabit.com is connected |
-| `on fisicabit.com Bluetooth connected / disconnected` | Event blocks |
-| `Bluetooth show connection icons [on]` | Turn the ◎ / ♥ icons off to use the display yourself |
-| `set Bluetooth sampling interval [ms]`, `Bluetooth sampling loop`, `Bluetooth time (ms)`, `reset Bluetooth time to 0` | Same sampling tools as USB |
-| `Bluetooth send micro:bit timestamp`, `Bluetooth set decimals`, `Bluetooth send text` | *(advanced)* |
-| `start Bluetooth for fisicabit.com with all BLE services` | *(advanced)* Also exposes accelerometer, temperature, magnetometer, buttons, LED and pin services — slower to connect |
+| Step | Block | Description |
+|------|-------|-------------|
+| 1. Start | `start Bluetooth for fisicabit.com` | **First** in `on start`: UART service, max TX power, ◎ / ♥ icons on the display |
+| 2. Send | `send to fisicabit.com via Bluetooth time and [value] every [100] ms` | Inside `forever`. 2, 3 and 4-value variants; only transmits while connected. Over BLE use 50 ms or more |
+| 3. Optional | `Bluetooth connected?`, `on connected / on disconnected`, `reset Bluetooth time to 0`, `Bluetooth time (ms)`, `Bluetooth fast loop every [50] ms`, `show connection icons` | Connection state and time control |
+| Advanced | `send micro:bit timestamp`, `set decimals`, `send text`, `start with all BLE services`, `set sampling rate / interval` | Only if needed |
 
 Why these blocks connect reliably:
 
@@ -169,7 +158,7 @@ Notes:
 
 * Bluetooth and the **Radio** extension cannot be used in the same program. USB serial keeps working alongside Bluetooth.
 * Practical BLE rate is up to ~20 Hz; for 50–100 Hz use USB.
-* The old `BT sample ... every ... ms` and `serial sample ... every ... ms` blocks still compile but are hidden; use the new `send to fisicabit.com` blocks.
+* The old `BT sample ... every ... ms` and `serial sample ... every ... ms` blocks still compile but are hidden; use the new `send to fisicabit.com time and ... every ... ms` blocks.
 
 ### Browser compatibility
 
