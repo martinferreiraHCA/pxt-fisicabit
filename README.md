@@ -107,7 +107,7 @@ Un solo bloque lo configura todo: `enviar a fisicabit.com tiempo y [valor] cada 
 | Paso | Bloque | Descripción |
 |------|--------|-------------|
 | 1. Enviar | `enviar a fisicabit.com tiempo y [valor] cada [100] ms` | Dentro de `para siempre`. Variantes de 2, 3 y 4 valores. 100 ms = 10 muestras por segundo |
-| Envío de datos sin tiempo | `enviar a fisicabit.com sin tiempo [valor] cada [100] ms` | Manda sólo los valores medidos (variantes de 2, 3 y 4). En fisicabit.com desactivá "Micro:bit envía timestamp": la página usa el reloj del navegador |
+| Envío de datos sin tiempo | `enviar a fisicabit.com sin tiempo [valor]` | Manda sólo los valores medidos, sin tiempo y sin espera: al apretar un botón, en un evento o en `para siempre` con tu propia pausa (variantes de 2, 3 y 4). En fisicabit.com desactivá "Micro:bit envía timestamp": la página usa el reloj del navegador |
 | 2. Opcional | `bucle rápido para fisicabit.com cada [20] ms` | En lugar de `para siempre`, para 50 / 100 Hz sin el retardo oculto; el bloque de envío va adentro |
 | 2. Opcional | `reiniciar tiempo USB a 0` | Empezar una nueva medición en t = 0 (por ejemplo al apretar A) |
 | 2. Opcional | `tiempo USB (ms)` | El tiempo que viaja en cada línea |
@@ -141,7 +141,7 @@ basic.forever(function () {
 |------|--------|-------------|
 | 1. Iniciar | `iniciar Bluetooth para fisicabit.com` | **Primero** en `al iniciar`: servicio UART, potencia máxima, íconos ◎ / ♥ en la pantalla |
 | 2. Enviar | `enviar a fisicabit.com por Bluetooth tiempo y [valor] cada [100] ms` | Dentro de `para siempre`. Variantes de 2, 3 y 4 valores; sólo transmite mientras hay conexión. Por BLE, 50 ms o más |
-| Envío de datos sin tiempo | `enviar a fisicabit.com por Bluetooth sin tiempo [valor] cada [100] ms` | Manda sólo los valores medidos (variantes de 2, 3 y 4). En fisicabit.com desactivá "Micro:bit envía timestamp" |
+| Envío de datos sin tiempo | `enviar a fisicabit.com por Bluetooth sin tiempo [valor]` | Manda sólo los valores medidos, sin tiempo y sin espera (variantes de 2, 3 y 4). En fisicabit.com desactivá "Micro:bit envía timestamp" |
 | 3. Opcional | `¿Bluetooth conectado?`, `al conectar / al desconectar`, `reiniciar tiempo Bluetooth a 0`, `tiempo Bluetooth (ms)`, `bucle rápido ... por Bluetooth cada [50] ms`, `mostrar íconos de conexión` | Estado de la conexión y control del tiempo |
 | Avanzado | `enviar tiempo del micro:bit`, `fijar decimales`, `enviar texto`, `iniciar con todos los servicios BLE`, `configurar frecuencia / intervalo` | Sólo si hace falta |
 
