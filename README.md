@@ -15,7 +15,7 @@ https://github.com/martinferreiraHCA/pxt-fisicabit
 
 O buscá **fisicabit-sensores** en el cuadro de Extensiones.
 
-Los bloques aparecen en el idioma del editor: en español si MakeCode está en español, en inglés si está en inglés (también hay traducción parcial a portugués). El idioma se cambia en el menú **⚙ Configuración → Idioma**. Si la extensión ya estaba agregada a un proyecto y los bloques siguen en inglés, quitala y volvé a agregarla (MakeCode guarda en caché la versión anterior).
+Los bloques aparecen en el idioma del editor: en español si MakeCode está en español, en inglés si está en inglés (también hay traducción parcial a portugués). El idioma se cambia en el menú **⚙ Configuración → Idioma**. Si la extensión ya estaba agregada a un proyecto y los bloques siguen en inglés, quitala y volvé a agregarla (MakeCode guarda en caché la versión anterior). Para probar una versión concreta antes de publicarla, pegá en Extensiones la URL con el commit: `https://github.com/martinferreiraHCA/pxt-fisicabit#<sha>`.
 
 ## Inicio rápido: enviar datos a fisicabit.com
 
