@@ -1,40 +1,40 @@
 // Enumerations for the FisicaBit extension
 
 declare const enum TipoSensorInterno {
-    //% block="Temperatura"
+    //% block="temperature"
     Temperatura = 0,
-    //% block="Acelerómetro X"
+    //% block="accelerometer X"
     AcelerometroX = 1,
-    //% block="Acelerómetro Y"
+    //% block="accelerometer Y"
     AcelerometroY = 2,
-    //% block="Acelerómetro Z"
+    //% block="accelerometer Z"
     AcelerometroZ = 3,
-    //% block="Nivel de Luz"
+    //% block="light level"
     NivelLuz = 4,
-    //% block="Brújula (heading)"
+    //% block="compass (heading)"
     Brujula = 5,
-    //% block="Nivel Sonido (v2)"
+    //% block="sound level (v2)"
     NivelSonido = 6,
-    //% block="Fuerza G"
+    //% block="force G"
     FuerzaG = 7
 }
 
 declare const enum TipoSensorExterno {
-    //% block="Potenciómetro (Analógico)"
+    //% block="potentiometer (analog)"
     Potenciometro = 0,
-    //% block="LDR - Luz (Analógico)"
+    //% block="LDR - light (analog)"
     LDR = 1,
-    //% block="Sensor Temp NTC (Analógico)"
+    //% block="NTC temp sensor (analog)"
     NTC = 2,
-    //% block="Ultrasonido HC-SR04"
+    //% block="ultrasonic HC-SR04"
     Ultrasonido = 3,
-    //% block="DHT11 Temp+Humedad"
+    //% block="DHT11 temp+humidity"
     DHT11 = 4,
-    //% block="Sensor PIR Movimiento"
+    //% block="PIR motion sensor"
     PIR = 5,
-    //% block="Sensor Infrarrojo"
+    //% block="infrared sensor"
     Infrarrojo = 6,
-    //% block="DS18B20 Temperatura"
+    //% block="DS18B20 temperature"
     DS18B20 = 7
 }
 
@@ -50,20 +50,20 @@ declare const enum UnidadTemperatura {
 declare const enum UnidadDistancia {
     //% block="cm"
     Centimetros = 0,
-    //% block="pulgadas"
+    //% block="inches"
     Pulgadas = 1,
     //% block="mm"
     Milimetros = 2
 }
 
 declare const enum FiltroUltrasonido {
-    //% block="ninguno (1 lectura)"
+    //% block="none (1 reading)"
     Ninguno = 1,
-    //% block="suave (mediana de 3)"
+    //% block="light (median of 3)"
     Suave = 3,
-    //% block="medio (mediana de 5)"
+    //% block="medium (median of 5)"
     Medio = 5,
-    //% block="fuerte (mediana de 7)"
+    //% block="strong (median of 7)"
     Fuerte = 7
 }
 
@@ -86,62 +86,62 @@ declare const enum RangoAcelerometro {
 }
 
 declare const enum EjeAceleracion {
-    //% block="X (izquierda/derecha)"
+    //% block="X (left/right)"
     X = 0,
-    //% block="Y (adelante/atrás)"
+    //% block="Y (front/back)"
     Y = 1,
-    //% block="Z (arriba/abajo)"
+    //% block="Z (up/down)"
     Z = 2,
-    //% block="|a| módulo"
+    //% block="|a| magnitude"
     Magnitud = 3,
-    //% block="vertical (según la gravedad)"
+    //% block="vertical (along gravity)"
     Vertical = 4
 }
 
 declare const enum ModoBarrera {
-    //% block="Digital"
+    //% block="digital"
     Digital = 0,
-    //% block="Analógico"
+    //% block="analog"
     Analogico = 1
 }
 
 declare const enum TipoBarreraOptica {
-    //% block="FC-33 (módulo ranura)"
+    //% block="FC-33 (slot module)"
     FC_33 = 0,
-    //% block="IR DIY (LED emisor+receptor)"
+    //% block="IR DIY (emitter+receiver LED)"
     IR_DIY = 1
 }
 
 declare const enum FlancoBarrera {
-    //% block="Descendente (objeto entra)"
+    //% block="falling (object enters)"
     Descendente = 0,
-    //% block="Ascendente (objeto sale)"
+    //% block="rising (object exits)"
     Ascendente = 1
 }
 
 declare const enum UnidadTiempo {
-    //% block="μs (microsegundos)"
+    //% block="μs (microseconds)"
     Microsegundos = 0,
-    //% block="ms (milisegundos)"
+    //% block="ms (milliseconds)"
     Milisegundos = 1,
-    //% block="s (segundos)"
+    //% block="s (seconds)"
     Segundos = 2
 }
 
 declare const enum FrecuenciaMuestreo {
-    //% block="1 Hz (1 muestra por segundo)"
+    //% block="1 Hz (1 sample per second)"
     Hz1 = 1000,
     //% block="2 Hz"
     Hz2 = 500,
     //% block="5 Hz"
     Hz5 = 200,
-    //% block="10 Hz (recomendado)"
+    //% block="10 Hz (recommended)"
     Hz10 = 100,
     //% block="20 Hz"
     Hz20 = 50,
-    //% block="50 Hz (USB, bucle rápido)"
+    //% block="50 Hz (USB, fast loop)"
     Hz50 = 20,
-    //% block="100 Hz (USB, bucle rápido)"
+    //% block="100 Hz (USB, fast loop)"
     Hz100 = 10
 }
 
@@ -155,20 +155,20 @@ declare const enum ModeloToF {
 }
 
 declare const enum FiltroToF {
-    //% block="ninguno"
+    //% block="none"
     Ninguno = 1,
-    //% block="bajo (mediana de 3)"
+    //% block="low (median of 3)"
     Bajo = 3,
-    //% block="medio (mediana de 5)"
+    //% block="medium (median of 5)"
     Medio = 5,
-    //% block="alto (mediana de 7)"
+    //% block="high (median of 7)"
     Alto = 7
 }
 
 declare const enum ModoToF {
-    //% block="estable (preciso)"
+    //% block="stable (accurate)"
     Estable = 0,
-    //% block="rápida (alta velocidad)"
+    //% block="fast (high speed)"
     Rapida = 1
 }
 
@@ -191,25 +191,25 @@ declare const enum DireccionBME280 {
 }
 
 declare const enum DatosDHT11 {
-    //% block="humedad (%)"
+    //% block="humidity (%)"
     Humedad = 0,
-    //% block="temperatura (°C)"
+    //% block="temperature (°C)"
     Temperatura = 1
 }
 
 declare const enum CanalTCS230 {
-    //% block="Rojo"
+    //% block="Red"
     Rojo = 0,
-    //% block="Verde"
+    //% block="Green"
     Verde = 1,
-    //% block="Azul"
+    //% block="Blue"
     Azul = 2,
     //% block="Clear"
     Clear = 3
 }
 
 declare const enum EscaladoTCS230 {
-    //% block="apagado (0%)"
+    //% block="off (0%)"
     Apagado = 0,
     //% block="2%"
     Dos = 1,
@@ -220,71 +220,71 @@ declare const enum EscaladoTCS230 {
 }
 
 declare const enum FuenteMicrofono {
-    //% block="electret externo (P0)"
+    //% block="external electret (P0)"
     ExternoP0 = 0,
-    //% block="electret externo (P1)"
+    //% block="external electret (P1)"
     ExternoP1 = 1,
-    //% block="electret externo (P2)"
+    //% block="external electret (P2)"
     ExternoP2 = 2,
-    //% block="micrófono interno (v2, sólo nivel)"
+    //% block="internal microphone (v2, level only)"
     InternoV2 = 3
 }
 
 declare const enum MetodoFrecuencia {
-    //% block="cruces por cero (rápido)"
+    //% block="zero-crossing (fast)"
     CrucesCero = 0,
-    //% block="autocorrelación (preciso, tono único)"
+    //% block="autocorrelation (precise, single tone)"
     Autocorrelacion = 1,
-    //% block="Goertzel (fijado a Hz objetivo)"
+    //% block="Goertzel (locked to target Hz)"
     Goertzel = 2
 }
 
 declare const enum TasaMuestreoAudio {
-    //% block="2 kHz (baja frecuencia, DC–800 Hz)"
+    //% block="2 kHz (low freq, DC–800 Hz)"
     F2kHz = 2000,
     //% block="4 kHz (40–1600 Hz)"
     F4kHz = 4000,
-    //% block="8 kHz (recomendado, 80–3200 Hz)"
+    //% block="8 kHz (recommended, 80–3200 Hz)"
     F8kHz = 8000,
-    //% block="11 kHz (voz, 110–4400 Hz)"
+    //% block="11 kHz (voice, 110–4400 Hz)"
     F11kHz = 11000,
-    //% block="16 kHz (amplio, 160–6400 Hz)"
+    //% block="16 kHz (wide, 160–6400 Hz)"
     F16kHz = 16000
 }
 
 declare const enum TamanoBufferAudio {
-    //% block="64 muestras (rápido)"
+    //% block="64 samples (fast)"
     N64 = 64,
-    //% block="128 muestras"
+    //% block="128 samples"
     N128 = 128,
-    //% block="256 muestras (recomendado)"
+    //% block="256 samples (recommended)"
     N256 = 256,
-    //% block="512 muestras"
+    //% block="512 samples"
     N512 = 512,
-    //% block="1024 muestras (máxima precisión)"
+    //% block="1024 samples (max precision)"
     N1024 = 1024
 }
 
 declare const enum UnidadMasa {
-    //% block="g (gramos)"
+    //% block="g (grams)"
     Gramos = 0,
-    //% block="kg (kilogramos)"
+    //% block="kg (kilograms)"
     Kilogramos = 1
 }
 
 declare const enum GananciaHX711 {
-    //% block="128 (canal A, por defecto)"
+    //% block="128 (channel A, default)"
     G128 = 25,
-    //% block="64 (canal A)"
+    //% block="64 (channel A)"
     G64 = 27,
-    //% block="32 (canal B)"
+    //% block="32 (channel B)"
     G32 = 26
 }
 
 declare const enum VariableDoppler {
-    //% block="velocidad de la fuente (+ acercándose)"
+    //% block="source velocity (+ approaching)"
     VelocidadFuente = 0,
-    //% block="velocidad del observador (+ acercándose)"
+    //% block="observer velocity (+ approaching)"
     VelocidadObservador = 1
 }
 

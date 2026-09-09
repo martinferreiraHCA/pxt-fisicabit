@@ -15,8 +15,6 @@ https://github.com/martinferreiraHCA/pxt-fisicabit
 
 Or search for **fisicabit-sensores** in the Extensions dialog.
 
-Block texts are in **Spanish** (the project's audience). MakeCode does not translate extensions when the editor language is English, so they stay in Spanish there; with the editor in Portuguese they are translated from `_locales/pt-BR`.
-
 ## Step-by-step tutorials
 
 Open these links in MakeCode. The tutorial shows up in the editor language (Spanish, English or Portuguese) and already includes the FisicaBit blocks:

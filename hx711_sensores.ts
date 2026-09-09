@@ -105,8 +105,8 @@ namespace fisicabit_native {
 //% weight=87
 //% color=#4682B4
 //% icon="\uf24e"
-//% block="HX711 — Fuerza/Masa"
-//% groups='["Configuración", "Calibración", "Medición", "Diagnóstico"]'
+//% block="HX711 — Force/Mass"
+//% groups='["Configuration", "Calibration", "Measurement", "Diagnostics"]'
 namespace FisicaBitHX711 {
 
     // =========================================================================
@@ -289,8 +289,8 @@ namespace FisicaBitHX711 {
      * @param sck Pin conectado a PD_SCK (reloj del HX711)
      */
     //% blockId=fisicabit_hx711_inicializar
-    //% block="inicializar HX711 DOUT %dout SCK %sck"
-    //% group="Configuración"
+    //% block="initialize HX711 DOUT %dout SCK %sck"
+    //% group="Configuration"
     //% weight=100
     //% dout.defl=DigitalPin.P0
     //% sck.defl=DigitalPin.P1
@@ -347,8 +347,8 @@ namespace FisicaBitHX711 {
      * @param ganancia Ganancia del amplificador
      */
     //% blockId=fisicabit_hx711_ganancia
-    //% block="fijar ganancia HX711 en %ganancia"
-    //% group="Configuración"
+    //% block="set HX711 gain to %ganancia"
+    //% group="Configuration"
     //% weight=98
     //% ganancia.defl=GananciaHX711.G128
     export function hx711SetGanancia(ganancia: GananciaHX711): void {
@@ -376,8 +376,8 @@ namespace FisicaBitHX711 {
      *   Sin tara, los valores incluyen el offset propio de la celda.
      */
     //% blockId=fisicabit_hx711_tarar
-    //% block="HX711 tarar (fijar cero)"
-    //% group="Calibración"
+    //% block="HX711 tare (set zero)"
+    //% group="Calibration"
     //% weight=95
     export function hx711Tarar(): void {
         if (!_hxListo) return
@@ -396,8 +396,8 @@ namespace FisicaBitHX711 {
      * @param pesoConocido Masa del objeto de calibración en gramos
      */
     //% blockId=fisicabit_hx711_calibrar
-    //% block="HX711 calibrar con %pesoConocido g"
-    //% group="Calibración"
+    //% block="HX711 calibrate with %pesoConocido g"
+    //% group="Calibration"
     //% weight=94
     //% pesoConocido.defl=100
     //% pesoConocido.min=1
@@ -424,8 +424,8 @@ namespace FisicaBitHX711 {
      * @param factor Factor de calibración (unidades ADC por gramo)
      */
     //% blockId=fisicabit_hx711_set_factor
-    //% block="fijar factor de calibración HX711 %factor"
-    //% group="Calibración"
+    //% block="set HX711 calibration factor %factor"
+    //% group="Calibration"
     //% weight=93
     export function hx711SetFactor(factor: number): void {
         if (factor == 0) return
@@ -451,8 +451,8 @@ namespace FisicaBitHX711 {
      * @param unidad Unidad de masa (gramos o kilogramos)
      */
     //% blockId=fisicabit_hx711_masa
-    //% block="HX711 masa en %unidad"
-    //% group="Medición"
+    //% block="HX711 mass in %unidad"
+    //% group="Measurement"
     //% weight=90
     //% unidad.defl=UnidadMasa.Gramos
     export function hx711Masa(unidad: UnidadMasa): number {
@@ -485,8 +485,8 @@ namespace FisicaBitHX711 {
      * @param gravedad Aceleración de la gravedad en m/s² (por defecto 9.81)
      */
     //% blockId=fisicabit_hx711_fuerza
-    //% block="HX711 fuerza (N) con g %gravedad m/s²"
-    //% group="Medición"
+    //% block="HX711 force (N) with g %gravedad m/s²"
+    //% group="Measurement"
     //% weight=89
     //% gravedad.defl=9.81
     export function hx711Fuerza(gravedad: number): number {
@@ -510,8 +510,8 @@ namespace FisicaBitHX711 {
      * Útil para depuración o análisis personalizado.
      */
     //% blockId=fisicabit_hx711_crudo
-    //% block="HX711 valor crudo"
-    //% group="Medición"
+    //% block="HX711 raw value"
+    //% group="Measurement"
     //% weight=85
     export function hx711Crudo(): number {
         if (!_hxListo) return 0
@@ -524,8 +524,8 @@ namespace FisicaBitHX711 {
      * Útil para observar el valor sin calibración pero con tara aplicada.
      */
     //% blockId=fisicabit_hx711_crudo_neto
-    //% block="HX711 valor crudo neto (tarado)"
-    //% group="Medición"
+    //% block="HX711 net raw value (tared)"
+    //% group="Measurement"
     //% weight=84
     export function hx711CrudoNeto(): number {
         if (!_hxListo) return 0
@@ -541,8 +541,8 @@ namespace FisicaBitHX711 {
      * Indica si el módulo HX711 fue detectado e inicializado correctamente.
      */
     //% blockId=fisicabit_hx711_conectado
-    //% block="HX711 conectado"
-    //% group="Diagnóstico"
+    //% block="HX711 connected"
+    //% group="Diagnostics"
     //% weight=80
     export function hx711Conectado(): boolean {
         return _hxListo && !_hxSinSenal
@@ -552,8 +552,8 @@ namespace FisicaBitHX711 {
      * Indica si el HX711 ha sido calibrado.
      */
     //% blockId=fisicabit_hx711_calibrado
-    //% block="HX711 calibrado"
-    //% group="Diagnóstico"
+    //% block="HX711 calibrated"
+    //% group="Diagnostics"
     //% weight=79
     export function hx711Calibrado(): boolean {
         return _hxCalibrado
@@ -564,8 +564,8 @@ namespace FisicaBitHX711 {
      * Útil para guardarlo y reutilizarlo sin recalibrar.
      */
     //% blockId=fisicabit_hx711_get_factor
-    //% block="HX711 factor de calibración"
-    //% group="Diagnóstico"
+    //% block="HX711 calibration factor"
+    //% group="Diagnostics"
     //% weight=78
     export function hx711GetFactor(): number {
         return _hxFactorCal
@@ -575,8 +575,8 @@ namespace FisicaBitHX711 {
      * Obtiene el valor de tara actual (offset en unidades unsigned).
      */
     //% blockId=fisicabit_hx711_get_tara
-    //% block="HX711 offset de tara"
-    //% group="Diagnóstico"
+    //% block="HX711 tare offset"
+    //% group="Diagnostics"
     //% weight=77
     export function hx711GetTara(): number {
         return _hxTara

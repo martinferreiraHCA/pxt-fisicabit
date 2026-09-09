@@ -27,7 +27,7 @@
 //% color=#5C6BC0
 //% icon=""
 //% block="FisicaBit USB"
-//% groups='["fisicabit.com", "Muestreo", "Avanzado"]'
+//% groups='["fisicabit.com", "Sampling", "Advanced"]'
 namespace FisicaBitSerial {
 
     let _m: FisicaBitDatos.Muestreador = null
@@ -59,7 +59,7 @@ namespace FisicaBitSerial {
      * Colocar dentro de "para siempre". Envía la línea: tiempo,valor
      * @param valor Valor a enviar (sensor, variable o cálculo)
      */
-    //% block="enviar a fisicabit.com %valor"
+    //% block="send to fisicabit.com %valor"
     //% blockId=fisicabit_usb_enviar_1
     //% group="fisicabit.com"
     //% weight=100
@@ -74,7 +74,7 @@ namespace FisicaBitSerial {
      * @param valor1 Primer valor
      * @param valor2 Segundo valor
      */
-    //% block="enviar a fisicabit.com %valor1 y %valor2"
+    //% block="send to fisicabit.com %valor1 and %valor2"
     //% blockId=fisicabit_usb_enviar_2
     //% group="fisicabit.com"
     //% weight=95
@@ -90,7 +90,7 @@ namespace FisicaBitSerial {
      * @param valor2 Segundo valor
      * @param valor3 Tercer valor
      */
-    //% block="enviar a fisicabit.com %valor1 , %valor2 y %valor3"
+    //% block="send to fisicabit.com %valor1 , %valor2 and %valor3"
     //% blockId=fisicabit_usb_enviar_3
     //% group="fisicabit.com"
     //% weight=90
@@ -107,7 +107,7 @@ namespace FisicaBitSerial {
      * @param valor3 Tercer valor
      * @param valor4 Cuarto valor
      */
-    //% block="enviar a fisicabit.com %valor1 , %valor2 , %valor3 y %valor4"
+    //% block="send to fisicabit.com %valor1 , %valor2 , %valor3 and %valor4"
     //% blockId=fisicabit_usb_enviar_4
     //% group="fisicabit.com"
     //% weight=85
@@ -121,7 +121,7 @@ namespace FisicaBitSerial {
      * Colocar en "al iniciar". Por defecto: 10 Hz (una muestra cada 100 ms).
      * @param frecuencia Frecuencia de muestreo
      */
-    //% block="configurar frecuencia de muestreo %frecuencia"
+    //% block="set sampling rate %frecuencia"
     //% blockId=fisicabit_usb_frecuencia
     //% group="fisicabit.com"
     //% weight=80
@@ -138,9 +138,9 @@ namespace FisicaBitSerial {
      * Configura el intervalo entre muestras en milisegundos (valor libre).
      * @param ms Intervalo de muestreo en ms (5 a 60000)
      */
-    //% block="configurar intervalo de muestreo %ms ms"
+    //% block="set sampling interval %ms ms"
     //% blockId=fisicabit_usb_intervalo
-    //% group="Muestreo"
+    //% group="Sampling"
     //% weight=75
     //% ms.min=5 ms.max=60000 ms.defl=100
     export function fijarIntervalo(ms: number): void {
@@ -154,9 +154,9 @@ namespace FisicaBitSerial {
      * @param frecuencia Frecuencia de muestreo
      * @param cuerpo Código a ejecutar en cada muestra
      */
-    //% block="muestrear para fisicabit.com a %frecuencia"
+    //% block="fisicabit.com sampling loop at %frecuencia"
     //% blockId=fisicabit_usb_bucle
-    //% group="Muestreo"
+    //% group="Sampling"
     //% weight=70
     //% frecuencia.defl=FrecuenciaMuestreo.Hz50
     //% blockAllowMultiple=0
@@ -170,9 +170,9 @@ namespace FisicaBitSerial {
      * Tiempo en milisegundos desde que se inició el envío por USB.
      * Siempre comienza en 0. Es el mismo tiempo que viaja en cada línea.
      */
-    //% block="tiempo USB (ms)"
+    //% block="USB time (ms)"
     //% blockId=fisicabit_serial_tiempo
-    //% group="Muestreo"
+    //% group="Sampling"
     //% weight=65
     export function tiempoSerial(): number {
         return _asegurar().tiempo()
@@ -182,9 +182,9 @@ namespace FisicaBitSerial {
      * Vuelve el tiempo a 0 (por ejemplo al apretar un botón para empezar
      * una nueva medición).
      */
-    //% block="reiniciar tiempo USB a 0"
+    //% block="reset USB time to 0"
     //% blockId=fisicabit_usb_reiniciar_tiempo
-    //% group="Muestreo"
+    //% group="Sampling"
     //% weight=60
     export function reiniciarTiempo(): void {
         _asegurar().reiniciarTiempo()
@@ -200,9 +200,9 @@ namespace FisicaBitSerial {
      * de fisicabit.com (activada por defecto).
      * @param activar true = enviar tiempo (por defecto), false = sólo valores
      */
-    //% block="USB enviar tiempo del micro:bit %activar"
+    //% block="USB send micro:bit timestamp %activar"
     //% blockId=fisicabit_usb_timestamp
-    //% group="Avanzado"
+    //% group="Advanced"
     //% weight=50
     //% activar.shadow=toggleOnOff
     //% activar.defl=true
@@ -215,9 +215,9 @@ namespace FisicaBitSerial {
      * Cantidad de decimales con que se envían los valores no enteros.
      * @param decimales Decimales (0 a 6). Por defecto 2.
      */
-    //% block="USB fijar decimales %decimales"
+    //% block="USB set decimals %decimales"
     //% blockId=fisicabit_usb_decimales
-    //% group="Avanzado"
+    //% group="Advanced"
     //% weight=45
     //% decimales.min=0 decimales.max=6 decimales.defl=2
     //% advanced=true
@@ -229,9 +229,9 @@ namespace FisicaBitSerial {
      * Envía una línea de texto libre por USB (sin tiempo ni espera).
      * @param texto Texto a enviar
      */
-    //% block="USB enviar línea %texto"
+    //% block="USB send line %texto"
     //% blockId=fisicabit_usb_linea
-    //% group="Avanzado"
+    //% group="Advanced"
     //% weight=40
     //% advanced=true
     export function enviarLinea(texto: string): void {
@@ -247,9 +247,9 @@ namespace FisicaBitSerial {
     /**
      * (Obsoleto) Usar "enviar a fisicabit.com" + "configurar frecuencia".
      */
-    //% block="Serial muestrear %valor|cada %ms ms"
+    //% block="serial sample %valor|every %ms ms"
     //% blockId=fisicabit_serial_muestrear_1
-    //% group="Avanzado"
+    //% group="Advanced"
     //% weight=10
     //% ms.min=10 ms.max=60000 ms.defl=100
     //% inlineInputMode=inline
@@ -263,9 +263,9 @@ namespace FisicaBitSerial {
     /**
      * (Obsoleto) Usar "enviar a fisicabit.com" + "configurar frecuencia".
      */
-    //% block="Serial muestrear %valor1 y %valor2|cada %ms ms"
+    //% block="serial sample %valor1 and %valor2|every %ms ms"
     //% blockId=fisicabit_serial_muestrear_2
-    //% group="Avanzado"
+    //% group="Advanced"
     //% weight=9
     //% ms.min=10 ms.max=60000 ms.defl=100
     //% inlineInputMode=inline
@@ -279,9 +279,9 @@ namespace FisicaBitSerial {
     /**
      * (Obsoleto) Usar "enviar a fisicabit.com" + "configurar frecuencia".
      */
-    //% block="Serial muestrear %valor1 , %valor2 y %valor3|cada %ms ms"
+    //% block="serial sample %valor1 , %valor2 and %valor3|every %ms ms"
     //% blockId=fisicabit_serial_muestrear_3
-    //% group="Avanzado"
+    //% group="Advanced"
     //% weight=8
     //% ms.min=10 ms.max=60000 ms.defl=100
     //% inlineInputMode=inline

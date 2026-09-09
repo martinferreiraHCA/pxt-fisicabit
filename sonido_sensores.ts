@@ -71,8 +71,8 @@
 //% weight=82
 //% color=#1F8A70
 //% icon="\uf130"
-//% block="FisicaBit Sonido"
-//% groups='["Configuración", "Captura", "Nivel de sonido", "Detección de frecuencia", "Efecto Doppler", "Avanzado"]'
+//% block="FisicaBit Sound"
+//% groups='["Setup", "Capture", "Sound level", "Frequency detection", "Doppler effect", "Advanced"]'
 namespace FisicaBitSonido {
 
     // =========================================================================
@@ -131,8 +131,8 @@ namespace FisicaBitSonido {
      * un módulo electret conectado a P0/P1/P2 (amplitud + frecuencia).
      */
     //% blockId=fisicabit_snd_fuente
-    //% block="fijar fuente de sonido %fuente"
-    //% group="Configuración" weight=100
+    //% block="set sound source %fuente"
+    //% group="Setup" weight=100
     //% fuente.defl=FuenteMicrofono.ExternoP0
     export function fijarFuente(fuente: FuenteMicrofono): void {
         _fuente = fuente
@@ -151,8 +151,8 @@ namespace FisicaBitSonido {
      * @param muestras número de muestras del buffer (64..1024)
      */
     //% blockId=fisicabit_snd_ventana
-    //% block="fijar tasa de muestreo %tasa con %muestras"
-    //% group="Configuración" weight=95
+    //% block="set sampling rate %tasa with %muestras"
+    //% group="Setup" weight=95
     //% tasa.defl=TasaMuestreoAudio.F8kHz
     //% muestras.defl=TamanoBufferAudio.N256
     export function fijarVentana(tasa: TasaMuestreoAudio, muestras: TamanoBufferAudio): void {
@@ -168,8 +168,8 @@ namespace FisicaBitSonido {
      * @param maxHz frecuencia máxima esperada (Hz)
      */
     //% blockId=fisicabit_snd_rango
-    //% block="limitar búsqueda de frecuencia a %minHz .. %maxHz Hz"
-    //% group="Configuración" weight=90
+    //% block="limit frequency search to %minHz .. %maxHz Hz"
+    //% group="Setup" weight=90
     //% minHz.defl=80 maxHz.defl=3000
     //% minHz.min=20 minHz.max=8000
     //% maxHz.min=40 maxHz.max=10000
@@ -195,8 +195,8 @@ namespace FisicaBitSonido {
      * @returns true si la captura tuvo éxito, false en simulador o v2-interno
      */
     //% blockId=fisicabit_snd_capturar
-    //% block="capturar ventana de sonido"
-    //% group="Captura" weight=100
+    //% block="capture sound window"
+    //% group="Capture" weight=100
     export function capturarVentana(): boolean {
         return _capturar()
     }
@@ -205,8 +205,8 @@ namespace FisicaBitSonido {
      * Devuelve la duración real de la ventana capturada en milisegundos.
      */
     //% blockId=fisicabit_snd_duracion
-    //% block="duración de la ventana (ms)"
-    //% group="Captura" weight=90
+    //% block="window duration (ms)"
+    //% group="Capture" weight=90
     export function duracionVentanaMs(): number {
         if (_sampleRate <= 0) return 0
         return Math.round(_numMuestras * 1000 / _sampleRate)
@@ -221,8 +221,8 @@ namespace FisicaBitSonido {
      * micro:bit v2. Equivale a `input.soundLevel()`. En v1 devuelve 0.
      */
     //% blockId=fisicabit_snd_nivel_v2
-    //% block="nivel de sonido interno (v2, 0–255)"
-    //% group="Nivel de sonido" weight=100
+    //% block="internal sound level (v2, 0–255)"
+    //% group="Sound level" weight=100
     export function nivelSonidoInternoV2(): number {
         return input.soundLevel()
     }
@@ -232,8 +232,8 @@ namespace FisicaBitSonido {
      * Úsalo como gating: sólo analizar frecuencia si hay señal.
      */
     //% blockId=fisicabit_snd_rms
-    //% block="amplitud RMS de la última ventana"
-    //% group="Nivel de sonido" weight=90
+    //% block="last window RMS amplitude"
+    //% group="Sound level" weight=90
     export function amplitudRMS(): number {
         if (!_capturado) return 0
         return FisicaBitAudioNative.audioRMS()
@@ -243,8 +243,8 @@ namespace FisicaBitSonido {
      * Rango pico-a-pico (max − min) de la última ventana capturada.
      */
     //% blockId=fisicabit_snd_pkpk
-    //% block="pico a pico de la última ventana"
-    //% group="Nivel de sonido" weight=85
+    //% block="last window peak-to-peak"
+    //% group="Sound level" weight=85
     export function amplitudPicoPico(): number {
         if (!_capturado) return 0
         return FisicaBitAudioNative.audioPicoPico()
@@ -254,8 +254,8 @@ namespace FisicaBitSonido {
      * Captura una ventana, calcula el RMS y la devuelve (todo en un paso).
      */
     //% blockId=fisicabit_snd_rms_ahora
-    //% block="amplitud RMS del sonido ahora"
-    //% group="Nivel de sonido" weight=80
+    //% block="sound RMS amplitude now"
+    //% group="Sound level" weight=80
     export function amplitudRMSAhora(): number {
         if (!_capturar()) return 0
         return FisicaBitAudioNative.audioRMS()
@@ -275,8 +275,8 @@ namespace FisicaBitSonido {
      * @param metodo algoritmo de detección
      */
     //% blockId=fisicabit_snd_freq_ultima
-    //% block="frecuencia (Hz) de la última ventana con %metodo"
-    //% group="Detección de frecuencia" weight=100
+    //% block="last window frequency (Hz) with %metodo"
+    //% group="Frequency detection" weight=100
     //% metodo.defl=MetodoFrecuencia.Autocorrelacion
     export function frecuenciaUltimaVentana(metodo: MetodoFrecuencia): number {
         if (!_capturado) return 0
@@ -303,8 +303,8 @@ namespace FisicaBitSonido {
      * @param umbralRms amplitud mínima para que la lectura sea válida
      */
     //% blockId=fisicabit_snd_freq_ahora
-    //% block="frecuencia del sonido (Hz) ahora con %metodo ignorar por debajo de RMS %umbralRms"
-    //% group="Detección de frecuencia" weight=98
+    //% block="sound frequency (Hz) now with %metodo ignore below RMS %umbralRms"
+    //% group="Frequency detection" weight=98
     //% metodo.defl=MetodoFrecuencia.Autocorrelacion
     //% umbralRms.defl=8 umbralRms.min=0 umbralRms.max=500
     export function frecuenciaAhora(metodo: MetodoFrecuencia, umbralRms: number): number {
@@ -332,8 +332,8 @@ namespace FisicaBitSonido {
      * @param targetHz frecuencia objetivo en Hz
      */
     //% blockId=fisicabit_snd_goertzel
-    //% block="energía Goertzel en %targetHz Hz"
-    //% group="Detección de frecuencia" weight=90
+    //% block="Goertzel energy at %targetHz Hz"
+    //% group="Frequency detection" weight=90
     //% targetHz.defl=440 targetHz.min=20 targetHz.max=10000
     export function goertzelEnergia(targetHz: number): number {
         if (!_capturado) return 0
@@ -353,8 +353,8 @@ namespace FisicaBitSonido {
      * @param pasoHz separación entre bines (Hz)
      */
     //% blockId=fisicabit_snd_lockin
-    //% block="frecuencia lock-in alrededor de %centroHz Hz ± %spanHz paso %pasoHz"
-    //% group="Detección de frecuencia" weight=85
+    //% block="lock-in frequency around %centroHz Hz ± %spanHz step %pasoHz"
+    //% group="Frequency detection" weight=85
     //% centroHz.defl=4000 spanHz.defl=200 pasoHz.defl=5
     //% centroHz.min=100 centroHz.max=10000
     //% spanHz.min=10 spanHz.max=2000
@@ -435,8 +435,8 @@ namespace FisicaBitSonido {
      * En el simulador devuelve 440 Hz (A4) como tono de prueba.
      */
     //% blockId=fisicabit_snd_detectar_frecuencia
-    //% block="detectar frecuencia (Hz)"
-    //% group="Detección de frecuencia" weight=110
+    //% block="detect frequency (Hz)"
+    //% group="Frequency detection" weight=110
     export function detectarFrecuencia(): number {
         return frecuenciaInternaV2()
     }
@@ -452,8 +452,8 @@ namespace FisicaBitSonido {
      * "—" si no hay señal suficiente. En el simulador devuelve "A4".
      */
     //% blockId=fisicabit_snd_detectar_nota
-    //% block="detectar nota musical"
-    //% group="Detección de frecuencia" weight=108
+    //% block="detect musical note"
+    //% group="Frequency detection" weight=108
     export function detectarNota(): string {
         const f = detectarFrecuencia()
         if (f <= 0) return "—"
@@ -474,8 +474,8 @@ namespace FisicaBitSonido {
      * @param umbralRms umbral mínimo de amplitud para considerar la lectura
      */
     //% blockId=fisicabit_snd_freq_interna
-    //% block="frecuencia del micrófono interno (Hz)"
-    //% group="Detección de frecuencia" weight=80
+    //% block="internal mic frequency (Hz)"
+    //% group="Frequency detection" weight=80
     export function frecuenciaInternaV2(): number {
         // Usa el shim nativo de audio (sim/audio.ts en el simulador,
         // shims.cpp + StreamSplitter en hardware). Rango 60..4500 Hz —
@@ -496,8 +496,8 @@ namespace FisicaBitSonido {
      * @param frecuenciaHz frecuencia en Hz
      */
     //% blockId=fisicabit_snd_nombre_nota
-    //% block="nombre de la nota para %frecuenciaHz Hz"
-    //% group="Detección de frecuencia" weight=78
+    //% block="note name for %frecuenciaHz Hz"
+    //% group="Frequency detection" weight=78
     //% frecuenciaHz.defl=440
     export function nombreNota(frecuenciaHz: number): string {
         if (frecuenciaHz < 20 || frecuenciaHz > 10000) return "—"
@@ -519,8 +519,8 @@ namespace FisicaBitSonido {
      * @param frecuenciaHz frecuencia medida en Hz
      */
     //% blockId=fisicabit_snd_detune
-    //% block="desafinación (cents) para %frecuenciaHz Hz"
-    //% group="Detección de frecuencia" weight=76
+    //% block="detune (cents) for %frecuenciaHz Hz"
+    //% group="Frequency detection" weight=76
     //% frecuenciaHz.defl=440
     export function desafinacionCents(frecuenciaHz: number): number {
         if (frecuenciaHz < 20) return 0
@@ -538,8 +538,8 @@ namespace FisicaBitSonido {
      * Devuelve "—" si no hay suficiente señal.
      */
     //% blockId=fisicabit_snd_nota_interna
-    //% block="nota detectada por el micrófono interno"
-    //% group="Detección de frecuencia" weight=82
+    //% block="internal mic detected note"
+    //% group="Frequency detection" weight=82
     export function notaInternaV2(): string {
         const f = frecuenciaInternaV2()
         if (f <= 0) return "—"
@@ -556,8 +556,8 @@ namespace FisicaBitSonido {
      * @param midi número de nota MIDI (0..127)
      */
     //% blockId=fisicabit_snd_midi_a_hz
-    //% block="frecuencia (Hz) de la nota MIDI %midi"
-    //% group="Detección de frecuencia" weight=74
+    //% block="frequency (Hz) of MIDI note %midi"
+    //% group="Frequency detection" weight=74
     //% midi.defl=69 midi.min=0 midi.max=127
     export function frecuenciaDeNotaMIDI(midi: number): number {
         const f = 440 * Math.pow(2, (midi - 69) / 12)
@@ -587,8 +587,8 @@ namespace FisicaBitSonido {
      * @param unidad unidad de salida
      */
     //% blockId=fisicabit_snd_doppler_v
-    //% block="velocidad Doppler: emitida %fEmitida Hz, observada %fObservada Hz (c=%velocidadSonido m/s) → %variable en %unidad"
-    //% group="Efecto Doppler" weight=100
+    //% block="Doppler velocity: emitted %fEmitida Hz, observed %fObservada Hz (c=%velocidadSonido m/s) → %variable in %unidad"
+    //% group="Doppler effect" weight=100
     //% fEmitida.defl=4000 fObservada.defl=4000
     //% velocidadSonido.defl=343
     //% variable.defl=VariableDoppler.VelocidadFuente
@@ -630,8 +630,8 @@ namespace FisicaBitSonido {
      * @param velocidadSonido velocidad del sonido (m/s)
      */
     //% blockId=fisicabit_snd_doppler_f
-    //% block="frecuencia observada esperada: emitida %fEmitida Hz, fuente %velocidadFuente m/s, observador %velocidadObservador m/s (c=%velocidadSonido m/s)"
-    //% group="Efecto Doppler" weight=95
+    //% block="expected observed frequency: emitted %fEmitida Hz, source %velocidadFuente m/s, observer %velocidadObservador m/s (c=%velocidadSonido m/s)"
+    //% group="Doppler effect" weight=95
     //% fEmitida.defl=4000
     //% velocidadFuente.defl=0 velocidadObservador.defl=0
     //% velocidadSonido.defl=343
@@ -656,8 +656,8 @@ namespace FisicaBitSonido {
      * @param temperaturaC temperatura del aire en °C
      */
     //% blockId=fisicabit_snd_c_sonido
-    //% block="velocidad del sonido en el aire a %temperaturaC °C"
-    //% group="Efecto Doppler" weight=90
+    //% block="speed of sound in air at %temperaturaC °C"
+    //% group="Doppler effect" weight=90
     //% temperaturaC.defl=20
     export function velocidadSonidoAire(temperaturaC: number): number {
         return Math.round((331.3 + 0.606 * temperaturaC) * 100) / 100
@@ -671,8 +671,8 @@ namespace FisicaBitSonido {
      * Número de muestras disponibles en el último buffer capturado.
      */
     //% blockId=fisicabit_snd_buf_len
-    //% block="largo del buffer"
-    //% group="Avanzado" weight=100
+    //% block="buffer length"
+    //% group="Advanced" weight=100
     //% advanced=true
     export function longitudBuffer(): number {
         return FisicaBitAudioNative.audioLongitudBuffer()
@@ -684,8 +684,8 @@ namespace FisicaBitSonido {
      * @param i índice (0 .. buffer length − 1)
      */
     //% blockId=fisicabit_snd_buf_get
-    //% block="muestra en índice %i"
-    //% group="Avanzado" weight=95
+    //% block="sample at index %i"
+    //% group="Advanced" weight=95
     //% advanced=true
     //% i.min=0 i.max=1023
     export function muestraEn(i: number): number {
@@ -696,8 +696,8 @@ namespace FisicaBitSonido {
      * Offset DC (media) estimado en la última captura.
      */
     //% blockId=fisicabit_snd_dc
-    //% block="offset DC de la última ventana"
-    //% group="Avanzado" weight=90
+    //% block="DC offset of last window"
+    //% group="Advanced" weight=90
     //% advanced=true
     export function offsetDC(): number {
         return FisicaBitAudioNative.audioOffsetDC()
@@ -707,8 +707,8 @@ namespace FisicaBitSonido {
      * Sample rate efectivo (Hz) de la última captura.
      */
     //% blockId=fisicabit_snd_rate
-    //% block="tasa de muestreo efectiva (Hz)"
-    //% group="Avanzado" weight=85
+    //% block="effective sample rate (Hz)"
+    //% group="Advanced" weight=85
     //% advanced=true
     export function tasaMuestreoEfectiva(): number {
         return FisicaBitAudioNative.audioTasaMuestreo()

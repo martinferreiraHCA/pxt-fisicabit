@@ -45,8 +45,8 @@
 //% weight=88
 //% color=#FF6347
 //% icon="\uf043"
-//% block="DHT11 — Humedad/Temperatura"
-//% groups='["Medición", "Lectura Completa", "Diagnóstico"]'
+//% block="DHT11 — Humidity/Temperature"
+//% groups='["Measurement", "Batch Reading", "Diagnostics"]'
 namespace FisicaBitDHT11 {
 
     // ── Estado DHT11 ──
@@ -157,8 +157,8 @@ namespace FisicaBitDHT11 {
      * @param pin Pin digital donde está conectado DATA
      */
     //% blockId=fisicabit_dht11_humedad
-    //% block="DHT11 humedad (%) en %pin"
-    //% group="Medición"
+    //% block="DHT11 humidity (percent) on %pin"
+    //% group="Measurement"
     //% weight=90
     //% pin.defl=DigitalPin.P16
     export function dht11Humedad(pin: DigitalPin): number {
@@ -173,8 +173,8 @@ namespace FisicaBitDHT11 {
      * @param unidad Unidad de temperatura
      */
     //% blockId=fisicabit_dht11_temperatura
-    //% block="DHT11 temperatura en %pin en %unidad"
-    //% group="Medición"
+    //% block="DHT11 temperature on %pin in %unidad"
+    //% group="Measurement"
     //% weight=89
     //% pin.defl=DigitalPin.P16
     //% unidad.defl=UnidadTemperatura.Celsius
@@ -202,8 +202,8 @@ namespace FisicaBitDHT11 {
      * @param pin Pin digital donde está conectado DATA
      */
     //% blockId=fisicabit_dht11_leer
-    //% block="DHT11 leer todo en %pin"
-    //% group="Lectura Completa"
+    //% block="DHT11 read all on %pin"
+    //% group="Batch Reading"
     //% weight=88
     //% pin.defl=DigitalPin.P16
     export function dht11Leer(pin: DigitalPin): void {
@@ -214,8 +214,8 @@ namespace FisicaBitDHT11 {
      * Obtiene la última humedad leída (después de dht11Leer).
      */
     //% blockId=fisicabit_dht11_ult_humedad
-    //% block="DHT11 última humedad (%)"
-    //% group="Lectura Completa"
+    //% block="DHT11 last humidity (percent)"
+    //% group="Batch Reading"
     //% weight=87
     export function dht11UltHumedad(): number {
         return _dhtUltHumedad / 10
@@ -226,8 +226,8 @@ namespace FisicaBitDHT11 {
      * @param unidad Unidad de temperatura
      */
     //% blockId=fisicabit_dht11_ult_temp
-    //% block="DHT11 última temperatura en %unidad"
-    //% group="Lectura Completa"
+    //% block="DHT11 last temperature in %unidad"
+    //% group="Batch Reading"
     //% weight=86
     //% unidad.defl=UnidadTemperatura.Celsius
     export function dht11UltTemperatura(unidad: UnidadTemperatura): number {
@@ -250,8 +250,8 @@ namespace FisicaBitDHT11 {
      * interferencia eléctrica, o lectura demasiado rápida (<1s).
      */
     //% blockId=fisicabit_dht11_valido
-    //% block="DHT11 lectura válida"
-    //% group="Diagnóstico"
+    //% block="DHT11 reading valid"
+    //% group="Diagnostics"
     //% weight=80
     export function dht11Valido(): boolean {
         return _dhtOk
