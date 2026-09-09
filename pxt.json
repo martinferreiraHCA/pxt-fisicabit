@@ -27,7 +27,13 @@
         "hcsr04_sensores.ts",
         "audio_shims.ts",
         "sonido_sensores.ts",
-        "hx711_sensores.ts"
+        "hx711_sensores.ts",
+        "_locales/es/fisicabit-sensores-strings.json",
+        "_locales/es/fisicabit-sensores-jsdoc-strings.json",
+        "_locales/en/fisicabit-sensores-strings.json",
+        "_locales/en/fisicabit-sensores-jsdoc-strings.json",
+        "_locales/pt-BR/fisicabit-sensores-strings.json",
+        "_locales/pt-BR/fisicabit-sensores-jsdoc-strings.json"
     ],
     "testFiles": [
         "test.ts"
