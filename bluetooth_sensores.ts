@@ -50,7 +50,7 @@
 
 //% weight=98
 //% color=#0082FB
-//% icon=""
+//% icon="\uf294"
 //% block="FisicaBit Bluetooth"
 //% groups='["1. Start (in on start)", "2. Send (inside forever)", "3. Optional", "Advanced", "BLE Services"]'
 namespace FisicaBitBT {
