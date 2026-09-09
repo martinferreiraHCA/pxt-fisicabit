@@ -79,6 +79,7 @@ One block configures everything: `send to fisicabit.com time and [value] every [
 | Step | Block | Description |
 |------|-------|-------------|
 | 1. Send | `send to fisicabit.com time and [value] every [100] ms` | Inside `forever`. 2, 3 and 4-value variants. 100 ms = 10 samples per second |
+| Send without time | `send to fisicabit.com without time [value]` | Sends only the measured values, no time and no wait: on a button press, in an event or inside `forever` with your own pause (2, 3 and 4-value variants). On fisicabit.com disable "Micro:bit sends timestamp": the page uses the browser clock |
 | 2. Optional | `fisicabit.com fast loop every [20] ms` | Instead of `forever`, for 50 / 100 Hz without the hidden delay; put the send block inside |
 | 2. Optional | `reset USB time to 0` | Start a new run at t = 0 (for example on button A) |
 | 2. Optional | `USB time (ms)` | The time sent in each line |
@@ -112,6 +113,7 @@ basic.forever(function () {
 |------|-------|-------------|
 | 1. Start | `start Bluetooth for fisicabit.com` | **First** in `on start`: UART service, max TX power, ◎ / ♥ icons on the display |
 | 2. Send | `send to fisicabit.com via Bluetooth time and [value] every [100] ms` | Inside `forever`. 2, 3 and 4-value variants; only transmits while connected. Over BLE use 50 ms or more |
+| Send without time | `send to fisicabit.com via Bluetooth without time [value]` | Sends only the measured values, no time and no wait (2, 3 and 4-value variants). On fisicabit.com disable "Micro:bit sends timestamp" |
 | 3. Optional | `Bluetooth connected?`, `on connected / on disconnected`, `reset Bluetooth time to 0`, `Bluetooth time (ms)`, `Bluetooth fast loop every [50] ms`, `show connection icons` | Connection state and time control |
 | Advanced | `send micro:bit timestamp`, `set decimals`, `send text`, `start with all BLE services`, `set sampling rate / interval` | Only if needed |
 

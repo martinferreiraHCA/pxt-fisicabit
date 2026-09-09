@@ -52,7 +52,7 @@
 //% color=#0082FB
 //% icon="\uf294"
 //% block="FisicaBit Bluetooth"
-//% groups='["1. Start (in on start)", "2. Send (inside forever)", "3. Optional", "Advanced", "BLE Services"]'
+//% groups='["1. Start (in on start)", "2. Send (inside forever)", "Send without time", "3. Optional", "Advanced", "BLE Services"]'
 namespace FisicaBitBT {
 
     let _m: FisicaBitDatos.Muestreador = null
@@ -91,6 +91,13 @@ namespace FisicaBitBT {
             bluetooth.uartWriteString(m.linea(valores) + "\n")
         }
         m.esperar()
+    }
+
+    function _enviarSinTiempo(valores: number[]): void {
+        const m = _asegurarUART()
+        if (_conectado) {
+            bluetooth.uartWriteString(m.linea(valores, false) + "\n")
+        }
     }
 
     // =========================================================================
@@ -211,6 +218,104 @@ namespace FisicaBitBT {
     //% inlineInputMode=inline
     export function enviar4(valor1: number, valor2: number, valor3: number, valor4: number, ms: number): void {
         _enviar([valor1, valor2, valor3, valor4], ms)
+    }
+
+    // =========================================================================
+    // ENVÍO DE DATOS SIN TIEMPO — sólo los valores medidos, sin espera
+    // =========================================================================
+
+    /**
+     * Envía a fisicabit.com por Bluetooth SOLO un valor medido, sin el tiempo del
+     * micro:bit y sin esperar: se manda en el momento en que se ejecuta el
+     * bloque. Usalo al presionar un botón, en cualquier evento, o dentro de
+     * "para siempre" con la pausa que quieras. Línea enviada: valor
+     * La página pone el tiempo con el reloj del navegador.
+     * Sólo transmite mientras la página está conectada.
+     *
+     * Ejemplo: [al presionar botón A] → [enviar a fisicabit.com sin tiempo (temperatura)]
+     * En fisicabit.com: Bluetooth, 1 variable, "Micro:bit envía timestamp" DESACTIVADO.
+     *
+     * @param valor Valor medido
+     */
+    //% block="send to fisicabit.com via Bluetooth without time %valor"
+    //% blockId=fisicabit_bt_enviar_st_1
+    //% group="Send without time"
+    //% weight=83
+    //% inlineInputMode=inline
+    export function enviarSinTiempo1(valor: number): void {
+        _enviarSinTiempo([valor])
+    }
+
+    /**
+     * Envía a fisicabit.com por Bluetooth SOLO dos valores medidos, sin el tiempo del
+     * micro:bit y sin esperar: se manda en el momento en que se ejecuta el
+     * bloque. Usalo al presionar un botón, en cualquier evento, o dentro de
+     * "para siempre" con la pausa que quieras. Línea enviada: valor1,valor2
+     * La página pone el tiempo con el reloj del navegador.
+     * Sólo transmite mientras la página está conectada.
+     *
+     * Ejemplo: [para siempre] → [enviar a fisicabit.com sin tiempo (aceleración x) y (aceleración y)] + [pausa 200 ms]
+     * En fisicabit.com: Bluetooth, 2 variables, "Micro:bit envía timestamp" DESACTIVADO.
+     *
+     * @param valor1 Primer valor medido
+     * @param valor2 Segundo valor medido
+     */
+    //% block="send to fisicabit.com via Bluetooth without time %valor1 and %valor2"
+    //% blockId=fisicabit_bt_enviar_st_2
+    //% group="Send without time"
+    //% weight=82
+    //% inlineInputMode=inline
+    export function enviarSinTiempo2(valor1: number, valor2: number): void {
+        _enviarSinTiempo([valor1, valor2])
+    }
+
+    /**
+     * Envía a fisicabit.com por Bluetooth SOLO tres valores medidos, sin el tiempo del
+     * micro:bit y sin esperar: se manda en el momento en que se ejecuta el
+     * bloque. Usalo al presionar un botón, en cualquier evento, o dentro de
+     * "para siempre" con la pausa que quieras. Línea enviada: valor1,valor2,valor3
+     * La página pone el tiempo con el reloj del navegador.
+     * Sólo transmite mientras la página está conectada.
+     *
+     * Ejemplo: [para siempre] → [enviar ... sin tiempo (aceleración x), (y) y (z)] + [pausa 100 ms]
+     * En fisicabit.com: Bluetooth, 3 variables, "Micro:bit envía timestamp" DESACTIVADO.
+     *
+     * @param valor1 Primer valor medido
+     * @param valor2 Segundo valor medido
+     * @param valor3 Tercer valor medido
+     */
+    //% block="send to fisicabit.com via Bluetooth without time %valor1 , %valor2 and %valor3"
+    //% blockId=fisicabit_bt_enviar_st_3
+    //% group="Send without time"
+    //% weight=81
+    //% inlineInputMode=inline
+    export function enviarSinTiempo3(valor1: number, valor2: number, valor3: number): void {
+        _enviarSinTiempo([valor1, valor2, valor3])
+    }
+
+    /**
+     * Envía a fisicabit.com por Bluetooth SOLO cuatro valores medidos, sin el tiempo del
+     * micro:bit y sin esperar: se manda en el momento en que se ejecuta el
+     * bloque. Usalo al presionar un botón, en cualquier evento, o dentro de
+     * "para siempre" con la pausa que quieras. Línea enviada: valor1,valor2,valor3,valor4
+     * La página pone el tiempo con el reloj del navegador.
+     * Sólo transmite mientras la página está conectada.
+     *
+     * Ejemplo: cuatro sensores en un evento o en "para siempre" con pausa
+     * En fisicabit.com: Bluetooth, 4 variables, "Micro:bit envía timestamp" DESACTIVADO.
+     *
+     * @param valor1 Primer valor medido
+     * @param valor2 Segundo valor medido
+     * @param valor3 Tercer valor medido
+     * @param valor4 Cuarto valor medido
+     */
+    //% block="send to fisicabit.com via Bluetooth without time %valor1 , %valor2 , %valor3 and %valor4"
+    //% blockId=fisicabit_bt_enviar_st_4
+    //% group="Send without time"
+    //% weight=80
+    //% inlineInputMode=inline
+    export function enviarSinTiempo4(valor1: number, valor2: number, valor3: number, valor4: number): void {
+        _enviarSinTiempo([valor1, valor2, valor3, valor4])
     }
 
     // =========================================================================

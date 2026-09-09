@@ -106,9 +106,9 @@ namespace FisicaBitDatos {
             }
         }
 
-        /** Arma la línea CSV: [tiempo,]v1,v2,... */
-        linea(valores: number[]): string {
-            let s = this.enviarTiempo ? ("" + this.tiempo()) : ""
+        /** Arma la línea CSV: [tiempo,]v1,v2,... (sin tiempo si conTiempo=false) */
+        linea(valores: number[], conTiempo: boolean = true): string {
+            let s = (conTiempo && this.enviarTiempo) ? ("" + this.tiempo()) : ""
             for (let i = 0; i < valores.length; i++) {
                 if (s.length > 0) s += ","
                 s += formatear(valores[i], this.decimales)

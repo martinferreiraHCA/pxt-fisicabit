@@ -72,5 +72,13 @@
     "FisicaBitBT.enviar2|param|ms": "Tempo entre amostras em ms, eg: 100",
     "FisicaBitBT.enviar3|param|ms": "Tempo entre amostras em ms, eg: 100",
     "FisicaBitBT.enviar4|param|ms": "Tempo entre amostras em ms, eg: 100",
-    "FisicaBitBT.bucleMuestreo|param|ms": "Tempo entre amostras em ms, eg: 50"
+    "FisicaBitBT.bucleMuestreo|param|ms": "Tempo entre amostras em ms, eg: 50",
+    "FisicaBitSerial.enviarSinTiempo1|block": "Envia para fisicabit.com por USB só um valor medido, sem o tempo do micro:bit e sem esperar: é enviado no momento em que o bloco roda. Use ao apertar um botão ou dentro de \"sempre\" com a sua própria pausa. No fisicabit.com: \"Micro:bit envia timestamp\" desativado.",
+    "FisicaBitSerial.enviarSinTiempo2|block": "Envia para fisicabit.com por USB só dois valores medidos, sem o tempo do micro:bit e sem esperar: é enviado no momento em que o bloco roda. Use ao apertar um botão ou dentro de \"sempre\" com a sua própria pausa. No fisicabit.com: \"Micro:bit envia timestamp\" desativado.",
+    "FisicaBitSerial.enviarSinTiempo3|block": "Envia para fisicabit.com por USB só três valores medidos, sem o tempo do micro:bit e sem esperar: é enviado no momento em que o bloco roda. Use ao apertar um botão ou dentro de \"sempre\" com a sua própria pausa. No fisicabit.com: \"Micro:bit envia timestamp\" desativado.",
+    "FisicaBitSerial.enviarSinTiempo4|block": "Envia para fisicabit.com por USB só quatro valores medidos, sem o tempo do micro:bit e sem esperar: é enviado no momento em que o bloco roda. Use ao apertar um botão ou dentro de \"sempre\" com a sua própria pausa. No fisicabit.com: \"Micro:bit envia timestamp\" desativado.",
+    "FisicaBitBT.enviarSinTiempo1|block": "Envia para fisicabit.com por Bluetooth só um valor medido, sem o tempo do micro:bit e sem esperar: é enviado no momento em que o bloco roda. Use ao apertar um botão ou dentro de \"sempre\" com a sua própria pausa. No fisicabit.com: \"Micro:bit envia timestamp\" desativado.",
+    "FisicaBitBT.enviarSinTiempo2|block": "Envia para fisicabit.com por Bluetooth só dois valores medidos, sem o tempo do micro:bit e sem esperar: é enviado no momento em que o bloco roda. Use ao apertar um botão ou dentro de \"sempre\" com a sua própria pausa. No fisicabit.com: \"Micro:bit envia timestamp\" desativado.",
+    "FisicaBitBT.enviarSinTiempo3|block": "Envia para fisicabit.com por Bluetooth só três valores medidos, sem o tempo do micro:bit e sem esperar: é enviado no momento em que o bloco roda. Use ao apertar um botão ou dentro de \"sempre\" com a sua própria pausa. No fisicabit.com: \"Micro:bit envia timestamp\" desativado.",
+    "FisicaBitBT.enviarSinTiempo4|block": "Envia para fisicabit.com por Bluetooth só quatro valores medidos, sem o tempo do micro:bit e sem esperar: é enviado no momento em que o bloco roda. Use ao apertar um botão ou dentro de \"sempre\" com a sua própria pausa. No fisicabit.com: \"Micro:bit envia timestamp\" desativado."
 }

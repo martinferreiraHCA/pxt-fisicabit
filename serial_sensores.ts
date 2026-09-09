@@ -30,7 +30,7 @@
 //% color=#5C6BC0
 //% icon="\uf287"
 //% block="FisicaBit USB"
-//% groups='["1. Send (inside forever)", "2. Optional", "Advanced"]'
+//% groups='["1. Send (inside forever)", "Send without time", "2. Optional", "Advanced"]'
 namespace FisicaBitSerial {
 
     let _m: FisicaBitDatos.Muestreador = null
@@ -52,6 +52,11 @@ namespace FisicaBitSerial {
         m.fijarPeriodo(ms)
         serial.writeLine(m.linea(valores))
         m.esperar()
+    }
+
+    function _enviarSinTiempo(valores: number[]): void {
+        const m = _asegurar()
+        serial.writeLine(m.linea(valores, false))
     }
 
     // =========================================================================
@@ -146,6 +151,100 @@ namespace FisicaBitSerial {
     //% inlineInputMode=inline
     export function enviar4(valor1: number, valor2: number, valor3: number, valor4: number, ms: number): void {
         _enviar([valor1, valor2, valor3, valor4], ms)
+    }
+
+    // =========================================================================
+    // ENVÍO DE DATOS SIN TIEMPO — sólo los valores medidos, sin espera
+    // =========================================================================
+
+    /**
+     * Envía a fisicabit.com por USB SOLO un valor medido, sin el tiempo del
+     * micro:bit y sin esperar: se manda en el momento en que se ejecuta el
+     * bloque. Usalo al presionar un botón, en cualquier evento, o dentro de
+     * "para siempre" con la pausa que quieras. Línea enviada: valor
+     * La página pone el tiempo con el reloj del navegador.
+     *
+     * Ejemplo: [al presionar botón A] → [enviar a fisicabit.com sin tiempo (temperatura)]
+     * En fisicabit.com: USB, 1 variable, "Micro:bit envía timestamp" DESACTIVADO.
+     *
+     * @param valor Valor medido
+     */
+    //% block="send to fisicabit.com without time %valor"
+    //% blockId=fisicabit_usb_enviar_st_1
+    //% group="Send without time"
+    //% weight=83
+    //% inlineInputMode=inline
+    export function enviarSinTiempo1(valor: number): void {
+        _enviarSinTiempo([valor])
+    }
+
+    /**
+     * Envía a fisicabit.com por USB SOLO dos valores medidos, sin el tiempo del
+     * micro:bit y sin esperar: se manda en el momento en que se ejecuta el
+     * bloque. Usalo al presionar un botón, en cualquier evento, o dentro de
+     * "para siempre" con la pausa que quieras. Línea enviada: valor1,valor2
+     * La página pone el tiempo con el reloj del navegador.
+     *
+     * Ejemplo: [para siempre] → [enviar a fisicabit.com sin tiempo (aceleración x) y (aceleración y)] + [pausa 200 ms]
+     * En fisicabit.com: USB, 2 variables, "Micro:bit envía timestamp" DESACTIVADO.
+     *
+     * @param valor1 Primer valor medido
+     * @param valor2 Segundo valor medido
+     */
+    //% block="send to fisicabit.com without time %valor1 and %valor2"
+    //% blockId=fisicabit_usb_enviar_st_2
+    //% group="Send without time"
+    //% weight=82
+    //% inlineInputMode=inline
+    export function enviarSinTiempo2(valor1: number, valor2: number): void {
+        _enviarSinTiempo([valor1, valor2])
+    }
+
+    /**
+     * Envía a fisicabit.com por USB SOLO tres valores medidos, sin el tiempo del
+     * micro:bit y sin esperar: se manda en el momento en que se ejecuta el
+     * bloque. Usalo al presionar un botón, en cualquier evento, o dentro de
+     * "para siempre" con la pausa que quieras. Línea enviada: valor1,valor2,valor3
+     * La página pone el tiempo con el reloj del navegador.
+     *
+     * Ejemplo: [para siempre] → [enviar ... sin tiempo (aceleración x), (y) y (z)] + [pausa 100 ms]
+     * En fisicabit.com: USB, 3 variables, "Micro:bit envía timestamp" DESACTIVADO.
+     *
+     * @param valor1 Primer valor medido
+     * @param valor2 Segundo valor medido
+     * @param valor3 Tercer valor medido
+     */
+    //% block="send to fisicabit.com without time %valor1 , %valor2 and %valor3"
+    //% blockId=fisicabit_usb_enviar_st_3
+    //% group="Send without time"
+    //% weight=81
+    //% inlineInputMode=inline
+    export function enviarSinTiempo3(valor1: number, valor2: number, valor3: number): void {
+        _enviarSinTiempo([valor1, valor2, valor3])
+    }
+
+    /**
+     * Envía a fisicabit.com por USB SOLO cuatro valores medidos, sin el tiempo del
+     * micro:bit y sin esperar: se manda en el momento en que se ejecuta el
+     * bloque. Usalo al presionar un botón, en cualquier evento, o dentro de
+     * "para siempre" con la pausa que quieras. Línea enviada: valor1,valor2,valor3,valor4
+     * La página pone el tiempo con el reloj del navegador.
+     *
+     * Ejemplo: cuatro sensores en un evento o en "para siempre" con pausa
+     * En fisicabit.com: USB, 4 variables, "Micro:bit envía timestamp" DESACTIVADO.
+     *
+     * @param valor1 Primer valor medido
+     * @param valor2 Segundo valor medido
+     * @param valor3 Tercer valor medido
+     * @param valor4 Cuarto valor medido
+     */
+    //% block="send to fisicabit.com without time %valor1 , %valor2 , %valor3 and %valor4"
+    //% blockId=fisicabit_usb_enviar_st_4
+    //% group="Send without time"
+    //% weight=80
+    //% inlineInputMode=inline
+    export function enviarSinTiempo4(valor1: number, valor2: number, valor3: number, valor4: number): void {
+        _enviarSinTiempo([valor1, valor2, valor3, valor4])
     }
 
     // =========================================================================
