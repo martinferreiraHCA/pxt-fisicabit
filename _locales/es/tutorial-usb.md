@@ -9,38 +9,29 @@ En este tutorial vas a programar el micro:bit para que mande las lecturas de sus
 
 Necesitás: un micro:bit, su cable USB y Chrome o Edge.
 
-## Paso 1: Elegir la frecuencia de muestreo
+## Paso 1: Mostrar que el programa corre
 
-Arrastrá ``||FisicaBitSerial:configurar frecuencia de muestreo||`` dentro de ``||basic:al iniciar||`` y elegí **10 Hz** (10 muestras por segundo).
-
-```blocks
-FisicaBitSerial.fijarFrecuencia(FrecuenciaMuestreo.Hz10)
-```
-
-## Paso 2: Mostrar que el programa corre
-
-Agregá ``||basic:mostrar ícono||`` antes, así el micro:bit muestra un tilde cuando arranca el programa.
+Arrastrá ``||basic:mostrar ícono||`` dentro de ``||basic:al iniciar||``, así el micro:bit muestra un tilde cuando arranca el programa.
 
 ```blocks
 basic.showIcon(IconNames.Yes)
-FisicaBitSerial.fijarFrecuencia(FrecuenciaMuestreo.Hz10)
 ```
 
-## Paso 3: Enviar el valor de un sensor
+## Paso 2: Enviar el tiempo y el valor de un sensor
 
-Arrastrá ``||FisicaBitSerial:enviar a fisicabit.com||`` dentro de ``||basic:para siempre||``. Poné ``||input:aceleración (mg) x||`` en su ranura. Este único bloque toma el tiempo, envía la línea `tiempo,valor` y espera hasta la próxima muestra.
+Arrastrá ``||FisicaBitSerial:enviar a fisicabit.com tiempo y ... cada ... ms||`` dentro de ``||basic:para siempre||``. Poné ``||input:aceleración (mg) x||`` en su ranura y dejá **100 ms** (10 muestras por segundo). Este único bloque toma el tiempo del micro:bit, envía la línea `tiempo,valor` y espera hasta la próxima muestra.
 
 ```blocks
 basic.forever(function () {
-    FisicaBitSerial.enviar1(input.acceleration(Dimension.X))
+    FisicaBitSerial.enviar1(input.acceleration(Dimension.X), 100)
 })
 ```
 
-## Paso 4: Descargar @showdialog
+## Paso 3: Descargar @showdialog
 
 Hacé clic en **Descargar** y copiá el programa al micro:bit. Esperá a que aparezca el tilde en la pantalla de LED.
 
-## Paso 5: Conectar en fisicabit.com @showdialog
+## Paso 4: Conectar en fisicabit.com @showdialog
 
 Abrí **fisicabit.com** en Chrome o Edge:
 
@@ -49,23 +40,23 @@ Abrí **fisicabit.com** en Chrome o Edge:
 3. Dejá activada la opción **Micro:bit envía timestamp**.
 4. Hacé clic en **Iniciar**. Inclina el micro:bit y mirá la gráfica.
 
-## Paso 6: Enviar dos valores
+## Paso 5: Enviar dos valores
 
-Reemplazá el bloque de ``||basic:para siempre||`` por ``||FisicaBitSerial:enviar a fisicabit.com ... y ...||`` y mandá la aceleración en **x** y en **y**. En fisicabit.com, poné el número de variables en **2**.
+Reemplazá el bloque de ``||basic:para siempre||`` por ``||FisicaBitSerial:enviar a fisicabit.com tiempo, ... y ... cada ... ms||`` y mandá la aceleración en **x** y en **y**. En fisicabit.com, poné el número de variables en **2**.
 
 ```blocks
 basic.forever(function () {
-    FisicaBitSerial.enviar2(input.acceleration(Dimension.X), input.acceleration(Dimension.Y))
+    FisicaBitSerial.enviar2(input.acceleration(Dimension.X), input.acceleration(Dimension.Y), 100)
 })
 ```
 
-## Paso 7: Muestreo más rápido (opcional)
+## Paso 6: Muestreo más rápido (opcional)
 
-Para experimentos rápidos como caída libre, usá ``||FisicaBitSerial:muestrear para fisicabit.com a||`` en lugar de ``||basic:para siempre||``. Mantiene **50 Hz** con precisión, sin el retardo oculto del bucle para siempre. Poné el bloque de envío adentro.
+Para experimentos rápidos como caída libre, usá ``||FisicaBitSerial:bucle rápido para fisicabit.com cada ... ms||`` en lugar de ``||basic:para siempre||`` con **20 ms** (50 muestras por segundo). Mantiene el ritmo con precisión, sin el retardo oculto del bucle para siempre. Poné el bloque de envío adentro.
 
 ```blocks
-FisicaBitSerial.bucleMuestreo(FrecuenciaMuestreo.Hz50, function () {
-    FisicaBitSerial.enviar1(input.acceleration(Dimension.X))
+FisicaBitSerial.bucleMuestreo(20, function () {
+    FisicaBitSerial.enviar1(input.acceleration(Dimension.X), 20)
 })
 ```
 

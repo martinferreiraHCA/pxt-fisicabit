@@ -97,8 +97,13 @@ namespace FisicaBitDatos {
         fijarPeriodo(ms: number): void {
             if (ms !== ms || ms < PERIODO_MIN_MS) ms = PERIODO_MIN_MS
             if (ms > PERIODO_MAX_MS) ms = PERIODO_MAX_MS
-            this.periodoMs = Math.round(ms)
-            this._proximo = 0
+            ms = Math.round(ms)
+            // Sólo resincroniza si el período cambió (el bloque de envío
+            // lo llama en cada muestra con el mismo valor).
+            if (ms !== this.periodoMs) {
+                this.periodoMs = ms
+                this._proximo = 0
+            }
         }
 
         /** Arma la línea CSV: [tiempo,]v1,v2,... */

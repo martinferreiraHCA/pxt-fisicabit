@@ -6,12 +6,11 @@
 //               inalámbrica (Bluetooth Low Energy, servicio UART Nordic) y
 //               enviar datos de sensores con un solo bloque.
 //
-//  USO TÍPICO EN BLOQUES:
+//  SECUENCIA MÍNIMA (dos bloques):
 //    al iniciar:
 //      [iniciar Bluetooth para fisicabit.com]        ← PRIMER bloque
-//      [configurar frecuencia de muestreo (10 Hz)]
 //    por siempre:
-//      [enviar a fisicabit.com por Bluetooth (aceleración x)]
+//      [enviar a fisicabit.com por Bluetooth tiempo y (aceleración x) cada (100) ms]
 //
 //  PROTOCOLO DE CONEXIÓN CON fisicabit.com (Web Bluetooth):
 //  ─────────────────────────────────────────────────────────
@@ -51,9 +50,9 @@
 
 //% weight=98
 //% color=#0082FB
-//% icon=""
+//% icon=""
 //% block="FisicaBit Bluetooth"
-//% groups='["fisicabit.com", "Connection", "Sampling", "Advanced", "BLE Services"]'
+//% groups='["1. Start (in on start)", "2. Send (inside forever)", "3. Optional", "Advanced", "BLE Services"]'
 namespace FisicaBitBT {
 
     let _m: FisicaBitDatos.Muestreador = null
@@ -84,8 +83,9 @@ namespace FisicaBitBT {
         return _m
     }
 
-    function _enviar(valores: number[]): void {
+    function _enviar(valores: number[], ms: number): void {
         const m = _asegurarUART()
+        m.fijarPeriodo(ms)
         if (_conectado) {
             // "\n" en lugar de "\r\n": un byte menos por paquete BLE
             bluetooth.uartWriteString(m.linea(valores) + "\n")
@@ -94,22 +94,23 @@ namespace FisicaBitBT {
     }
 
     // =========================================================================
-    // GRUPO 1: fisicabit.com — inicio y un solo bloque de envío
+    // PASO 1: INICIAR — primer bloque de "al iniciar"
     // =========================================================================
 
     /**
      * Inicia Bluetooth listo para conectarse a fisicabit.com.
      * Colocar en "al iniciar" como PRIMER bloque.
      *
-     * Qué hace:
-     *   1. Inicia el servicio UART BLE (el que usa fisicabit.com)
-     *   2. Potencia de transmisión al máximo (alcance ~20 m)
-     *   3. Limpia las barras del patrón Bluetooth de la pantalla
-     *   4. Muestra diana (◎) = esperando conexión, corazón (♥) = conectado
+     * Qué hace: enciende el servicio UART que busca fisicabit.com, sube la
+     * potencia de transmisión al máximo y muestra en la pantalla una diana (◎)
+     * mientras espera y un corazón (♥) cuando la página se conecta.
+     *
+     * Ejemplo: [al iniciar] → [iniciar Bluetooth para fisicabit.com]
+     * Luego en fisicabit.com: Bluetooth → Conectar → "BBC micro:bit [xxxxx]".
      */
     //% block="start Bluetooth for fisicabit.com"
     //% blockId=fisicabit_bt_inicio_rapido
-    //% group="fisicabit.com"
+    //% group="1. Start (in on start)"
     //% weight=110
     export function inicioRapido(): void {
         _asegurarUART()
@@ -117,95 +118,114 @@ namespace FisicaBitBT {
         basic.showIcon(IconNames.Target)
     }
 
+    // =========================================================================
+    // PASO 2: ENVIAR — un solo bloque dentro de "para siempre"
+    // =========================================================================
+
     /**
-     * Envía UN valor a fisicabit.com por Bluetooth y espera el tiempo de muestreo.
-     * Colocar dentro de "para siempre". Envía la línea: tiempo,valor
-     * Sólo transmite cuando fisicabit.com está conectado.
-     * @param valor Valor a enviar (sensor, variable o cálculo)
+     * Envía a fisicabit.com por Bluetooth el tiempo (ms) y un valor medido,
+     * y espera hasta la próxima muestra. Colocar dentro de "para siempre".
+     * Sólo transmite mientras la página está conectada. Línea: tiempo,valor
+     *
+     * Ejemplo: [enviar a fisicabit.com por Bluetooth tiempo y (aceleración x) cada (100) ms]
+     *   → 10 muestras por segundo, tiempo desde 0 en cada conexión.
+     * En fisicabit.com: Bluetooth, 1 variable, "Micro:bit envía timestamp" activado.
+     * Por Bluetooth se recomienda 50 ms o más (hasta 20 muestras por segundo).
+     *
+     * @param valor Valor medido (sensor, variable o cálculo)
+     * @param ms Tiempo entre muestras en ms (100 = 10 por segundo), eg: 100
      */
-    //% block="send to fisicabit.com via Bluetooth %valor"
+    //% block="send to fisicabit.com via Bluetooth time and %valor every %ms ms"
     //% blockId=fisicabit_bt_enviar_1
-    //% group="fisicabit.com"
+    //% group="2. Send (inside forever)"
     //% weight=100
+    //% ms.min=5 ms.max=60000 ms.defl=100
     //% inlineInputMode=inline
-    export function enviar1(valor: number): void {
-        _enviar([valor])
+    export function enviar1(valor: number, ms: number): void {
+        _enviar([valor], ms)
     }
 
     /**
-     * Envía DOS valores a fisicabit.com por Bluetooth y espera el tiempo de muestreo.
-     * Colocar dentro de "para siempre". Envía: tiempo,valor1,valor2
-     * @param valor1 Primer valor
-     * @param valor2 Segundo valor
+     * Envía a fisicabit.com por Bluetooth el tiempo (ms) y dos valores
+     * medidos, y espera hasta la próxima muestra. Colocar dentro de
+     * "para siempre". Línea: tiempo,valor1,valor2
+     *
+     * Ejemplo: aceleración x e y cada 100 ms.
+     * En fisicabit.com: Bluetooth, 2 variables, "Micro:bit envía timestamp" activado.
+     *
+     * @param valor1 Primer valor medido
+     * @param valor2 Segundo valor medido
+     * @param ms Tiempo entre muestras en ms, eg: 100
      */
-    //% block="send to fisicabit.com via Bluetooth %valor1 and %valor2"
+    //% block="send to fisicabit.com via Bluetooth time, %valor1 and %valor2 every %ms ms"
     //% blockId=fisicabit_bt_enviar_2
-    //% group="fisicabit.com"
+    //% group="2. Send (inside forever)"
     //% weight=95
+    //% ms.min=5 ms.max=60000 ms.defl=100
     //% inlineInputMode=inline
-    export function enviar2(valor1: number, valor2: number): void {
-        _enviar([valor1, valor2])
+    export function enviar2(valor1: number, valor2: number, ms: number): void {
+        _enviar([valor1, valor2], ms)
     }
 
     /**
-     * Envía TRES valores a fisicabit.com por Bluetooth y espera el tiempo de muestreo.
-     * Colocar dentro de "para siempre". Envía: tiempo,valor1,valor2,valor3
-     * @param valor1 Primer valor
-     * @param valor2 Segundo valor
-     * @param valor3 Tercer valor
+     * Envía a fisicabit.com por Bluetooth el tiempo (ms) y tres valores
+     * medidos, y espera hasta la próxima muestra. Colocar dentro de
+     * "para siempre". Línea: tiempo,valor1,valor2,valor3
+     *
+     * Ejemplo: aceleración x, y, z cada 100 ms.
+     * En fisicabit.com: Bluetooth, 3 variables, "Micro:bit envía timestamp" activado.
+     *
+     * @param valor1 Primer valor medido
+     * @param valor2 Segundo valor medido
+     * @param valor3 Tercer valor medido
+     * @param ms Tiempo entre muestras en ms, eg: 100
      */
-    //% block="send to fisicabit.com via Bluetooth %valor1 , %valor2 and %valor3"
+    //% block="send to fisicabit.com via Bluetooth time, %valor1 , %valor2 and %valor3 every %ms ms"
     //% blockId=fisicabit_bt_enviar_3
-    //% group="fisicabit.com"
+    //% group="2. Send (inside forever)"
     //% weight=90
+    //% ms.min=5 ms.max=60000 ms.defl=100
     //% inlineInputMode=inline
-    export function enviar3(valor1: number, valor2: number, valor3: number): void {
-        _enviar([valor1, valor2, valor3])
+    export function enviar3(valor1: number, valor2: number, valor3: number, ms: number): void {
+        _enviar([valor1, valor2, valor3], ms)
     }
 
     /**
-     * Envía CUATRO valores a fisicabit.com por Bluetooth y espera el tiempo de muestreo.
-     * Colocar dentro de "para siempre". Envía: tiempo,valor1,valor2,valor3,valor4
-     * @param valor1 Primer valor
-     * @param valor2 Segundo valor
-     * @param valor3 Tercer valor
-     * @param valor4 Cuarto valor
+     * Envía a fisicabit.com por Bluetooth el tiempo (ms) y cuatro valores
+     * medidos, y espera hasta la próxima muestra. Colocar dentro de
+     * "para siempre". Línea: tiempo,valor1,valor2,valor3,valor4
+     *
+     * En fisicabit.com: Bluetooth, 4 variables, "Micro:bit envía timestamp" activado.
+     *
+     * @param valor1 Primer valor medido
+     * @param valor2 Segundo valor medido
+     * @param valor3 Tercer valor medido
+     * @param valor4 Cuarto valor medido
+     * @param ms Tiempo entre muestras en ms, eg: 100
      */
-    //% block="send to fisicabit.com via Bluetooth %valor1 , %valor2 , %valor3 and %valor4"
+    //% block="send to fisicabit.com via Bluetooth time, %valor1 , %valor2 , %valor3 and %valor4 every %ms ms"
     //% blockId=fisicabit_bt_enviar_4
-    //% group="fisicabit.com"
+    //% group="2. Send (inside forever)"
     //% weight=85
+    //% ms.min=5 ms.max=60000 ms.defl=100
     //% inlineInputMode=inline
-    export function enviar4(valor1: number, valor2: number, valor3: number, valor4: number): void {
-        _enviar([valor1, valor2, valor3, valor4])
-    }
-
-    /**
-     * Configura cuántas muestras por segundo se envían por Bluetooth.
-     * Colocar en "al iniciar". Por defecto: 10 Hz. Por BLE se recomienda
-     * hasta 20 Hz; para más velocidad usar USB.
-     * @param frecuencia Frecuencia de muestreo
-     */
-    //% block="set Bluetooth sampling rate %frecuencia"
-    //% blockId=fisicabit_bt_frecuencia
-    //% group="fisicabit.com"
-    //% weight=80
-    //% frecuencia.defl=FrecuenciaMuestreo.Hz10
-    export function fijarFrecuencia(frecuencia: FrecuenciaMuestreo): void {
-        _asegurarUART().fijarPeriodo(frecuencia)
+    export function enviar4(valor1: number, valor2: number, valor3: number, valor4: number, ms: number): void {
+        _enviar([valor1, valor2, valor3, valor4], ms)
     }
 
     // =========================================================================
-    // GRUPO 2: CONEXIÓN
+    // PASO 3: OPCIONAL — estado de la conexión y control del tiempo
     // =========================================================================
 
     /**
-     * Verdadero mientras fisicabit.com (u otra app) está conectada por Bluetooth.
+     * Verdadero mientras fisicabit.com está conectado por Bluetooth.
+     *
+     * Ejemplo: [si (¿Bluetooth conectado?) entonces] → [mostrar ícono ♥]
      */
     //% block="Bluetooth connected?"
     //% blockId=fisicabit_bt_conectado
-    //% group="Connection"
-    //% weight=75
+    //% group="3. Optional"
+    //% weight=80
     export function estaConectado(): boolean {
         _asegurarUART()
         return _conectado
@@ -213,12 +233,14 @@ namespace FisicaBitBT {
 
     /**
      * Ejecuta el código cuando fisicabit.com se conecta por Bluetooth.
+     *
+     * Ejemplo: [al conectar fisicabit.com por Bluetooth] → [reproducir tono Do]
      * @param cuerpo Código a ejecutar al conectar
      */
     //% block="on fisicabit.com Bluetooth connected"
     //% blockId=fisicabit_bt_al_conectar
-    //% group="Connection"
-    //% weight=72
+    //% group="3. Optional"
+    //% weight=78
     export function alConectar(cuerpo: () => void): void {
         _asegurarUART()
         bluetooth.onBluetoothConnected(cuerpo)
@@ -230,64 +252,25 @@ namespace FisicaBitBT {
      */
     //% block="on fisicabit.com Bluetooth disconnected"
     //% blockId=fisicabit_bt_al_desconectar
-    //% group="Connection"
-    //% weight=71
+    //% group="3. Optional"
+    //% weight=77
     export function alDesconectar(cuerpo: () => void): void {
         _asegurarUART()
         bluetooth.onBluetoothDisconnected(cuerpo)
     }
 
     /**
-     * Activa o desactiva los íconos de estado en la pantalla LED
-     * (diana = esperando, corazón = conectado). Útil si querés usar
-     * la pantalla para otra cosa.
-     * @param mostrar true = mostrar íconos (por defecto)
+     * Vuelve el tiempo a 0. Útil para empezar una nueva medición al apretar
+     * un botón: la próxima línea enviada arranca en tiempo 0.
+     *
+     * Ejemplo: [al presionar botón A] → [reiniciar tiempo Bluetooth a 0]
      */
-    //% block="Bluetooth show connection icons %mostrar"
-    //% blockId=fisicabit_bt_iconos
-    //% group="Connection"
-    //% weight=70
-    //% mostrar.shadow=toggleOnOff
-    //% mostrar.defl=true
-    export function mostrarIconos(mostrar: boolean): void {
-        _mostrarIconos = mostrar
-        if (!mostrar) basic.clearScreen()
-    }
-
-    // =========================================================================
-    // GRUPO 3: MUESTREO — control fino del tiempo
-    // =========================================================================
-
-    /**
-     * Configura el intervalo entre muestras en milisegundos (valor libre).
-     * @param ms Intervalo de muestreo en ms (5 a 60000)
-     */
-    //% block="set Bluetooth sampling interval %ms ms"
-    //% blockId=fisicabit_bt_intervalo
-    //% group="Sampling"
-    //% weight=65
-    //% ms.min=5 ms.max=60000 ms.defl=100
-    export function fijarIntervalo(ms: number): void {
-        _asegurarUART().fijarPeriodo(ms)
-    }
-
-    /**
-     * Ejecuta el código interior a la frecuencia indicada con temporización
-     * precisa (sin el retardo oculto de "para siempre").
-     * Adentro usar "enviar a fisicabit.com por Bluetooth".
-     * @param frecuencia Frecuencia de muestreo
-     * @param cuerpo Código a ejecutar en cada muestra
-     */
-    //% block="fisicabit.com Bluetooth sampling loop at %frecuencia"
-    //% blockId=fisicabit_bt_bucle
-    //% group="Sampling"
-    //% weight=60
-    //% frecuencia.defl=FrecuenciaMuestreo.Hz20
-    //% blockAllowMultiple=0
-    export function bucleMuestreo(frecuencia: FrecuenciaMuestreo, cuerpo: () => void): void {
-        const m = _asegurarUART()
-        m.fijarPeriodo(frecuencia)
-        m.bucle(cuerpo)
+    //% block="reset Bluetooth time to 0"
+    //% blockId=fisicabit_bt_reiniciar_tiempo
+    //% group="3. Optional"
+    //% weight=75
+    export function reiniciarTiempo(): void {
+        _asegurarUART().reiniciarTiempo()
     }
 
     /**
@@ -296,26 +279,53 @@ namespace FisicaBitBT {
      */
     //% block="Bluetooth time (ms)"
     //% blockId=fisicabit_bt_tiempo
-    //% group="Sampling"
-    //% weight=55
+    //% group="3. Optional"
+    //% weight=70
     export function tiempo(): number {
         return _asegurarUART().tiempo()
     }
 
     /**
-     * Vuelve el tiempo a 0 (por ejemplo al apretar un botón para empezar
-     * una nueva medición).
+     * Bucle rápido para fisicabit.com por Bluetooth: ejecuta el código
+     * interior cada X ms con temporización precisa, sin el retardo oculto de
+     * "para siempre". Adentro va el bloque "enviar a fisicabit.com por
+     * Bluetooth"; su tiempo "cada ... ms" se ignora dentro del bucle.
+     * Por Bluetooth conviene 50 ms o más.
+     *
+     * @param ms Tiempo entre muestras en ms, eg: 50
+     * @param cuerpo Código a ejecutar en cada muestra
      */
-    //% block="reset Bluetooth time to 0"
-    //% blockId=fisicabit_bt_reiniciar_tiempo
-    //% group="Sampling"
-    //% weight=50
-    export function reiniciarTiempo(): void {
-        _asegurarUART().reiniciarTiempo()
+    //% block="fisicabit.com Bluetooth fast loop every %ms ms"
+    //% blockId=fisicabit_bt_bucle
+    //% group="3. Optional"
+    //% weight=65
+    //% ms.min=5 ms.max=60000 ms.defl=50
+    //% blockAllowMultiple=0
+    export function bucleMuestreo(ms: number, cuerpo: () => void): void {
+        const m = _asegurarUART()
+        m.fijarPeriodo(ms)
+        m.bucle(cuerpo)
+    }
+
+    /**
+     * Activa o desactiva los íconos de estado en la pantalla LED
+     * (diana = esperando, corazón = conectado). Desactivalos si querés usar
+     * la pantalla para otra cosa.
+     * @param mostrar true = mostrar íconos (por defecto)
+     */
+    //% block="Bluetooth show connection icons %mostrar"
+    //% blockId=fisicabit_bt_iconos
+    //% group="3. Optional"
+    //% weight=60
+    //% mostrar.shadow=toggleOnOff
+    //% mostrar.defl=true
+    export function mostrarIconos(mostrar: boolean): void {
+        _mostrarIconos = mostrar
+        if (!mostrar) basic.clearScreen()
     }
 
     // =========================================================================
-    // GRUPO 4: AVANZADO
+    // AVANZADO
     // =========================================================================
 
     /**
@@ -386,6 +396,37 @@ namespace FisicaBitBT {
         bluetooth.startIOPinService()
         _mostrarIconos = true
         basic.showIcon(IconNames.Target)
+    }
+
+    /**
+     * Fija el intervalo entre muestras que usarán los bloques de envío que
+     * no lo indiquen. Normalmente no hace falta: el bloque "enviar" ya trae
+     * su propio "cada ... ms".
+     * @param frecuencia Frecuencia de muestreo
+     */
+    //% block="set Bluetooth sampling rate %frecuencia"
+    //% blockId=fisicabit_bt_frecuencia
+    //% group="Advanced"
+    //% weight=30
+    //% frecuencia.defl=FrecuenciaMuestreo.Hz10
+    //% advanced=true
+    export function fijarFrecuencia(frecuencia: FrecuenciaMuestreo): void {
+        _asegurarUART().fijarPeriodo(frecuencia)
+    }
+
+    /**
+     * Fija el intervalo entre muestras en milisegundos (valor libre).
+     * Normalmente no hace falta: el bloque "enviar" ya trae su propio "cada ... ms".
+     * @param ms Intervalo de muestreo en ms (5 a 60000)
+     */
+    //% block="set Bluetooth sampling interval %ms ms"
+    //% blockId=fisicabit_bt_intervalo
+    //% group="Advanced"
+    //% weight=29
+    //% ms.min=5 ms.max=60000 ms.defl=100
+    //% advanced=true
+    export function fijarIntervalo(ms: number): void {
+        _asegurarUART().fijarPeriodo(ms)
     }
 
     // =========================================================================
