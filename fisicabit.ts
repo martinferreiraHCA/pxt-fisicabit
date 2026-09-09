@@ -48,8 +48,8 @@
 //% weight=100
 //% color=#E64322
 //% icon="\uf0e7"
-//% block="FisicaBit Sensors"
-//% groups="['Internal Sensors', 'External Sensors', 'Optical Barrier', 'Conversions', 'Native C++', 'Utilities']"
+//% block="FisicaBit Sensores"
+//% groups="['Sensores Internos', 'Sensores Externos', 'Barrera Óptica', 'Conversiones', 'Nativo C++', 'Utilidades']"
 namespace FisicaBit {
 
     // =========================================================================
@@ -76,9 +76,9 @@ namespace FisicaBit {
      * @param sensor El tipo de sensor interno a leer (ver enum TipoSensorInterno)
      * @returns Valor numérico del sensor (la unidad depende del sensor)
      */
-    //% block="read internal sensor %sensor"
+    //% block="leer sensor interno %sensor"
     //% blockId=fisicabit_leer_sensor_interno
-    //% group="Internal Sensors"
+    //% group="Sensores Internos"
     //% weight=100
     //% sensor.defl=TipoSensorInterno.Temperatura
     export function leerSensorInterno(sensor: TipoSensorInterno): number {
@@ -197,9 +197,9 @@ namespace FisicaBit {
      * @param pin Pin analógico donde está conectado el sensor
      * @returns Valor entre 0 y 1023 (resolución ADC de 10 bits)
      */
-    //% block="read analog sensor on %pin"
+    //% block="leer sensor analógico en %pin"
     //% blockId=fisicabit_leer_analogico
-    //% group="External Sensors"
+    //% group="Sensores Externos"
     //% weight=90
     //% pin.defl=PinAnalogico.P0
     export function leerSensorAnalogico(pin: PinAnalogico): number {
@@ -235,9 +235,9 @@ namespace FisicaBit {
      * @param pin Número del pin digital (ej: 8 para P8, 12 para P12)
      * @returns 0 (LOW) o 1 (HIGH)
      */
-    //% block="read digital sensor on P%pin"
+    //% block="leer sensor digital en P%pin"
     //% blockId=fisicabit_leer_digital
-    //% group="External Sensors"
+    //% group="Sensores Externos"
     //% weight=85
     //% pin.defl=8
     export function leerSensorDigital(pin: number): number {
@@ -290,9 +290,9 @@ namespace FisicaBit {
      * @param unidad Unidad de temperatura deseada
      * @returns Temperatura medida (con 1 decimal)
      */
-    //% block="NTC 10K temperature on %pin in %unidad"
+    //% block="temperatura NTC 10K en %pin en %unidad"
     //% blockId=fisicabit_ntc_10k
-    //% group="External Sensors"
+    //% group="Sensores Externos"
     //% weight=88
     //% pin.defl=PinAnalogico.P0
     //% unidad.defl=UnidadTemperatura.Celsius
@@ -467,9 +467,9 @@ namespace FisicaBit {
      * @param barrera Cuál barrera configurar ("A" = primera, "B" = segunda)
      * @param umbral Valor de 0 a 1023 que separa "haz libre" de "haz cortado"
      */
-    //% block="set barrier %barrera threshold to %umbral"
+    //% block="fijar umbral barrera %barrera a %umbral"
     //% blockId=fisicabit_barrera_umbral
-    //% group="Optical Barrier"
+    //% group="Barrera Óptica"
     //% weight=99
     //% umbral.min=0 umbral.max=1023 umbral.defl=512
     //% barrera.defl="A"
@@ -499,9 +499,9 @@ namespace FisicaBit {
      * @param modo Digital (FC-33) o Analógico (IR DIY)
      * @returns Valor crudo: Digital → 0 o 1, Analógico → 0 a 1023
      */
-    //% block="read barrier raw pin %pin mode %modo"
+    //% block="leer barrera crudo pin %pin modo %modo"
     //% blockId=fisicabit_barrera_crudo
-    //% group="Optical Barrier"
+    //% group="Barrera Óptica"
     //% weight=98
     //% pin.defl=PinAnalogico.P1
     //% modo.defl=ModoBarrera.Analogico
@@ -529,9 +529,9 @@ namespace FisicaBit {
      * @param modo Digital o Analógico
      * @returns true si hay un objeto cortando el haz
      */
-    //% block="barrier triggered on %pin mode %modo"
+    //% block="barrera activada en %pin modo %modo"
     //% blockId=fisicabit_barrera_activada
-    //% group="Optical Barrier"
+    //% group="Barrera Óptica"
     //% weight=97
     //% pin.defl=PinAnalogico.P1
     //% modo.defl=ModoBarrera.Digital
@@ -581,9 +581,9 @@ namespace FisicaBit {
      * @param timeoutMs Timeout máximo en milisegundos (0 = sin timeout)
      * @returns Tiempo entre barreras en milisegundos, -1 si timeout
      */
-    //% block="measure time barrier A %pinA → B %pinB mode %modo timeout %timeoutMs ms"
+    //% block="medir tiempo barrera A %pinA → B %pinB modo %modo timeout %timeoutMs ms"
     //% blockId=fisicabit_barrera_tiempo
-    //% group="Optical Barrier"
+    //% group="Barrera Óptica"
     //% weight=95
     //% pinA.defl=PinAnalogico.P1
     //% pinB.defl=PinAnalogico.P2
@@ -661,9 +661,9 @@ namespace FisicaBit {
      * @param timeoutUs Timeout en microsegundos
      * @returns Tiempo en microsegundos, 0 si timeout
      */
-    //% block="[C++] barrier time A P%pinA → B P%pinB mode %modo threshA %umbralA threshB %umbralB timeout %timeoutUs μs"
+    //% block="[C++] tiempo barrera A P%pinA → B P%pinB modo %modo umbralA %umbralA umbralB %umbralB timeout %timeoutUs μs"
     //% blockId=fisicabit_barrera_nativo
-    //% group="Optical Barrier"
+    //% group="Barrera Óptica"
     //% weight=93
     //% pinA.defl=1 pinB.defl=2
     //% modo.defl=ModoBarrera.Digital
@@ -704,9 +704,9 @@ namespace FisicaBit {
      * @param distanciaMm Distancia entre barreras en milímetros
      * @returns Velocidad en m/s (multiplicada por 100 para 2 decimales)
      */
-    //% block="velocity with time %tiempoUs μs distance %distanciaMm mm (×100 m/s)"
+    //% block="velocidad con tiempo %tiempoUs μs distancia %distanciaMm mm (×100 m/s)"
     //% blockId=fisicabit_barrera_velocidad
-    //% group="Optical Barrier"
+    //% group="Barrera Óptica"
     //% weight=91
     //% tiempoUs.defl=50000 distanciaMm.defl=100
     export function calcularVelocidad(tiempoUs: number, distanciaMm: number): number {
@@ -726,9 +726,9 @@ namespace FisicaBit {
      * @param unidad Unidad de salida deseada
      * @returns Tiempo en la unidad seleccionada (×100 para 2 decimales en ms y s)
      */
-    //% block="convert %tiempoUs μs to %unidad"
+    //% block="convertir %tiempoUs μs a %unidad"
     //% blockId=fisicabit_barrera_convertir_tiempo
-    //% group="Optical Barrier"
+    //% group="Barrera Óptica"
     //% weight=89
     //% unidad.defl=UnidadTiempo.Milisegundos
     export function convertirTiempo(tiempoUs: number, unidad: UnidadTiempo): number {
@@ -759,9 +759,9 @@ namespace FisicaBit {
      * @param timeoutMs Timeout en milisegundos
      * @returns Tiempo de bloqueo en milisegundos, -1 si timeout
      */
-    //% block="blocking time on %pin mode %modo timeout %timeoutMs ms"
+    //% block="tiempo de bloqueo en %pin modo %modo timeout %timeoutMs ms"
     //% blockId=fisicabit_barrera_bloqueo
-    //% group="Optical Barrier"
+    //% group="Barrera Óptica"
     //% weight=87
     //% pin.defl=PinAnalogico.P1
     //% modo.defl=ModoBarrera.Digital
@@ -813,9 +813,9 @@ namespace FisicaBit {
      * @param a Unidad de destino
      * @returns Temperatura convertida
      */
-    //% block="convert %valor from %de to %a"
+    //% block="convertir %valor de %de a %a"
     //% blockId=fisicabit_convertir_temp
-    //% group="Conversions"
+    //% group="Conversiones"
     //% weight=70
     export function convertirTemperatura(
         valor: number,
@@ -862,9 +862,9 @@ namespace FisicaBit {
      * @param salidaMax Máximo del rango de salida
      * @returns Valor mapeado al nuevo rango
      */
-    //% block="map %valor from (%entradaMin — %entradaMax) to (%salidaMin — %salidaMax)"
+    //% block="mapear %valor de (%entradaMin — %entradaMax) a (%salidaMin — %salidaMax)"
     //% blockId=fisicabit_mapear
-    //% group="Conversions"
+    //% group="Conversiones"
     //% weight=65
     export function mapearValor(
         valor: number,
@@ -904,9 +904,9 @@ namespace FisicaBit {
      * @param canal Canal ADC (0-7, corresponde a los pines analógicos)
      * @returns Valor crudo del ADC de 12 bits (0-4095)
      */
-    //% block="[C++] read native ADC channel %canal"
+    //% block="[C++] leer ADC nativo canal %canal"
     //% blockId=fisicabit_adc_nativo
-    //% group="Native C++"
+    //% group="Nativo C++"
     //% weight=50
     //% shim=fisicabit_native::leerADCNativo
     export function leerADCNativo(canal: number): number {
@@ -924,9 +924,9 @@ namespace FisicaBit {
      * @param timeoutUs Timeout en microsegundos
      * @returns Duración del pulso en microsegundos
      */
-    //% block="[C++] measure pulse pin P%pin level %nivelAlto timeout %timeoutUs μs"
+    //% block="[C++] medir pulso pin P%pin nivel %nivelAlto timeout %timeoutUs μs"
     //% blockId=fisicabit_pulso_nativo
-    //% group="Native C++"
+    //% group="Nativo C++"
     //% weight=45
     //% shim=fisicabit_native::medirPulsoNativo
     export function medirPulsoNativo(pin: number, nivelAlto: boolean, timeoutUs: number): number {
@@ -942,9 +942,9 @@ namespace FisicaBit {
      * @param muestras Número de muestras a promediar (1-64)
      * @returns Promedio de las lecturas (0-4095)
      */
-    //% block="[C++] read ADC average channel %canal samples %muestras"
+    //% block="[C++] leer ADC promedio canal %canal muestras %muestras"
     //% blockId=fisicabit_adc_promedio
-    //% group="Native C++"
+    //% group="Nativo C++"
     //% weight=40
     //% shim=fisicabit_native::leerADCPromedio
     export function leerADCPromedio(canal: number, muestras: number): number {
@@ -968,9 +968,9 @@ namespace FisicaBit {
      * @param etiqueta Texto descriptivo (ej: "Temp")
      * @param valor Valor numérico a mostrar
      */
-    //% block="show on LED %etiqueta : %valor"
+    //% block="mostrar en LED %etiqueta : %valor"
     //% blockId=fisicabit_mostrar_led
-    //% group="Utilities"
+    //% group="Utilidades"
     //% weight=30
     export function mostrarEnLED(etiqueta: string, valor: number): void {
         basic.showString(etiqueta + ":" + Math.round(valor))
@@ -995,8 +995,8 @@ namespace FisicaBit {
 //% weight=97
 //% color=#1E88E5
 //% icon="\uf1b2"
-//% block="FisicaBit Kinematics"
-//% groups="['Acceleration', 'Orientation', 'Calibration & gravity', 'Instantaneous velocity']"
+//% block="FisicaBit Cinemática"
+//% groups="['Aceleración', 'Orientación', 'Calibración y gravedad', 'Velocidad instantánea']"
 namespace FisicaBitCinematica {
 
     // =========================================================================
@@ -1354,9 +1354,9 @@ namespace FisicaBitCinematica {
      *
      * @param muestras Número de muestras a promediar (50-500). Def. 200.
      */
-    //% block="calibrate accelerometer at rest (%muestras samples)"
+    //% block="calibrar acelerómetro en reposo (%muestras muestras)"
     //% blockId=fisicabit_cin_calibrar
-    //% group="Calibration & gravity"
+    //% group="Calibración y gravedad"
     //% weight=100
     //% muestras.min=50 muestras.max=500 muestras.defl=200
     export function calibrarAcelerometro(muestras: number): void {
@@ -1381,9 +1381,9 @@ namespace FisicaBitCinematica {
      * a partir de la lectura cruda actual. Si la calibración está
      * bloqueada, no hace nada.
      */
-    //% block="update gravity estimate"
+    //% block="actualizar estimación de gravedad"
     //% blockId=fisicabit_cin_actualizar_gravedad
-    //% group="Calibration & gravity"
+    //% group="Calibración y gravedad"
     //% weight=99
     export function actualizarGravedad(): void {
         const ax = input.acceleration(Dimension.X)
@@ -1408,9 +1408,9 @@ namespace FisicaBitCinematica {
      *
      * @param alfa Constante del filtro (0,001-0,5). Def. 0,05.
      */
-    //% block="set gravity filter α to %alfa"
+    //% block="fijar filtro de gravedad α en %alfa"
     //% blockId=fisicabit_cin_fijar_alfa
-    //% group="Calibration & gravity"
+    //% group="Calibración y gravedad"
     //% weight=98
     //% alfa.min=0.001 alfa.max=0.5 alfa.defl=0.05
     export function fijarAlfaGravedad(alfa: number): void {
@@ -1424,9 +1424,9 @@ namespace FisicaBitCinematica {
      * (desbloquea el EMA) tras una calibración. Usar sólo si el cuerpo
      * va a cambiar de orientación durante el experimento.
      */
-    //% block="unlock gravity tracking"
+    //% block="desbloquear seguimiento de gravedad"
     //% blockId=fisicabit_cin_unlock
-    //% group="Calibration & gravity"
+    //% group="Calibración y gravedad"
     //% weight=97
     export function desbloquearGravedad(): void {
         _gLocked = false
@@ -1439,9 +1439,9 @@ namespace FisicaBitCinematica {
      *      ±8 g  →  ≈15,6 mg/bit
      * Elegir el MÁS PEQUEÑO que no sature durante el experimento.
      */
-    //% block="set accelerometer range %rango"
+    //% block="fijar rango del acelerómetro %rango"
     //% blockId=fisicabit_cin_rango
-    //% group="Calibration & gravity"
+    //% group="Calibración y gravedad"
     //% weight=96
     //% rango.defl=RangoAcelerometro.Rango2G
     export function fijarRangoAcelerometro(rango: RangoAcelerometro): void {
@@ -1453,9 +1453,9 @@ namespace FisicaBitCinematica {
      * debería valer ≈1000 mg. Diagnóstico: si no lo hace, el cuerpo se
      * está moviendo o la calibración es incorrecta.
      */
-    //% block="|g estimated| (mg)"
+    //% block="|g estimada| (mg)"
     //% blockId=fisicabit_cin_mod_gravedad
-    //% group="Calibration & gravity"
+    //% group="Calibración y gravedad"
     //% weight=70
     export function moduloGravedadEstimada(): number {
         return Math.round(Math.sqrt(_gvx * _gvx + _gvy * _gvy + _gvz * _gvz))
@@ -1465,9 +1465,9 @@ namespace FisicaBitCinematica {
      * Convierte un valor de miligravedades (mg) a m/s² usando g₀ CODATA.
      * Devuelve con 2 decimales.
      */
-    //% block="convert %mg mg → m/s²"
+    //% block="convertir %mg mg → m/s²"
     //% blockId=fisicabit_cin_mg_a_ms2
-    //% group="Calibration & gravity"
+    //% group="Calibración y gravedad"
     //% weight=60
     export function convertirMgAMs2(mg: number): number {
         return Math.round(mg * MG_A_MS2 * 100) / 100
@@ -1492,9 +1492,9 @@ namespace FisicaBitCinematica {
      *
      * VALIDACIÓN: rango por eje ≥ 20 μT (si no, se descarta).
      */
-    //% block="calibrate magnetometer (rotate micro:bit)"
+    //% block="calibrar magnetómetro (girar el micro:bit)"
     //% blockId=fisicabit_cin_cal_mag
-    //% group="Calibration & gravity"
+    //% group="Calibración y gravedad"
     //% weight=95
     export function calibrarMagnetometro(): void {
         const N = 300
@@ -1578,9 +1578,9 @@ namespace FisicaBitCinematica {
      * guardaste los valores (por ejemplo por serial con `enviarCalMag`).
      * Activa automáticamente el modo dual.
      */
-    //% block="set manual magnetometer cal offX %ox offY %oy offZ %oz scX %sx scY %sy scZ %sz"
+    //% block="fijar calibración manual del magnetómetro offX %ox offY %oy offZ %oz escX %sx escY %sy escZ %sz"
     //% blockId=fisicabit_cin_cal_mag_manual
-    //% group="Calibration & gravity"
+    //% group="Calibración y gravedad"
     //% weight=60
     //% advanced=true
     export function calibracionManualMag(
@@ -1598,9 +1598,9 @@ namespace FisicaBitCinematica {
     /**
      * ¿El magnetómetro tiene una calibración válida cargada?
      */
-    //% block="magnetometer calibrated?"
+    //% block="¿magnetómetro calibrado?"
     //% blockId=fisicabit_cin_mag_calibrado
-    //% group="Calibration & gravity"
+    //% group="Calibración y gravedad"
     //% weight=55
     export function magnetometroCalibrado(): boolean {
         return _magCalibrated
@@ -1610,9 +1610,9 @@ namespace FisicaBitCinematica {
      * Calidad (0-100 %) de la calibración magnética actual, basada en
      * la uniformidad de los radios del elipsoide medido.
      */
-    //% block="magnetometer calibration score"
+    //% block="calidad de calibración del magnetómetro"
     //% blockId=fisicabit_cin_mag_calidad
-    //% group="Calibration & gravity"
+    //% group="Calibración y gravedad"
     //% weight=50
     export function calidadCalMag(): number {
         return _magCalQuality
@@ -1624,9 +1624,9 @@ namespace FisicaBitCinematica {
      * Sin calibración del magnetómetro el modo dual sigue funcionando
      * (usa sólo pitch/roll + LPF), pero el yaw queda a 0.
      */
-    //% block="enable dual mode (accelerometer + magnetometer)"
+    //% block="activar modo dual (acelerómetro + magnetómetro)"
     //% blockId=fisicabit_cin_dual
-    //% group="Calibration & gravity"
+    //% group="Calibración y gravedad"
     //% weight=94
     export function habilitarModoDual(): void {
         _dualModeEnabled = true
@@ -1638,9 +1638,9 @@ namespace FisicaBitCinematica {
      * formato `#CAL:MAG:...`. El `#` hace que fisicabit.com lo ignore
      * como dato de medición pero queda visible en el monitor serial.
      */
-    //% block="send magnetometer calibration via serial"
+    //% block="enviar calibración del magnetómetro por serial"
     //% blockId=fisicabit_cin_enviar_cal_mag
-    //% group="Calibration & gravity"
+    //% group="Calibración y gravedad"
     //% weight=45
     export function enviarCalMag(): void {
         serial.writeLine(
@@ -1675,9 +1675,9 @@ namespace FisicaBitCinematica {
      *
      * @param eje Eje físico (X, Y, Z, Magnitud o Vertical)
      */
-    //% block="acceleration on axis %eje (m/s²)"
+    //% block="aceleración en eje %eje (m/s²)"
     //% blockId=fisicabit_cin_accel_lineal
-    //% group="Acceleration"
+    //% group="Aceleración"
     //% weight=100
     //% eje.defl=EjeAceleracion.Vertical
     export function leerAceleracionLineal(eje: EjeAceleracion): number {
@@ -1759,9 +1759,9 @@ namespace FisicaBitCinematica {
      * Aceleración lineal del cuerpo sobre el eje X (izquierda/derecha),
      * en m/s². Referencia de reposo descontada. 0,00 m/s² en reposo.
      */
-    //% block="acceleration X (m/s²)"
+    //% block="aceleración X (m/s²)"
     //% blockId=fisicabit_cin_accel_x
-    //% group="Acceleration"
+    //% group="Aceleración"
     //% weight=95
     export function aceleracionX(): number {
         return leerAceleracionLineal(EjeAceleracion.X)
@@ -1771,9 +1771,9 @@ namespace FisicaBitCinematica {
      * Aceleración lineal del cuerpo sobre el eje Y (adelante/atrás),
      * en m/s². Referencia de reposo descontada. 0,00 m/s² en reposo.
      */
-    //% block="acceleration Y (m/s²)"
+    //% block="aceleración Y (m/s²)"
     //% blockId=fisicabit_cin_accel_y
-    //% group="Acceleration"
+    //% group="Aceleración"
     //% weight=94
     export function aceleracionY(): number {
         return leerAceleracionLineal(EjeAceleracion.Y)
@@ -1784,9 +1784,9 @@ namespace FisicaBitCinematica {
      * la placa), en m/s². Referencia de reposo descontada. 0,00 m/s²
      * en reposo.
      */
-    //% block="acceleration Z (m/s²)"
+    //% block="aceleración Z (m/s²)"
     //% blockId=fisicabit_cin_accel_z
-    //% group="Acceleration"
+    //% group="Aceleración"
     //% weight=93
     export function aceleracionZ(): number {
         return leerAceleracionLineal(EjeAceleracion.Z)
@@ -1797,9 +1797,9 @@ namespace FisicaBitCinematica {
      * Componente de la aceleración lineal sobre −ĝ (arriba positivo).
      * Funciona aunque la placa esté inclinada. 0,00 m/s² en reposo.
      */
-    //% block="vertical acceleration (m/s²)"
+    //% block="aceleración vertical (m/s²)"
     //% blockId=fisicabit_cin_accel_vert
-    //% group="Acceleration"
+    //% group="Aceleración"
     //% weight=97
     export function aceleracionVertical(): number {
         return leerAceleracionLineal(EjeAceleracion.Vertical)
@@ -1809,9 +1809,9 @@ namespace FisicaBitCinematica {
      * Magnitud del vector aceleración lineal |a⃗|, en m/s². Invariante
      * frente a rotaciones de la placa. 0,00 m/s² en reposo.
      */
-    //% block="acceleration magnitude (m/s²)"
+    //% block="módulo de la aceleración (m/s²)"
     //% blockId=fisicabit_cin_accel_mag
-    //% group="Acceleration"
+    //% group="Aceleración"
     //% weight=92
     export function aceleracionMagnitud(): number {
         return leerAceleracionLineal(EjeAceleracion.Magnitud)
@@ -1825,9 +1825,9 @@ namespace FisicaBitCinematica {
      *
      * @param eje Eje físico (X, Y, Z, Magnitud o Vertical)
      */
-    //% block="proper acceleration on axis %eje (m/s²)"
+    //% block="aceleración propia en eje %eje (m/s²)"
     //% blockId=fisicabit_cin_accel_propia
-    //% group="Acceleration"
+    //% group="Aceleración"
     //% weight=85
     //% eje.defl=EjeAceleracion.Magnitud
     export function leerAceleracionPropia(eje: EjeAceleracion): number {
@@ -1864,9 +1864,9 @@ namespace FisicaBitCinematica {
      *
      * @param umbralMg Umbral (50-500 mg). Def. 200.
      */
-    //% block="free fall detected? (threshold %umbralMg mg)"
+    //% block="¿caída libre detectada? (umbral %umbralMg mg)"
     //% blockId=fisicabit_cin_caida_libre
-    //% group="Acceleration"
+    //% group="Aceleración"
     //% weight=80
     //% umbralMg.min=50 umbralMg.max=500 umbralMg.defl=200
     export function esCaidaLibre(umbralMg: number): boolean {
@@ -1887,9 +1887,9 @@ namespace FisicaBitCinematica {
      *
      * Sólo tiene sentido con el magnetómetro calibrado.
      */
-    //% block="magnetic disturbance detected?"
+    //% block="¿perturbación magnética detectada?"
     //% blockId=fisicabit_cin_mag_disturbed
-    //% group="Acceleration"
+    //% group="Aceleración"
     //% weight=79
     export function magnetometroAlterado(): boolean {
         return _magDisturbed
@@ -1903,9 +1903,9 @@ namespace FisicaBitCinematica {
      * Ángulo de CABECEO (pitch) estimado, en grados. Rango [-90, +90].
      * Requiere MODO DUAL activo; si no, devuelve 0.
      */
-    //% block="pitch (°)"
+    //% block="cabeceo / pitch (°)"
     //% blockId=fisicabit_cin_pitch
-    //% group="Orientation"
+    //% group="Orientación"
     //% weight=70
     export function pitch(): number {
         return Math.round(_estPitch * 180 / Math.PI * 10) / 10
@@ -1915,9 +1915,9 @@ namespace FisicaBitCinematica {
      * Ángulo de ALABEO (roll) estimado, en grados. Rango [-180, +180].
      * Requiere MODO DUAL activo; si no, devuelve 0.
      */
-    //% block="roll (°)"
+    //% block="alabeo / roll (°)"
     //% blockId=fisicabit_cin_roll
-    //% group="Orientation"
+    //% group="Orientación"
     //% weight=69
     export function roll(): number {
         return Math.round(_estRoll * 180 / Math.PI * 10) / 10
@@ -1929,9 +1929,9 @@ namespace FisicaBitCinematica {
      * Si no hay calibración o hay perturbación, devuelve el último
      * valor válido (0 al inicio).
      */
-    //% block="heading (°)"
+    //% block="rumbo / heading (°)"
     //% blockId=fisicabit_cin_heading
-    //% group="Orientation"
+    //% group="Orientación"
     //% weight=68
     export function heading(): number {
         let deg = _estYaw * 180 / Math.PI
@@ -2014,9 +2014,9 @@ namespace FisicaBitCinematica {
      *
      * @param eje Eje físico (X, Y, Z, Magnitud o Vertical)
      */
-    //% block="instantaneous velocity (m/s) axis %eje"
+    //% block="velocidad instantánea (m/s) eje %eje"
     //% blockId=fisicabit_cin_velocidad
-    //% group="Instantaneous velocity"
+    //% group="Velocidad instantánea"
     //% weight=90
     //% eje.defl=EjeAceleracion.Vertical
     export function velocidadInstantanea(eje: EjeAceleracion): number {
@@ -2107,9 +2107,9 @@ namespace FisicaBitCinematica {
      * llamada. Úsalo al principio de cada experimento, con el cuerpo
      * REALMENTE en reposo, para que la velocidad inicial sea 0,00 m/s.
      */
-    //% block="reset instantaneous velocity"
+    //% block="reiniciar velocidad instantánea"
     //% blockId=fisicabit_cin_reset
-    //% group="Instantaneous velocity"
+    //% group="Velocidad instantánea"
     //% weight=80
     export function reiniciarVelocidad(): void {
         _vx = 0

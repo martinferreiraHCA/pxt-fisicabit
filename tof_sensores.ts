@@ -35,8 +35,8 @@
 //% weight=92
 //% color=#1E90FF
 //% icon="\uf140"
-//% block="ToF — Laser Distance"
-//% groups='["Configuration", "Measurement", "Diagnostics"]'
+//% block="ToF — Distancia Láser"
+//% groups='["Configuración", "Medición", "Diagnóstico"]'
 namespace FisicaBitToF {
 
     // =========================================================================
@@ -495,9 +495,9 @@ namespace FisicaBitToF {
      *
      * @param modelo El módulo conectado al micro:bit
      */
-    //% block="select ToF module %modelo"
+    //% block="seleccionar módulo ToF %modelo"
     //% blockId=fisicabit_tof_seleccionar
-    //% group="Configuration"
+    //% group="Configuración"
     //% weight=100
     //% modelo.defl=ModeloToF.TOF200C
     export function tofSeleccionarModulo(modelo: ModeloToF): void {
@@ -516,9 +516,9 @@ namespace FisicaBitToF {
      *   SDA → P20 (SDA)
      *   SCL → P19 (SCL)
      */
-    //% block="initialize ToF sensor (I2C: SDA P20 SCL P19)"
+    //% block="inicializar sensor ToF (I2C: SDA P20 SCL P19)"
     //% blockId=fisicabit_tof_inicializar
-    //% group="Configuration"
+    //% group="Configuración"
     //% weight=99
     export function tofInicializar(): void {
         _listo = _doInit()
@@ -542,9 +542,9 @@ namespace FisicaBitToF {
      *
      * @param filtro Intensidad del suavizado
      */
-    //% block="set ToF smoothing %filtro"
+    //% block="fijar suavizado ToF %filtro"
     //% blockId=fisicabit_tof_suavizado
-    //% group="Configuration"
+    //% group="Configuración"
     //% weight=95
     //% filtro.defl=FiltroToF.Bajo
     export function tofFijarSuavizado(filtro: FiltroToF): void {
@@ -560,9 +560,9 @@ namespace FisicaBitToF {
      *
      * @param modo Modo de medición
      */
-    //% block="set ToF mode %modo"
+    //% block="fijar modo ToF %modo"
     //% blockId=fisicabit_tof_modo
-    //% group="Configuration"
+    //% group="Configuración"
     //% weight=94
     //% modo.defl=ModoToF.Estable
     export function tofFijarModo(modo: ModoToF): void {
@@ -582,9 +582,9 @@ namespace FisicaBitToF {
      * Incluye filtro de mediana para eliminar picos espurios.
      * Ideal para muestreo serial o Bluetooth en experimentos de movimiento.
      */
-    //% block="ToF distance (mm)"
+    //% block="distancia ToF (mm)"
     //% blockId=fisicabit_tof_mm
-    //% group="Measurement"
+    //% group="Medición"
     //% weight=90
     export function tofDistanciaMm(): number {
         return _readFiltered()
@@ -594,9 +594,9 @@ namespace FisicaBitToF {
      * Mide la distancia en centímetros (entero).
      * Útil para mostrar en la pantalla LED o para cálculos simples.
      */
-    //% block="ToF distance (cm)"
+    //% block="distancia ToF (cm)"
     //% blockId=fisicabit_tof_cm
-    //% group="Measurement"
+    //% group="Medición"
     //% weight=89
     export function tofDistanciaCm(): number {
         let mm = _readFiltered()
@@ -608,9 +608,9 @@ namespace FisicaBitToF {
      * Devuelve falso si el sensor no respondió, el objeto está
      * fuera de rango, o hubo un error de comunicación.
      */
-    //% block="ToF measurement valid"
+    //% block="medición ToF válida"
     //% blockId=fisicabit_tof_valida
-    //% group="Measurement"
+    //% group="Medición"
     //% weight=85
     export function tofMedicionValida(): boolean {
         return _ultOk
@@ -625,9 +625,9 @@ namespace FisicaBitToF {
      * Indica si el sensor fue inicializado correctamente
      * y está listo para medir.
      */
-    //% block="ToF sensor connected"
+    //% block="sensor ToF conectado"
     //% blockId=fisicabit_tof_conectado
-    //% group="Diagnostics"
+    //% group="Diagnóstico"
     //% weight=80
     export function tofSensorConectado(): boolean {
         return _listo
@@ -637,9 +637,9 @@ namespace FisicaBitToF {
      * Reinicia el sensor desde cero.
      * Útil si el sensor dejó de responder o se desconectó y reconectó.
      */
-    //% block="restart ToF sensor"
+    //% block="reiniciar sensor ToF"
     //% blockId=fisicabit_tof_reiniciar
-    //% group="Diagnostics"
+    //% group="Diagnóstico"
     //% weight=75
     export function tofReiniciar(): void {
         _listo = false
@@ -654,9 +654,9 @@ namespace FisicaBitToF {
      * Máxima velocidad pero puede tener picos espurios.
      * Devuelve -1 si la medición falló.
      */
-    //% block="ToF raw distance (mm)"
+    //% block="distancia ToF cruda (mm)"
     //% blockId=fisicabit_tof_crudo
-    //% group="Diagnostics"
+    //% group="Diagnóstico"
     //% weight=70
     export function tofDistanciaCrudaMm(): number {
         return _doRead()

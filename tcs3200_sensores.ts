@@ -29,8 +29,8 @@
 //% weight=85
 //% color=#7B2D8E
 //% icon="\uf0eb"
-//% block="TCS230 — Colorimeter"
-//% groups='["TCS230 Setup (S0=P13 S1=P14 S2=P15 S3=P9 OUT=P1)", "Measurement", "Calibration", "Spectrophotometry", "Advanced"]'
+//% block="TCS230 — Colorímetro"
+//% groups='["Configuración TCS230 (S0=P13 S1=P14 S2=P15 S3=P9 OUT=P1)", "Medición", "Calibración", "Espectrofotometría", "Avanzado"]'
 namespace FisicaBitColorimetro {
 
     // ── Pines por defecto ──
@@ -142,8 +142,8 @@ namespace FisicaBitColorimetro {
      *   OE  → GND (siempre habilitado)
      */
     //% blockId=fisicabit_tcs_inicializar
-    //% block="initialize TCS230 color sensor"
-    //% group="TCS230 Setup (S0=P13 S1=P14 S2=P15 S3=P9 OUT=P1)" weight=100
+    //% block="inicializar sensor de color TCS230"
+    //% group="Configuración TCS230 (S0=P13 S1=P14 S2=P15 S3=P9 OUT=P1)" weight=100
     export function tcsInicializar(): void {
         _aplicarEscalado(EscaladoTCS230.Veinte)
         _inicializado = true
@@ -158,8 +158,8 @@ namespace FisicaBitColorimetro {
      * @param out pin OUT (señal de frecuencia) — número de pin (0-16)
      */
     //% blockId=fisicabit_tcs_inicializar_custom
-    //% block="initialize TCS230 S0 %s0 S1 %s1 S2 %s2 S3 %s3 OUT P %out"
-    //% group="TCS230 Setup (S0=P13 S1=P14 S2=P15 S3=P9 OUT=P1)" weight=99
+    //% block="inicializar TCS230 S0 %s0 S1 %s1 S2 %s2 S3 %s3 OUT P %out"
+    //% group="Configuración TCS230 (S0=P13 S1=P14 S2=P15 S3=P9 OUT=P1)" weight=99
     //% s0.defl=DigitalPin.P13 s1.defl=DigitalPin.P14
     //% s2.defl=DigitalPin.P15 s3.defl=DigitalPin.P9
     //% out.min=0 out.max=16 out.defl=1
@@ -178,8 +178,8 @@ namespace FisicaBitColorimetro {
      * @param escalado nivel de escalado
      */
     //% blockId=fisicabit_tcs_escalado
-    //% block="set TCS230 frequency scaling %escalado"
-    //% group="TCS230 Setup (S0=P13 S1=P14 S2=P15 S3=P9 OUT=P1)" weight=98
+    //% block="fijar escalado frecuencia TCS230 %escalado"
+    //% group="Configuración TCS230 (S0=P13 S1=P14 S2=P15 S3=P9 OUT=P1)" weight=98
     export function tcsFijarEscalado(escalado: EscaladoTCS230): void {
         _aplicarEscalado(escalado)
     }
@@ -189,8 +189,8 @@ namespace FisicaBitColorimetro {
      * @param muestras número de períodos a promediar (1-50)
      */
     //% blockId=fisicabit_tcs_muestras
-    //% block="set TCS230 averaging samples %muestras"
-    //% group="TCS230 Setup (S0=P13 S1=P14 S2=P15 S3=P9 OUT=P1)" weight=97
+    //% block="fijar muestras promedio TCS230 %muestras"
+    //% group="Configuración TCS230 (S0=P13 S1=P14 S2=P15 S3=P9 OUT=P1)" weight=97
     //% muestras.min=1 muestras.max=50 muestras.defl=10
     export function tcsFijarMuestras(muestras: number): void {
         _muestrasPromedio = Math.clamp(1, 50, muestras)
@@ -206,8 +206,8 @@ namespace FisicaBitColorimetro {
      * @param canal canal de color a leer
      */
     //% blockId=fisicabit_tcs_leer_canal
-    //% block="TCS230 period (μs) channel %canal"
-    //% group="Measurement" weight=90
+    //% block="período TCS230 (μs) canal %canal"
+    //% group="Medición" weight=90
     export function tcsLeerCanal(canal: CanalTCS230): number {
         return _leerPeriodo(canal)
     }
@@ -217,8 +217,8 @@ namespace FisicaBitColorimetro {
      * Usar los bloques getter para obtener cada valor.
      */
     //% blockId=fisicabit_tcs_leer_todos
-    //% block="TCS230 read all channels"
-    //% group="Measurement" weight=89
+    //% block="TCS230 leer todos los canales"
+    //% group="Medición" weight=89
     export function tcsLeerTodos(): void {
         _ultimoRojo = _leerPeriodo(CanalTCS230.Rojo)
         _ultimoVerde = _leerPeriodo(CanalTCS230.Verde)
@@ -231,8 +231,8 @@ namespace FisicaBitColorimetro {
      * @param canal canal a consultar
      */
     //% blockId=fisicabit_tcs_valor
-    //% block="TCS230 last value %canal (μs)"
-    //% group="Measurement" weight=88
+    //% block="TCS230 último valor %canal (μs)"
+    //% group="Medición" weight=88
     export function tcsValor(canal: CanalTCS230): number {
         switch (canal) {
             case CanalTCS230.Rojo: return _ultimoRojo
@@ -249,8 +249,8 @@ namespace FisicaBitColorimetro {
      * @param muestras número de períodos a promediar
      */
     //% blockId=fisicabit_tcs_leer_promedio
-    //% block="TCS230 averaged period (μs) channel %canal samples %muestras"
-    //% group="Measurement" weight=87
+    //% block="período promedio TCS230 (μs) canal %canal muestras %muestras"
+    //% group="Medición" weight=87
     //% muestras.min=1 muestras.max=50 muestras.defl=10
     export function tcsLeerPromediado(canal: CanalTCS230, muestras: number): number {
         _seleccionarCanal(canal)
@@ -268,8 +268,8 @@ namespace FisicaBitColorimetro {
      * Los valores se usan para calcular transmitancia y absorbancia.
      */
     //% blockId=fisicabit_tcs_calibrar_blanco
-    //% block="TCS230 calibrate white reference"
-    //% group="Calibration" weight=80
+    //% block="TCS230 calibrar referencia blanca"
+    //% group="Calibración" weight=80
     export function tcsCalibrarBlanco(): void {
         _blancoRojo = _leerPeriodo(CanalTCS230.Rojo)
         _blancoVerde = _leerPeriodo(CanalTCS230.Verde)
@@ -283,8 +283,8 @@ namespace FisicaBitColorimetro {
      * @param periodoUs período de referencia en μs
      */
     //% blockId=fisicabit_tcs_fijar_blanco
-    //% block="TCS230 set white reference %canal to %periodoUs μs"
-    //% group="Calibration" weight=79
+    //% block="TCS230 fijar referencia blanca %canal a %periodoUs μs"
+    //% group="Calibración" weight=79
     export function tcsFijarBlanco(canal: CanalTCS230, periodoUs: number): void {
         switch (canal) {
             case CanalTCS230.Rojo: _blancoRojo = periodoUs; break
@@ -299,8 +299,8 @@ namespace FisicaBitColorimetro {
      * @param canal canal de color
      */
     //% blockId=fisicabit_tcs_blanco_valor
-    //% block="TCS230 white reference %canal (μs)"
-    //% group="Calibration" weight=78
+    //% block="TCS230 referencia blanca %canal (μs)"
+    //% group="Calibración" weight=78
     export function tcsBlancoValor(canal: CanalTCS230): number {
         return _getBlanco(canal)
     }
@@ -316,8 +316,8 @@ namespace FisicaBitColorimetro {
      * @param canal canal de color
      */
     //% blockId=fisicabit_tcs_transmitancia
-    //% block="TCS230 transmittance (percent) channel %canal"
-    //% group="Spectrophotometry" weight=70
+    //% block="TCS230 transmitancia (%) canal %canal"
+    //% group="Espectrofotometría" weight=70
     export function tcsTransmitancia(canal: CanalTCS230): number {
         let blanco = _getBlanco(canal)
         if (blanco <= 0) return 0
@@ -335,8 +335,8 @@ namespace FisicaBitColorimetro {
      * @param canal canal de color
      */
     //% blockId=fisicabit_tcs_absorbancia
-    //% block="TCS230 absorbance channel %canal"
-    //% group="Spectrophotometry" weight=69
+    //% block="TCS230 absorbancia canal %canal"
+    //% group="Espectrofotometría" weight=69
     export function tcsAbsorbancia(canal: CanalTCS230): number {
         let blanco = _getBlanco(canal)
         if (blanco <= 0) return 0
@@ -355,8 +355,8 @@ namespace FisicaBitColorimetro {
      * @param periodoBlanco período del blanco en μs
      */
     //% blockId=fisicabit_tcs_transmitancia_manual
-    //% block="transmittance (percent) sample %periodoMuestra white %periodoBlanco μs"
-    //% group="Spectrophotometry" weight=68
+    //% block="transmitancia (%) muestra %periodoMuestra blanco %periodoBlanco μs"
+    //% group="Espectrofotometría" weight=68
     export function tcsTransmitanciaManual(periodoMuestra: number, periodoBlanco: number): number {
         if (periodoBlanco <= 0 || periodoMuestra <= 0) return 0
         return Math.roundWithPrecision((periodoBlanco / periodoMuestra) * 100, 1)
@@ -368,8 +368,8 @@ namespace FisicaBitColorimetro {
      * @param periodoBlanco período del blanco en μs
      */
     //% blockId=fisicabit_tcs_absorbancia_manual
-    //% block="absorbance sample %periodoMuestra white %periodoBlanco μs"
-    //% group="Spectrophotometry" weight=67
+    //% block="absorbancia muestra %periodoMuestra blanco %periodoBlanco μs"
+    //% group="Espectrofotometría" weight=67
     export function tcsAbsorbanciaManual(periodoMuestra: number, periodoBlanco: number): number {
         if (periodoBlanco <= 0 || periodoMuestra <= 0) return 0
         let ratio = periodoMuestra / periodoBlanco
@@ -385,8 +385,8 @@ namespace FisicaBitColorimetro {
      * @param canal canal de color
      */
     //% blockId=fisicabit_tcs_crudo
-    //% block="TCS230 raw single period (μs) channel %canal"
-    //% group="Advanced" weight=60
+    //% block="TCS230 período crudo (μs) canal %canal"
+    //% group="Avanzado" weight=60
     export function tcsLeerCrudo(canal: CanalTCS230): number {
         _seleccionarCanal(canal)
         return fisicabit_native.tcs3200LeerPeriodoUs(_pinOut, _timeoutUs)
@@ -397,8 +397,8 @@ namespace FisicaBitColorimetro {
      * @param timeoutMs timeout en milisegundos
      */
     //% blockId=fisicabit_tcs_timeout
-    //% block="set TCS230 timeout %timeoutMs ms"
-    //% group="Advanced" weight=59
+    //% block="fijar timeout TCS230 %timeoutMs ms"
+    //% group="Avanzado" weight=59
     //% timeoutMs.min=50 timeoutMs.max=2000 timeoutMs.defl=500
     export function tcsFijarTimeout(timeoutMs: number): void {
         _timeoutUs = Math.clamp(50, 2000, timeoutMs) * 1000
@@ -409,8 +409,8 @@ namespace FisicaBitColorimetro {
      * Formato: R:valor,G:valor,B:valor,C:valor
      */
     //% blockId=fisicabit_tcs_serial
-    //% block="TCS230 send all channels via serial"
-    //% group="Advanced" weight=58
+    //% block="TCS230 enviar todos los canales por serial"
+    //% group="Avanzado" weight=58
     export function tcsEnviarSerial(): void {
         tcsLeerTodos()
         serial.writeLine(
@@ -427,8 +427,8 @@ namespace FisicaBitColorimetro {
      * @param canal canal de color
      */
     //% blockId=fisicabit_tcs_serial_spectro
-    //% block="TCS230 send spectro data via serial channel %canal"
-    //% group="Advanced" weight=57
+    //% block="TCS230 enviar datos espectro por serial canal %canal"
+    //% group="Avanzado" weight=57
     export function tcsEnviarSerialSpectro(canal: CanalTCS230): void {
         let blanco = _getBlanco(canal)
         let muestra = _leerPeriodo(canal)

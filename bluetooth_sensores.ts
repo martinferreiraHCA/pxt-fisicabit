@@ -53,7 +53,7 @@
 //% color=#0082FB
 //% icon=""
 //% block="FisicaBit Bluetooth"
-//% groups='["fisicabit.com", "Connection", "Sampling", "Advanced", "BLE Services"]'
+//% groups='["fisicabit.com", "Conexión", "Muestreo", "Avanzado", "Servicios BLE"]'
 namespace FisicaBitBT {
 
     let _m: FisicaBitDatos.Muestreador = null
@@ -107,7 +107,7 @@ namespace FisicaBitBT {
      *   3. Limpia las barras del patrón Bluetooth de la pantalla
      *   4. Muestra diana (◎) = esperando conexión, corazón (♥) = conectado
      */
-    //% block="start Bluetooth for fisicabit.com"
+    //% block="iniciar Bluetooth para fisicabit.com"
     //% blockId=fisicabit_bt_inicio_rapido
     //% group="fisicabit.com"
     //% weight=110
@@ -123,7 +123,7 @@ namespace FisicaBitBT {
      * Sólo transmite cuando fisicabit.com está conectado.
      * @param valor Valor a enviar (sensor, variable o cálculo)
      */
-    //% block="send to fisicabit.com via Bluetooth %valor"
+    //% block="enviar a fisicabit.com por Bluetooth %valor"
     //% blockId=fisicabit_bt_enviar_1
     //% group="fisicabit.com"
     //% weight=100
@@ -138,7 +138,7 @@ namespace FisicaBitBT {
      * @param valor1 Primer valor
      * @param valor2 Segundo valor
      */
-    //% block="send to fisicabit.com via Bluetooth %valor1 and %valor2"
+    //% block="enviar a fisicabit.com por Bluetooth %valor1 y %valor2"
     //% blockId=fisicabit_bt_enviar_2
     //% group="fisicabit.com"
     //% weight=95
@@ -154,7 +154,7 @@ namespace FisicaBitBT {
      * @param valor2 Segundo valor
      * @param valor3 Tercer valor
      */
-    //% block="send to fisicabit.com via Bluetooth %valor1 , %valor2 and %valor3"
+    //% block="enviar a fisicabit.com por Bluetooth %valor1 , %valor2 y %valor3"
     //% blockId=fisicabit_bt_enviar_3
     //% group="fisicabit.com"
     //% weight=90
@@ -171,7 +171,7 @@ namespace FisicaBitBT {
      * @param valor3 Tercer valor
      * @param valor4 Cuarto valor
      */
-    //% block="send to fisicabit.com via Bluetooth %valor1 , %valor2 , %valor3 and %valor4"
+    //% block="enviar a fisicabit.com por Bluetooth %valor1 , %valor2 , %valor3 y %valor4"
     //% blockId=fisicabit_bt_enviar_4
     //% group="fisicabit.com"
     //% weight=85
@@ -186,7 +186,7 @@ namespace FisicaBitBT {
      * hasta 20 Hz; para más velocidad usar USB.
      * @param frecuencia Frecuencia de muestreo
      */
-    //% block="set Bluetooth sampling rate %frecuencia"
+    //% block="configurar frecuencia de muestreo Bluetooth %frecuencia"
     //% blockId=fisicabit_bt_frecuencia
     //% group="fisicabit.com"
     //% weight=80
@@ -202,9 +202,9 @@ namespace FisicaBitBT {
     /**
      * Verdadero mientras fisicabit.com (u otra app) está conectada por Bluetooth.
      */
-    //% block="Bluetooth connected?"
+    //% block="¿Bluetooth conectado?"
     //% blockId=fisicabit_bt_conectado
-    //% group="Connection"
+    //% group="Conexión"
     //% weight=75
     export function estaConectado(): boolean {
         _asegurarUART()
@@ -215,9 +215,9 @@ namespace FisicaBitBT {
      * Ejecuta el código cuando fisicabit.com se conecta por Bluetooth.
      * @param cuerpo Código a ejecutar al conectar
      */
-    //% block="on fisicabit.com Bluetooth connected"
+    //% block="al conectar fisicabit.com por Bluetooth"
     //% blockId=fisicabit_bt_al_conectar
-    //% group="Connection"
+    //% group="Conexión"
     //% weight=72
     export function alConectar(cuerpo: () => void): void {
         _asegurarUART()
@@ -228,9 +228,9 @@ namespace FisicaBitBT {
      * Ejecuta el código cuando fisicabit.com se desconecta del Bluetooth.
      * @param cuerpo Código a ejecutar al desconectar
      */
-    //% block="on fisicabit.com Bluetooth disconnected"
+    //% block="al desconectar fisicabit.com del Bluetooth"
     //% blockId=fisicabit_bt_al_desconectar
-    //% group="Connection"
+    //% group="Conexión"
     //% weight=71
     export function alDesconectar(cuerpo: () => void): void {
         _asegurarUART()
@@ -243,9 +243,9 @@ namespace FisicaBitBT {
      * la pantalla para otra cosa.
      * @param mostrar true = mostrar íconos (por defecto)
      */
-    //% block="Bluetooth show connection icons %mostrar"
+    //% block="Bluetooth mostrar íconos de conexión %mostrar"
     //% blockId=fisicabit_bt_iconos
-    //% group="Connection"
+    //% group="Conexión"
     //% weight=70
     //% mostrar.shadow=toggleOnOff
     //% mostrar.defl=true
@@ -262,9 +262,9 @@ namespace FisicaBitBT {
      * Configura el intervalo entre muestras en milisegundos (valor libre).
      * @param ms Intervalo de muestreo en ms (5 a 60000)
      */
-    //% block="set Bluetooth sampling interval %ms ms"
+    //% block="configurar intervalo de muestreo Bluetooth %ms ms"
     //% blockId=fisicabit_bt_intervalo
-    //% group="Sampling"
+    //% group="Muestreo"
     //% weight=65
     //% ms.min=5 ms.max=60000 ms.defl=100
     export function fijarIntervalo(ms: number): void {
@@ -278,9 +278,9 @@ namespace FisicaBitBT {
      * @param frecuencia Frecuencia de muestreo
      * @param cuerpo Código a ejecutar en cada muestra
      */
-    //% block="fisicabit.com Bluetooth sampling loop at %frecuencia"
+    //% block="muestrear para fisicabit.com por Bluetooth a %frecuencia"
     //% blockId=fisicabit_bt_bucle
-    //% group="Sampling"
+    //% group="Muestreo"
     //% weight=60
     //% frecuencia.defl=FrecuenciaMuestreo.Hz20
     //% blockAllowMultiple=0
@@ -294,9 +294,9 @@ namespace FisicaBitBT {
      * Tiempo en milisegundos desde la última conexión Bluetooth (arranca en 0).
      * Es el mismo tiempo que viaja en cada línea enviada.
      */
-    //% block="Bluetooth time (ms)"
+    //% block="tiempo Bluetooth (ms)"
     //% blockId=fisicabit_bt_tiempo
-    //% group="Sampling"
+    //% group="Muestreo"
     //% weight=55
     export function tiempo(): number {
         return _asegurarUART().tiempo()
@@ -306,9 +306,9 @@ namespace FisicaBitBT {
      * Vuelve el tiempo a 0 (por ejemplo al apretar un botón para empezar
      * una nueva medición).
      */
-    //% block="reset Bluetooth time to 0"
+    //% block="reiniciar tiempo Bluetooth a 0"
     //% blockId=fisicabit_bt_reiniciar_tiempo
-    //% group="Sampling"
+    //% group="Muestreo"
     //% weight=50
     export function reiniciarTiempo(): void {
         _asegurarUART().reiniciarTiempo()
@@ -324,9 +324,9 @@ namespace FisicaBitBT {
      * de fisicabit.com (activada por defecto).
      * @param activar true = enviar tiempo (por defecto), false = sólo valores
      */
-    //% block="Bluetooth send micro:bit timestamp %activar"
+    //% block="Bluetooth enviar tiempo del micro:bit %activar"
     //% blockId=fisicabit_bt_timestamp
-    //% group="Advanced"
+    //% group="Avanzado"
     //% weight=45
     //% activar.shadow=toggleOnOff
     //% activar.defl=true
@@ -340,9 +340,9 @@ namespace FisicaBitBT {
      * Menos decimales = líneas más cortas = Bluetooth más fluido.
      * @param decimales Decimales (0 a 6). Por defecto 2.
      */
-    //% block="Bluetooth set decimals %decimales"
+    //% block="Bluetooth fijar decimales %decimales"
     //% blockId=fisicabit_bt_decimales
-    //% group="Advanced"
+    //% group="Avanzado"
     //% weight=44
     //% decimales.min=0 decimales.max=6 decimales.defl=2
     //% advanced=true
@@ -354,9 +354,9 @@ namespace FisicaBitBT {
      * Envía una línea de texto libre por Bluetooth (sin tiempo ni espera).
      * @param texto Texto a enviar
      */
-    //% block="Bluetooth send text %texto"
+    //% block="Bluetooth enviar texto %texto"
     //% blockId=fisicabit_bt_enviar_texto
-    //% group="Advanced"
+    //% group="Avanzado"
     //% weight=43
     //% advanced=true
     export function enviarTexto(texto: string): void {
@@ -371,9 +371,9 @@ namespace FisicaBitBT {
      * hace más lenta la conexión (sobre todo en Windows). Usar sólo si
      * hace falta.
      */
-    //% block="start Bluetooth for fisicabit.com with all BLE services"
+    //% block="iniciar Bluetooth para fisicabit.com con todos los servicios BLE"
     //% blockId=fisicabit_bt_inicio_completo
-    //% group="Advanced"
+    //% group="Avanzado"
     //% weight=42
     //% advanced=true
     export function inicioCompleto(): void {
@@ -395,9 +395,9 @@ namespace FisicaBitBT {
     /**
      * Inicia el servicio BLE de acelerómetro.
      */
-    //% block="start BLE accelerometer service"
+    //% block="iniciar servicio BLE acelerómetro"
     //% blockId=fisicabit_bt_srv_accel
-    //% group="BLE Services"
+    //% group="Servicios BLE"
     //% weight=30
     //% advanced=true
     export function iniciarServicioAcelerometro(): void {
@@ -407,9 +407,9 @@ namespace FisicaBitBT {
     /**
      * Inicia el servicio BLE de temperatura.
      */
-    //% block="start BLE temperature service"
+    //% block="iniciar servicio BLE temperatura"
     //% blockId=fisicabit_bt_srv_temp
-    //% group="BLE Services"
+    //% group="Servicios BLE"
     //% weight=28
     //% advanced=true
     export function iniciarServicioTemperatura(): void {
@@ -419,9 +419,9 @@ namespace FisicaBitBT {
     /**
      * Inicia el servicio BLE de magnetómetro (brújula).
      */
-    //% block="start BLE magnetometer service"
+    //% block="iniciar servicio BLE magnetómetro"
     //% blockId=fisicabit_bt_srv_mag
-    //% group="BLE Services"
+    //% group="Servicios BLE"
     //% weight=26
     //% advanced=true
     export function iniciarServicioMagnetometro(): void {
@@ -431,9 +431,9 @@ namespace FisicaBitBT {
     /**
      * Inicia el servicio BLE de botones.
      */
-    //% block="start BLE button service"
+    //% block="iniciar servicio BLE botones"
     //% blockId=fisicabit_bt_srv_btn
-    //% group="BLE Services"
+    //% group="Servicios BLE"
     //% weight=24
     //% advanced=true
     export function iniciarServicioBotones(): void {
@@ -443,9 +443,9 @@ namespace FisicaBitBT {
     /**
      * Inicia el servicio BLE de pantalla LED.
      */
-    //% block="start BLE LED service"
+    //% block="iniciar servicio BLE pantalla LED"
     //% blockId=fisicabit_bt_srv_led
-    //% group="BLE Services"
+    //% group="Servicios BLE"
     //% weight=22
     //% advanced=true
     export function iniciarServicioLED(): void {
@@ -455,9 +455,9 @@ namespace FisicaBitBT {
     /**
      * Inicia el servicio BLE de pines I/O.
      */
-    //% block="start BLE I/O pin service"
+    //% block="iniciar servicio BLE pines I/O"
     //% blockId=fisicabit_bt_srv_io
-    //% group="BLE Services"
+    //% group="Servicios BLE"
     //% weight=20
     //% advanced=true
     export function iniciarServicioIO(): void {
@@ -472,9 +472,9 @@ namespace FisicaBitBT {
     /**
      * (Obsoleto) Usar "iniciar Bluetooth para fisicabit.com".
      */
-    //% block="start Bluetooth UART"
+    //% block="iniciar Bluetooth UART"
     //% blockId=fisicabit_bt_iniciar
-    //% group="Advanced"
+    //% group="Avanzado"
     //% weight=10
     //% deprecated=true
     export function iniciarUART(): void {
@@ -487,9 +487,9 @@ namespace FisicaBitBT {
     /**
      * (Obsoleto) "iniciar Bluetooth para fisicabit.com" ya muestra los íconos.
      */
-    //% block="setup BT connection indicator"
+    //% block="configurar indicador de conexión BT"
     //% blockId=fisicabit_bt_indicador
-    //% group="Advanced"
+    //% group="Avanzado"
     //% weight=9
     //% deprecated=true
     export function configurarIndicadorConexion(): void {
@@ -500,9 +500,9 @@ namespace FisicaBitBT {
     /**
      * (Obsoleto) Usar "enviar a fisicabit.com por Bluetooth" + "configurar frecuencia".
      */
-    //% block="BT sample %valor|every %ms ms"
+    //% block="BT muestrear %valor|cada %ms ms"
     //% blockId=fisicabit_bt_muestrear_1
-    //% group="Advanced"
+    //% group="Avanzado"
     //% weight=8
     //% ms.min=10 ms.max=60000 ms.defl=100
     //% inlineInputMode=inline
@@ -516,9 +516,9 @@ namespace FisicaBitBT {
     /**
      * (Obsoleto) Usar "enviar a fisicabit.com por Bluetooth" + "configurar frecuencia".
      */
-    //% block="BT sample %valor1 and %valor2|every %ms ms"
+    //% block="BT muestrear %valor1 y %valor2|cada %ms ms"
     //% blockId=fisicabit_bt_muestrear_2
-    //% group="Advanced"
+    //% group="Avanzado"
     //% weight=7
     //% ms.min=10 ms.max=60000 ms.defl=100
     //% inlineInputMode=inline
@@ -532,9 +532,9 @@ namespace FisicaBitBT {
     /**
      * (Obsoleto) Usar "enviar a fisicabit.com por Bluetooth" + "configurar frecuencia".
      */
-    //% block="BT sample %valor1 , %valor2 and %valor3|every %ms ms"
+    //% block="BT muestrear %valor1 , %valor2 y %valor3|cada %ms ms"
     //% blockId=fisicabit_bt_muestrear_3
-    //% group="Advanced"
+    //% group="Avanzado"
     //% weight=6
     //% ms.min=10 ms.max=60000 ms.defl=100
     //% inlineInputMode=inline

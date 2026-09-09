@@ -38,8 +38,8 @@
 //% weight=95
 //% color=#FF8C00
 //% icon="\uf2ce"
-//% block="HC-SR04 — Ultrasonic Distance"
-//% groups='["Configuration", "Measurement"]'
+//% block="HC-SR04 — Distancia Ultrasónica"
+//% groups='["Configuración", "Medición"]'
 namespace FisicaBitHCSR04 {
 
     // ── Estado interno del filtro ultrasónico ──
@@ -116,9 +116,9 @@ namespace FisicaBitHCSR04 {
      *
      * @param filtro Intensidad del filtro (más muestras = más suave pero más lento)
      */
-    //% block="set ultrasonic filter to %filtro"
+    //% block="fijar filtro ultrasónico a %filtro"
     //% blockId=fisicabit_us_configurar
-    //% group="Configuration"
+    //% group="Configuración"
     //% weight=82
     //% filtro.defl=FiltroUltrasonido.Suave
     export function configurarFiltroUltrasonido(filtro: FiltroUltrasonido): void {
@@ -132,9 +132,9 @@ namespace FisicaBitHCSR04 {
      * @param minMm Distancia mínima válida en milímetros (defecto: 20 mm)
      * @param maxMm Distancia máxima válida en milímetros (defecto: 4000 mm)
      */
-    //% block="set ultrasonic range from %minMm to %maxMm mm"
+    //% block="fijar rango ultrasónico de %minMm a %maxMm mm"
     //% blockId=fisicabit_us_rango
-    //% group="Configuration"
+    //% group="Configuración"
     //% weight=81
     //% minMm.defl=20 minMm.min=10
     //% maxMm.defl=4000 maxMm.min=20 maxMm.max=4000
@@ -150,9 +150,9 @@ namespace FisicaBitHCSR04 {
      *
      * @param maxCambioMm Máximo cambio permitido en mm (0 = desactivado)
      */
-    //% block="set ultrasonic max step %maxCambioMm mm"
+    //% block="fijar salto máximo ultrasónico %maxCambioMm mm"
     //% blockId=fisicabit_us_max_cambio
-    //% group="Configuration"
+    //% group="Configuración"
     //% weight=79
     //% maxCambioMm.defl=0 maxCambioMm.min=0
     export function configurarMaxCambioUltrasonido(maxCambioMm: number): void {
@@ -174,9 +174,9 @@ namespace FisicaBitHCSR04 {
      * @param unidad Unidad de medida deseada
      * @returns Distancia medida en la unidad seleccionada
      */
-    //% block="HC-SR04 distance TRIG %pinTrig ECHO %pinEcho in %unidad"
+    //% block="HC-SR04 distancia TRIG %pinTrig ECHO %pinEcho en %unidad"
     //% blockId=fisicabit_ultrasonido
-    //% group="Measurement"
+    //% group="Medición"
     //% weight=80
     //% pinTrig.defl=DigitalPin.P8
     //% pinEcho.defl=DigitalPin.P12
@@ -231,9 +231,9 @@ namespace FisicaBitHCSR04 {
      * @param unidad Unidad de medida deseada
      * @returns Distancia cruda en la unidad seleccionada, 0 si falla
      */
-    //% block="HC-SR04 raw distance TRIG %pinTrig ECHO %pinEcho in %unidad"
+    //% block="HC-SR04 distancia cruda TRIG %pinTrig ECHO %pinEcho en %unidad"
     //% blockId=fisicabit_ultrasonido_crudo
-    //% group="Measurement"
+    //% group="Medición"
     //% weight=78
     //% pinTrig.defl=DigitalPin.P8
     //% pinEcho.defl=DigitalPin.P12
