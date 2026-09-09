@@ -33,7 +33,13 @@
         "_locales/en/fisicabit-sensores-strings.json",
         "_locales/en/fisicabit-sensores-jsdoc-strings.json",
         "_locales/pt-BR/fisicabit-sensores-strings.json",
-        "_locales/pt-BR/fisicabit-sensores-jsdoc-strings.json"
+        "_locales/pt-BR/fisicabit-sensores-jsdoc-strings.json",
+        "tutorial-usb.md",
+        "tutorial-bluetooth.md",
+        "_locales/es/tutorial-usb.md",
+        "_locales/es/tutorial-bluetooth.md",
+        "_locales/pt-BR/tutorial-usb.md",
+        "_locales/pt-BR/tutorial-bluetooth.md"
     ],
     "testFiles": [
         "test.ts"
