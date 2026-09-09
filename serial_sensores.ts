@@ -28,7 +28,7 @@
 
 //% weight=99
 //% color=#5C6BC0
-//% icon=""
+//% icon="\uf287"
 //% block="FisicaBit USB"
 //% groups='["1. Send (inside forever)", "2. Optional", "Advanced"]'
 namespace FisicaBitSerial {
