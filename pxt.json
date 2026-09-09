@@ -1,7 +1,7 @@
 {
     "name": "fisicabit-sensores",
     "version": "0.7.0",
-    "description": "micro:bit extension for physics experiments — sensors, optical barriers, and one-block data streaming to fisicabit.com over USB or Bluetooth",
+    "description": "Extensión micro:bit para experimentos de física: sensores, barreras ópticas y envío de datos a fisicabit.com con un solo bloque por USB o Bluetooth",
     "license": "MIT",
     "authors": [
         "FisicaBit"
@@ -36,10 +36,16 @@
         "microbit"
     ],
     "preferredEditor": "tsprj",
-    "bluetooth": {
-        "open": 1,
-        "pairing_mode": 0,
-        "whitelist": 0,
-        "security_level": null
+    "yotta": {
+        "config": {
+            "microbit-dal": {
+                "bluetooth": {
+                    "open": 1,
+                    "pairing_mode": 0,
+                    "whitelist": 0,
+                    "security_level": null
+                }
+            }
+        }
     }
 }

@@ -1,19 +1,23 @@
-# FisicaBit Sensors — micro:bit Extension
+# FisicaBit Sensores — Extensión para micro:bit
 
-> MakeCode extension for physics experiments with micro:bit — sensors, optical barriers, and one-block data streaming to [fisicabit.com](https://fisicabit.com) over USB or Bluetooth.
-> Project: [fisicabit.com](https://fisicabit.com)
+> 🇬🇧 [English version](README-en.md)
 
-## Use this extension
+> Extensión de MakeCode para experimentos de física con micro:bit: sensores, barreras ópticas y envío de datos a [fisicabit.com](https://fisicabit.com) con un solo bloque, por USB o por Bluetooth.
+> Proyecto: [fisicabit.com](https://fisicabit.com)
 
-In MakeCode, go to **Extensions** and paste this repository URL:
+## Cómo usar esta extensión
+
+En MakeCode, entrá a **Extensiones** y pegá la URL de este repositorio:
 
 ```
 https://github.com/martinferreiraHCA/pxt-fisicabit
 ```
 
-Or search for **fisicabit-sensores** in the Extensions dialog.
+O buscá **fisicabit-sensores** en el cuadro de Extensiones.
 
-## Inicio rápido (español) — enviar datos a fisicabit.com
+Los bloques aparecen en el idioma del editor: en español si MakeCode está en español, en inglés si está en inglés (también hay traducción parcial a portugués). El idioma se cambia en el menú **⚙ Configuración → Idioma**.
+
+## Inicio rápido: enviar datos a fisicabit.com
 
 **Por USB (cable):** un solo bloque envía `tiempo,valor` y respeta la frecuencia configurada.
 
@@ -41,49 +45,49 @@ En fisicabit.com: elegí **USB** o **Bluetooth**, poné el **número de variable
 | ◎ diana | Esperando que fisicabit.com se conecte |
 | ♥ corazón | Conectado, enviando datos |
 
-## Available blocks
+## Bloques disponibles
 
-### Internal Sensors
+### Sensores internos
 
 ```blocks
 let temp = FisicaBit.leerSensorInterno(TipoSensorInterno.Temperatura)
 basic.showNumber(temp)
 ```
 
-| Block | Description |
-|-------|-------------|
-| `read internal sensor [temperature]` | Reads built-in micro:bit sensors (temperature, accelerometer, light, compass, sound) |
+| Bloque | Descripción |
+|--------|-------------|
+| `leer sensor interno [temperatura]` | Lee los sensores integrados del micro:bit (temperatura, acelerómetro, luz, brújula, sonido) |
 
-### External Sensors
-
-```blocks
-let reading = FisicaBit.leerSensorAnalogico(PinAnalogico.P0)
-```
-
-| Block | Description |
-|-------|-------------|
-| `read analog sensor on [P0]` | Reads potentiometer, LDR, NTC (0-1023) |
-| `read digital sensor on P[8]` | Reads PIR, infrared, switch (0/1) |
-| `ultrasonic distance TRIG P1 ECHO P2 in [cm]` | Measures distance with HC-SR04 |
-
-### Optical Barrier (timing experiments)
+### Sensores externos
 
 ```blocks
-let timeMs = FisicaBit.medirTiempoBarrera(PinAnalogico.P1, PinAnalogico.P2, ModoBarrera.Digital, 10000)
-let velocity = FisicaBit.calcularVelocidad(timeMs * 1000, 100)
+let lectura = FisicaBit.leerSensorAnalogico(PinAnalogico.P0)
 ```
 
-| Block | Description |
-|-------|-------------|
-| `set barrier threshold to [512]` | Calibrate analog barrier trigger level |
-| `read barrier raw pin [P1] mode [analog]` | Raw sensor value for calibration |
-| `barrier triggered on [P1] mode [digital]` | Check if object is blocking the beam |
-| `measure time barrier A [P1] → B [P2]` | Transit time between two barriers (~1ms resolution) |
-| `[C++] barrier time A P1 → B P2` | Native C++ timing (~1μs resolution) |
-| `velocity with time [μs] distance [mm]` | Calculate velocity (returns m/s x100) |
-| `blocking time on [P1]` | How long an object blocks one barrier |
+| Bloque | Descripción |
+|--------|-------------|
+| `leer sensor analógico en [P0]` | Lee potenciómetro, LDR, NTC (0-1023) |
+| `leer sensor digital en P[8]` | Lee PIR, infrarrojo, interruptor (0/1) |
+| `HC-SR04 distancia TRIG P1 ECHO P2 en [cm]` | Mide distancia con HC-SR04 |
 
-### FisicaBit USB — stream to fisicabit.com over the cable
+### Barrera óptica (experimentos de tiempo)
+
+```blocks
+let tiempoMs = FisicaBit.medirTiempoBarrera(PinAnalogico.P1, PinAnalogico.P2, ModoBarrera.Digital, 10000)
+let velocidad = FisicaBit.calcularVelocidad(tiempoMs * 1000, 100)
+```
+
+| Bloque | Descripción |
+|--------|-------------|
+| `fijar umbral barrera a [512]` | Calibra el nivel de disparo de una barrera analógica |
+| `leer barrera crudo pin [P1] modo [analógico]` | Valor crudo del sensor para calibrar |
+| `barrera activada en [P1] modo [digital]` | Indica si un objeto corta el haz |
+| `medir tiempo barrera A [P1] → B [P2]` | Tiempo de tránsito entre dos barreras (resolución ~1 ms) |
+| `[C++] tiempo barrera A P1 → B P2` | Temporización nativa en C++ (resolución ~1 μs) |
+| `velocidad con tiempo [μs] distancia [mm]` | Calcula la velocidad (devuelve m/s × 100) |
+| `tiempo de bloqueo en [P1]` | Cuánto tiempo un objeto bloquea una barrera |
+
+### FisicaBit USB: enviar a fisicabit.com por cable
 
 ```blocks
 FisicaBitSerial.fijarFrecuencia(FrecuenciaMuestreo.Hz10)
@@ -92,36 +96,36 @@ basic.forever(function () {
 })
 ```
 
-Each `send to fisicabit.com` block does everything: it takes the micro:bit time (starting at 0), writes one CSV line (`time,v1,v2,...`) at 115200 baud, and waits until the next sample is due. The wait is deadline-based, so the real period matches the configured rate even with the hidden ~20 ms delay of `forever`.
+Cada bloque `enviar a fisicabit.com` hace todo: toma el tiempo del micro:bit (arranca en 0), escribe una línea CSV (`tiempo,v1,v2,...`) a 115200 baudios y espera hasta que toque la próxima muestra. La espera se calcula sobre el instante previsto, así el período real coincide con la frecuencia configurada aunque `para siempre` agregue su retardo oculto de ~20 ms.
 
-| Block | Description |
-|-------|-------------|
-| `send to fisicabit.com [value]` | Send 1 value (also 2, 3 and 4-value variants) |
-| `set sampling rate [10 Hz]` | 1, 2, 5, 10, 20, 50 or 100 Hz (default 10 Hz) |
-| `set sampling interval [100] ms` | Any interval from 5 to 60000 ms |
-| `fisicabit.com sampling loop at [50 Hz]` | Runs its body at a precise rate without `forever` overhead — use for 50 / 100 Hz |
-| `USB time (ms)` | Time sent in each line, starts at 0 |
-| `reset USB time to 0` | Start a new run at t = 0 |
-| `USB send micro:bit timestamp [on]` | *(advanced)* Turn the time column off if the page option "Micro:bit sends timestamp" is disabled |
-| `USB set decimals [2]` | *(advanced)* Decimals for non-integer values |
-| `USB send line [text]` | *(advanced)* Raw text line |
+| Bloque | Descripción |
+|--------|-------------|
+| `enviar a fisicabit.com [valor]` | Envía 1 valor (también hay variantes de 2, 3 y 4 valores) |
+| `configurar frecuencia de muestreo [10 Hz]` | 1, 2, 5, 10, 20, 50 o 100 Hz (por defecto 10 Hz) |
+| `configurar intervalo de muestreo [100] ms` | Cualquier intervalo de 5 a 60000 ms |
+| `muestrear para fisicabit.com a [50 Hz]` | Ejecuta su contenido a una frecuencia precisa sin el retardo de `para siempre`; usar para 50 / 100 Hz |
+| `tiempo USB (ms)` | Tiempo que viaja en cada línea, arranca en 0 |
+| `reiniciar tiempo USB a 0` | Empezar una nueva medición en t = 0 |
+| `USB enviar tiempo del micro:bit [activado]` | *(avanzado)* Desactivar la columna de tiempo si en la página está apagada la opción "Micro:bit envía timestamp" |
+| `USB fijar decimales [2]` | *(avanzado)* Decimales para valores no enteros |
+| `USB enviar línea [texto]` | *(avanzado)* Línea de texto libre |
 
-### Conversions
+### Conversiones
 
-| Block | Description |
-|-------|-------------|
-| `convert [23] from [°C] to [°F]` | Convert temperature between units |
-| `map [512] from (0—1023) to (0—100)` | Scale values to another range |
+| Bloque | Descripción |
+|--------|-------------|
+| `convertir [23] de [°C] a [°F]` | Convierte temperatura entre unidades |
+| `mapear [512] de (0—1023) a (0—100)` | Escala valores a otro rango |
 
-### Native C++ (Advanced)
+### Nativo C++ (avanzado)
 
-| Block | Description |
-|-------|-------------|
-| `[C++] read native ADC channel [0]` | 12-bit ADC reading (0-4095) |
-| `[C++] read ADC average channel [0] samples [16]` | Oversampled ADC to reduce noise |
-| `[C++] measure pulse pin P[2] level [HIGH] timeout [25000] μs` | Precise pulse timing |
+| Bloque | Descripción |
+|--------|-------------|
+| `[C++] leer ADC nativo canal [0]` | Lectura ADC de 12 bits (0-4095) |
+| `[C++] leer ADC promedio canal [0] muestras [16]` | ADC con sobremuestreo para reducir ruido |
+| `[C++] medir pulso pin P[2] nivel [ALTO] timeout [25000] μs` | Temporización precisa de pulsos |
 
-### FisicaBit Bluetooth — stream to fisicabit.com wirelessly
+### FisicaBit Bluetooth: enviar a fisicabit.com sin cable
 
 ```blocks
 FisicaBitBT.inicioRapido()
@@ -131,29 +135,29 @@ basic.forever(function () {
 })
 ```
 
-| Block | Description |
-|-------|-------------|
-| `start Bluetooth for fisicabit.com` | Put this **first** in `on start`: UART service, max TX power, LED status icons |
-| `send to fisicabit.com via Bluetooth [value]` | Send 1 value (also 2, 3 and 4-value variants); only transmits while connected |
-| `set Bluetooth sampling rate [10 Hz]` | Default 10 Hz; up to 20 Hz recommended over BLE |
-| `Bluetooth connected?` | True while fisicabit.com is connected |
-| `on fisicabit.com Bluetooth connected / disconnected` | Event blocks |
-| `Bluetooth show connection icons [on]` | Turn the ◎ / ♥ icons off to use the display yourself |
-| `set Bluetooth sampling interval [ms]`, `Bluetooth sampling loop`, `Bluetooth time (ms)`, `reset Bluetooth time to 0` | Same sampling tools as USB |
-| `Bluetooth send micro:bit timestamp`, `Bluetooth set decimals`, `Bluetooth send text` | *(advanced)* |
-| `start Bluetooth for fisicabit.com with all BLE services` | *(advanced)* Also exposes accelerometer, temperature, magnetometer, buttons, LED and pin services — slower to connect |
+| Bloque | Descripción |
+|--------|-------------|
+| `iniciar Bluetooth para fisicabit.com` | Ponerlo **primero** en `al iniciar`: servicio UART, potencia máxima, íconos de estado en la pantalla |
+| `enviar a fisicabit.com por Bluetooth [valor]` | Envía 1 valor (también 2, 3 y 4 valores); sólo transmite mientras hay conexión |
+| `configurar frecuencia de muestreo Bluetooth [10 Hz]` | Por defecto 10 Hz; por BLE se recomienda hasta 20 Hz |
+| `¿Bluetooth conectado?` | Verdadero mientras fisicabit.com está conectado |
+| `al conectar / al desconectar fisicabit.com por Bluetooth` | Bloques de evento |
+| `Bluetooth mostrar íconos de conexión [activado]` | Apagar los íconos ◎ / ♥ para usar la pantalla en otra cosa |
+| `configurar intervalo de muestreo Bluetooth [ms]`, `muestrear para fisicabit.com por Bluetooth`, `tiempo Bluetooth (ms)`, `reiniciar tiempo Bluetooth a 0` | Las mismas herramientas de muestreo que USB |
+| `Bluetooth enviar tiempo del micro:bit`, `Bluetooth fijar decimales`, `Bluetooth enviar texto` | *(avanzado)* |
+| `iniciar Bluetooth para fisicabit.com con todos los servicios BLE` | *(avanzado)* Expone además acelerómetro, temperatura, magnetómetro, botones, LED y pines; tarda más en conectar |
 
-Why these blocks connect reliably:
+Por qué estos bloques conectan sin problemas:
 
-* Only the UART service is started by default. Every extra BLE service slows down discovery (especially on Windows) and can trip the firmware's 4 s supervision timeout.
-* Transmit power is set to the maximum (7).
-* Lines are short (time starts at 0, 2 decimals, `\n` terminator), so a sample fits in a single 20-byte BLE packet.
-* Nothing is sent while no page is connected; sampling keeps its rhythm and data resumes automatically after a reconnect. Time restarts at 0 on every connection.
-* If BLE falls behind, the sampler resynchronises instead of bursting stale samples.
+* Sólo se inicia el servicio UART. Cada servicio BLE extra hace más lento el descubrimiento (sobre todo en Windows) y puede vencer el timeout de supervisión de 4 s del firmware.
+* La potencia de transmisión se fija al máximo (7).
+* Las líneas son cortas (tiempo desde 0, 2 decimales, terminador `\n`), así cada muestra entra en un único paquete BLE de 20 bytes.
+* No se envía nada mientras no hay una página conectada; el muestreo mantiene su ritmo y los datos vuelven solos al reconectar. El tiempo arranca en 0 en cada conexión.
+* Si BLE se atrasa, el muestreador se resincroniza en vez de mandar una ráfaga de muestras viejas.
 
-## Wiring examples
+## Ejemplos de conexión
 
-### HC-SR04 Ultrasonic Sensor
+### Sensor ultrasónico HC-SR04
 ```
 HC-SR04 TRIG → micro:bit P1
 HC-SR04 ECHO → micro:bit P2
@@ -161,58 +165,58 @@ HC-SR04 VCC  → micro:bit 3V
 HC-SR04 GND  → micro:bit GND
 ```
 
-### FC-33 Optical Barrier (digital)
+### Barrera óptica FC-33 (digital)
 ```
-FC-33 #1 OUT → P1 (barrier A)
-FC-33 #2 OUT → P2 (barrier B)
-Both VCC → 3V, GND → GND
+FC-33 #1 OUT → P1 (barrera A)
+FC-33 #2 OUT → P2 (barrera B)
+Ambos VCC → 3V, GND → GND
 ```
 
-### IR DIY Barrier (analog)
+### Barrera IR casera (analógica)
 ```
-Emitter:  3V → R(100Ω) → IR LED → GND
-Receiver: 3V → Phototransistor → Pin (signal)
+Emisor:   3V → R(100Ω) → LED IR → GND
+Receptor: 3V → Fototransistor → Pin (señal)
                                  ├── R(10KΩ) → GND
 ```
 
-## Bluetooth setup
+## Configuración de Bluetooth
 
-1. This extension already ships with `"bluetooth": { "open": 1, "pairing_mode": 0, "whitelist": 0 }` in `pxt.json` ("No Pairing Required"). If you copy the code into your own project, set the same in **Settings → Project Settings**.
-2. Put `start Bluetooth for fisicabit.com` as the first block in `on start`.
-3. Flash the program, wait for the ◎ icon, then click **Bluetooth** on fisicabit.com and pick `BBC micro:bit [xxxxx]`.
-4. If a previously paired micro:bit refuses to connect, remove ("forget") it from the operating system's Bluetooth settings and try again.
+1. Esta extensión ya impone "sin vinculación" (**No Pairing Required**) desde su `pxt.json` (`yotta.config.microbit-dal.bluetooth`: `open: 1, pairing_mode: 0, whitelist: 0`), así que no hace falta tocar nada en el proyecto. Si igual querés verificarlo: **⚙ Configuración → Configuración del proyecto → No Pairing Required**.
+2. Poné `iniciar Bluetooth para fisicabit.com` como primer bloque de `al iniciar`.
+3. Cargá el programa, esperá el ícono ◎, después tocá **Bluetooth** en fisicabit.com y elegí `BBC micro:bit [xxxxx]`.
+4. Si un micro:bit que estuvo vinculado antes no se conecta, quitalo ("olvidar") de la configuración Bluetooth del sistema operativo y volvé a intentar.
 
-Notes:
+Notas:
 
-* Bluetooth and the **Radio** extension cannot be used in the same program. USB serial keeps working alongside Bluetooth.
-* Practical BLE rate is up to ~20 Hz; for 50–100 Hz use USB.
-* The old `BT sample ... every ... ms` and `serial sample ... every ... ms` blocks still compile but are hidden; use the new `send to fisicabit.com` blocks.
+* Bluetooth y la extensión **Radio** no pueden usarse en el mismo programa. El serial USB sí sigue funcionando junto con Bluetooth.
+* La velocidad práctica por BLE es de hasta ~20 Hz; para 50–100 Hz usá USB.
+* Los bloques viejos `BT muestrear ... cada ... ms` y `Serial muestrear ... cada ... ms` siguen compilando pero están ocultos; usá los nuevos bloques `enviar a fisicabit.com`.
 
-### Browser compatibility
+### Compatibilidad de navegadores
 
-| Platform | Browser | USB (Web Serial) | Bluetooth (Web Bluetooth) |
-|----------|---------|------------------|---------------------------|
-| Windows / macOS / Linux / ChromeOS | Chrome, Edge | Yes | Yes |
-| Android | Chrome | No | Yes |
-| iOS / iPadOS | Safari | No | No (Apple does not support Web Serial or Web Bluetooth) |
+| Plataforma | Navegador | USB (Web Serial) | Bluetooth (Web Bluetooth) |
+|------------|-----------|------------------|---------------------------|
+| Windows / macOS / Linux / ChromeOS | Chrome, Edge | Sí | Sí |
+| Android | Chrome | No | Sí |
+| iOS / iPadOS | Safari | No | No (Apple no soporta Web Serial ni Web Bluetooth) |
 
-Data is received on [fisicabit.com](https://fisicabit.com) in real time.
+Los datos se reciben en [fisicabit.com](https://fisicabit.com) en tiempo real.
 
-## micro:bit pin reference
+## Referencia de pines del micro:bit
 
 ```
-Analog pins (ADC):     P0, P1, P2
-Free digital pins:     P8, P12, P16
-I2C bus:               P19 (SCL), P20 (SDA)
-SPI bus:               P13 (SCK), P14 (MISO), P15 (MOSI)
-Shared with LEDs:      P3, P4, P5, P6, P7, P9, P10, P11
+Pines analógicos (ADC):   P0, P1, P2
+Pines digitales libres:   P8, P12, P16
+Bus I2C:                  P19 (SCL), P20 (SDA)
+Bus SPI:                  P13 (SCK), P14 (MISO), P15 (MOSI)
+Compartidos con los LED:  P3, P4, P5, P6, P7, P9, P10, P11
 ```
 
-## Supported targets
+## Plataformas soportadas
 
-* for PXT/microbit
+* PXT/microbit
 
-## License
+## Licencia
 
 MIT
 
