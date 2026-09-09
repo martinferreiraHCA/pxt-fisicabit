@@ -181,7 +181,7 @@ Receptor: 3V → Fototransistor → Pin (señal)
 
 ## Configuración de Bluetooth
 
-1. Esta extensión ya trae `"bluetooth": { "open": 1, "pairing_mode": 0, "whitelist": 0 }` en `pxt.json` ("No Pairing Required"). Si copiás el código a un proyecto propio, configurá lo mismo en **Configuración → Configuración del proyecto**.
+1. Esta extensión ya impone "sin vinculación" (**No Pairing Required**) desde su `pxt.json` (`yotta.config.microbit-dal.bluetooth`: `open: 1, pairing_mode: 0, whitelist: 0`), así que no hace falta tocar nada en el proyecto. Si igual querés verificarlo: **⚙ Configuración → Configuración del proyecto → No Pairing Required**.
 2. Poné `iniciar Bluetooth para fisicabit.com` como primer bloque de `al iniciar`.
 3. Cargá el programa, esperá el ícono ◎, después tocá **Bluetooth** en fisicabit.com y elegí `BBC micro:bit [xxxxx]`.
 4. Si un micro:bit que estuvo vinculado antes no se conecta, quitalo ("olvidar") de la configuración Bluetooth del sistema operativo y volvé a intentar.

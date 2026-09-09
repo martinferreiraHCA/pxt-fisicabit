@@ -36,8 +36,11 @@
 //      resincroniza en vez de acumular una ráfaga de muestras viejas.
 //
 //  CONFIGURACIÓN REQUERIDA (pxt.json, ya incluida en esta extensión):
-//    "bluetooth": { "open": 1, "pairing_mode": 0, "whitelist": 0 }
+//    "yotta": { "config": { "microbit-dal": { "bluetooth":
+//        { "open": 1, "pairing_mode": 0, "whitelist": 0 } } } }
 //    → Conexión abierta, sin vinculación ("No Pairing Required").
+//    (La clave "bluetooth" de nivel superior NO la lee el compilador;
+//     se verificó en built/codal.json: OPEN=1, PAIRING_MODE=0, WHITELIST=0.)
 //
 //  LIMITACIONES CONOCIDAS:
 //    • Bluetooth y Radio no pueden usarse en el mismo programa.
