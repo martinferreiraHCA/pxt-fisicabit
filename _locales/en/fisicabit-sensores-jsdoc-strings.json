@@ -72,5 +72,21 @@
     "FisicaBitBT.enviar2|param|ms": "Time between samples in ms, eg: 100",
     "FisicaBitBT.enviar3|param|ms": "Time between samples in ms, eg: 100",
     "FisicaBitBT.enviar4|param|ms": "Time between samples in ms, eg: 100",
-    "FisicaBitBT.bucleMuestreo|param|ms": "Time between samples in ms, eg: 50"
+    "FisicaBitBT.bucleMuestreo|param|ms": "Time between samples in ms, eg: 50",
+    "FisicaBitSerial.enviarSinTiempo1|block": "Sends only one measured value to fisicabit.com over USB, without the micro:bit time, then waits until the next sample. The page timestamps with the browser clock. On fisicabit.com: \"Micro:bit sends timestamp\" disabled.",
+    "FisicaBitSerial.enviarSinTiempo1|param|ms": "Time between samples in ms, eg: 100",
+    "FisicaBitSerial.enviarSinTiempo2|block": "Sends only two measured values to fisicabit.com over USB, without the micro:bit time, then waits until the next sample. The page timestamps with the browser clock. On fisicabit.com: \"Micro:bit sends timestamp\" disabled.",
+    "FisicaBitSerial.enviarSinTiempo2|param|ms": "Time between samples in ms, eg: 100",
+    "FisicaBitSerial.enviarSinTiempo3|block": "Sends only three measured values to fisicabit.com over USB, without the micro:bit time, then waits until the next sample. The page timestamps with the browser clock. On fisicabit.com: \"Micro:bit sends timestamp\" disabled.",
+    "FisicaBitSerial.enviarSinTiempo3|param|ms": "Time between samples in ms, eg: 100",
+    "FisicaBitSerial.enviarSinTiempo4|block": "Sends only four measured values to fisicabit.com over USB, without the micro:bit time, then waits until the next sample. The page timestamps with the browser clock. On fisicabit.com: \"Micro:bit sends timestamp\" disabled.",
+    "FisicaBitSerial.enviarSinTiempo4|param|ms": "Time between samples in ms, eg: 100",
+    "FisicaBitBT.enviarSinTiempo1|block": "Sends only one measured value to fisicabit.com via Bluetooth, without the micro:bit time, then waits until the next sample. The page timestamps with the browser clock. On fisicabit.com: \"Micro:bit sends timestamp\" disabled.",
+    "FisicaBitBT.enviarSinTiempo1|param|ms": "Time between samples in ms, eg: 100",
+    "FisicaBitBT.enviarSinTiempo2|block": "Sends only two measured values to fisicabit.com via Bluetooth, without the micro:bit time, then waits until the next sample. The page timestamps with the browser clock. On fisicabit.com: \"Micro:bit sends timestamp\" disabled.",
+    "FisicaBitBT.enviarSinTiempo2|param|ms": "Time between samples in ms, eg: 100",
+    "FisicaBitBT.enviarSinTiempo3|block": "Sends only three measured values to fisicabit.com via Bluetooth, without the micro:bit time, then waits until the next sample. The page timestamps with the browser clock. On fisicabit.com: \"Micro:bit sends timestamp\" disabled.",
+    "FisicaBitBT.enviarSinTiempo3|param|ms": "Time between samples in ms, eg: 100",
+    "FisicaBitBT.enviarSinTiempo4|block": "Sends only four measured values to fisicabit.com via Bluetooth, without the micro:bit time, then waits until the next sample. The page timestamps with the browser clock. On fisicabit.com: \"Micro:bit sends timestamp\" disabled.",
+    "FisicaBitBT.enviarSinTiempo4|param|ms": "Time between samples in ms, eg: 100"
 }
