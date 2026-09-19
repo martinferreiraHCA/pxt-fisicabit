@@ -87,5 +87,8 @@
     "FisicaBitCinematica.reiniciarVelocidad|block": "Zera a velocidade em todos os eixos. Usar no início de cada medição com o corpo parado.",
     "FisicaBitCinematica.enReposo|block": "Verdadeiro quando a placa está parada (aceleração quase constante por 0,2 s).",
     "FisicaBitCinematica.calibrarEnReposo|block": "Com a placa parada por 1 segundo: mede a gravidade, define a referência de repouso e a escala real do sensor, e zera a velocidade.",
-    "FisicaBitCinematica.calibrar6Posiciones|block": "Calibração de offset e escala por eixo: apoiar a placa com a face indicada para cima, parada, e apertar A. Seis vezes."
+    "FisicaBitCinematica.calibrar6Posiciones|block": "Calibração de offset e escala por eixo: apoiar a placa com a face indicada para cima, parada, e apertar A. Seis vezes.",
+    "FisicaBitCinematica.enviarVelocidad|block": "Envia para fisicabit.com o tempo e a velocidade (m/s) a cada X ms por USB ou Bluetooth. Ideal para MRUV: o gráfico velocidade-tempo é uma reta cuja inclinação é a aceleração.",
+    "FisicaBitCinematica.enviarVelocidadAceleracion|block": "Envia para fisicabit.com o tempo, a velocidade (m/s) e a aceleração (m/s²) a cada X ms por USB ou Bluetooth.",
+    "FisicaBitCinematica.enviarAceleracion|block": "Envia para fisicabit.com o tempo e a aceleração (m/s²) a cada X ms por USB ou Bluetooth."
 }

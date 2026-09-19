@@ -98,6 +98,16 @@ basic.forever(function () {
 })
 ```
 
+Uniformly accelerated motion over Bluetooth (board fixed to a cart on an incline):
+
+```blocks
+FisicaBitBT.inicioRapido()
+FisicaBitCinematica.iniciar()
+basic.forever(function () {
+    FisicaBitCinematica.enviarVelocidad(EjeAceleracion.X, MedioEnvio.Bluetooth, 100)
+})
+```
+
 Connect, rest, measure: `start precision accelerometer` configures the sensor and self-calibrates while the board is still. Then `acceleration (m/s²)` and `instantaneous velocity (m/s)` return calibrated physical units with no further setup.
 
 | Step | Block | Description |
@@ -106,7 +116,8 @@ Connect, rest, measure: `start precision accelerometer` configures the sensor an
 | 2. Measure | `acceleration (m/s²) [vertical / X / Y / Z / magnitude]` | Linear acceleration relative to the ground, gravity removed; 0 at rest |
 | 2. Measure | `instantaneous velocity (m/s) [axis]` | Integrated in the background sample by sample; auto-zeroes when the board stops |
 | 2. Measure | `reset velocity to 0`, `at rest?`, `proper acceleration`, `free fall?`, `pitch`, `roll` | Extras |
-| 3. Optional | `calibrate at rest (1 s)`, `set sampling 100/200/400 Hz`, `set smoothing`, `set range ±2/±4/±8 g`, `keep reference fixed`, `auto-zero velocity`, `local gravity`, `measured gravity`, `high-resolution status` | Fine tuning |
+| 3. Send | `send velocity [X] via [Bluetooth] every [100] ms` | One block for uniformly accelerated motion: time and velocity at fixed intervals; on fisicabit.com the v(t) graph is a line whose slope is the acceleration. Variants: `velocity and acceleration`, `acceleration` |
+| 4. Optional | `calibrate at rest (1 s)`, `set sampling 100/200/400 Hz`, `set smoothing`, `set range ±2/±4/±8 g`, `keep reference fixed`, `auto-zero velocity`, `local gravity`, `measured gravity`, `high-resolution status` | Fine tuning |
 | Advanced | `calibrate 6 positions`, `set calibration`, `send calibration via serial`, `high-resolution mode`, `raw acceleration`, `samples per second` | Factory calibration and diagnostics |
 
 What it does inside (from the LSM303AGR datasheet and the micro:bit v2 CODAL driver):

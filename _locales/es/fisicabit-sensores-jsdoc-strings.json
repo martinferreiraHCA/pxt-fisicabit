@@ -96,5 +96,11 @@
     "FisicaBitCinematica.fijarAutoCeroVelocidad|block": "Puesta a cero automática de la velocidad cuando la placa está quieta (activada por defecto).",
     "FisicaBitCinematica.fijarGravedadLocal|block": "Valor de la gravedad local usado para convertir a m/s² (por defecto 9,80665).",
     "FisicaBitCinematica.calibrar6Posiciones|block": "Calibración de offset y escala por eje: apoyar la placa con la cara indicada hacia arriba, quieta, y apretar A. Seis veces.",
-    "FisicaBitCinematica.estadoAltaResolucion|block": "1 = alta resolución activa (micro:bit v2), 0 = modo normal, -1 = sensor no reconocido o simulador."
+    "FisicaBitCinematica.estadoAltaResolucion|block": "1 = alta resolución activa (micro:bit v2), 0 = modo normal, -1 = sensor no reconocido o simulador.",
+    "FisicaBitCinematica.enviarVelocidad|block": "Envía a fisicabit.com el tiempo y la velocidad (m/s) cada X ms por USB o Bluetooth. Ideal para MRUV: la gráfica velocidad-tiempo es una recta cuya pendiente es la aceleración. En la página: 1 variable, timestamp activado.",
+    "FisicaBitCinematica.enviarVelocidad|param|ms": "Tiempo entre envíos en ms (100 = 10 por segundo), eg: 100",
+    "FisicaBitCinematica.enviarVelocidadAceleracion|block": "Envía a fisicabit.com el tiempo, la velocidad (m/s) y la aceleración (m/s²) cada X ms por USB o Bluetooth. En la página: 2 variables, timestamp activado.",
+    "FisicaBitCinematica.enviarVelocidadAceleracion|param|ms": "Tiempo entre envíos en ms, eg: 100",
+    "FisicaBitCinematica.enviarAceleracion|block": "Envía a fisicabit.com el tiempo y la aceleración (m/s²) cada X ms por USB o Bluetooth. En la página: 1 variable, timestamp activado.",
+    "FisicaBitCinematica.enviarAceleracion|param|ms": "Tiempo entre envíos en ms, eg: 100"
 }
