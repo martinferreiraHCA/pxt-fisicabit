@@ -107,6 +107,13 @@ declare const enum SuavizadoAcelerometro {
     MuyFuerte = 40
 }
 
+declare const enum MedioEnvio {
+    //% block="USB"
+    USB = 0,
+    //% block="Bluetooth"
+    Bluetooth = 1
+}
+
 declare const enum EjeAceleracion {
     //% block="X (left/right)"
     X = 0,

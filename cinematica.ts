@@ -53,7 +53,7 @@
 //% color=#1E88E5
 //% icon=""
 //% block="FisicaBit Kinematics"
-//% groups="['1. Start (in on start)', '2. Measure', '3. Optional', 'Advanced']"
+//% groups="['1. Start (in on start)', '2. Measure', '3. Send to fisicabit.com', '4. Optional', 'Advanced']"
 namespace FisicaBitCinematica {
 
     // =========================================================================
@@ -487,7 +487,89 @@ namespace FisicaBitCinematica {
     }
 
     // =========================================================================
-    // PASO 3: OPCIONAL
+    // PASO 3: ENVIAR A fisicabit.com — velocidad y aceleración a intervalos
+    // =========================================================================
+
+    function _enviar(medio: MedioEnvio, valores: number[], ms: number): void {
+        if (medio === MedioEnvio.Bluetooth) {
+            if (valores.length === 1) FisicaBitBT.enviar1(valores[0], ms)
+            else FisicaBitBT.enviar2(valores[0], valores[1], ms)
+        } else {
+            if (valores.length === 1) FisicaBitSerial.enviar1(valores[0], ms)
+            else FisicaBitSerial.enviar2(valores[0], valores[1], ms)
+        }
+    }
+
+    /**
+     * Envía a fisicabit.com el tiempo y la VELOCIDAD (m/s) cada X ms, por
+     * USB o Bluetooth. Colocar dentro de "para siempre". Ideal para MRUV:
+     * en la página, la gráfica velocidad-tiempo es una recta y su
+     * pendiente es la aceleración.
+     * Línea enviada: tiempo,velocidad. En fisicabit.com: 1 variable,
+     * "Micro:bit envía timestamp" activado. Por Bluetooth, poner antes
+     * "iniciar Bluetooth para fisicabit.com" en "al iniciar".
+     *
+     * Ejemplo: carrito en un plano inclinado, placa fija al carrito:
+     *   [para siempre] → [enviar velocidad X por Bluetooth cada 100 ms]
+     * @param eje Eje del movimiento: X, Y, Z, vertical o magnitud
+     * @param medio USB o Bluetooth
+     * @param ms Tiempo entre envíos en ms (100 = 10 por segundo), eg: 100
+     */
+    //% block="send velocity %eje via %medio every %ms ms"
+    //% blockId=fisicabit_cin_enviar_v
+    //% group="3. Send to fisicabit.com"
+    //% weight=100
+    //% eje.defl=EjeAceleracion.X
+    //% ms.min=20 ms.max=60000 ms.defl=100
+    //% inlineInputMode=inline
+    export function enviarVelocidad(eje: EjeAceleracion, medio: MedioEnvio, ms: number): void {
+        _enviar(medio, [velocidadInstantanea(eje)], ms)
+    }
+
+    /**
+     * Envía a fisicabit.com el tiempo, la VELOCIDAD (m/s) y la
+     * ACELERACIÓN (m/s²) cada X ms, por USB o Bluetooth. Colocar dentro
+     * de "para siempre". Permite comparar en la misma gráfica la pendiente
+     * de v(t) con la aceleración medida.
+     * Línea enviada: tiempo,velocidad,aceleración. En fisicabit.com: 2
+     * variables, "Micro:bit envía timestamp" activado.
+     * @param eje Eje del movimiento: X, Y, Z, vertical o magnitud
+     * @param medio USB o Bluetooth
+     * @param ms Tiempo entre envíos en ms, eg: 100
+     */
+    //% block="send velocity and acceleration %eje via %medio every %ms ms"
+    //% blockId=fisicabit_cin_enviar_va
+    //% group="3. Send to fisicabit.com"
+    //% weight=95
+    //% eje.defl=EjeAceleracion.X
+    //% ms.min=20 ms.max=60000 ms.defl=100
+    //% inlineInputMode=inline
+    export function enviarVelocidadAceleracion(eje: EjeAceleracion, medio: MedioEnvio, ms: number): void {
+        _enviar(medio, [velocidadInstantanea(eje), leerAceleracionLineal(eje)], ms)
+    }
+
+    /**
+     * Envía a fisicabit.com el tiempo y la ACELERACIÓN (m/s²) cada X ms,
+     * por USB o Bluetooth. Colocar dentro de "para siempre".
+     * Línea enviada: tiempo,aceleración. En fisicabit.com: 1 variable,
+     * "Micro:bit envía timestamp" activado.
+     * @param eje Eje: vertical, X, Y, Z o magnitud
+     * @param medio USB o Bluetooth
+     * @param ms Tiempo entre envíos en ms, eg: 100
+     */
+    //% block="send acceleration %eje via %medio every %ms ms"
+    //% blockId=fisicabit_cin_enviar_a
+    //% group="3. Send to fisicabit.com"
+    //% weight=90
+    //% eje.defl=EjeAceleracion.Vertical
+    //% ms.min=20 ms.max=60000 ms.defl=100
+    //% inlineInputMode=inline
+    export function enviarAceleracion(eje: EjeAceleracion, medio: MedioEnvio, ms: number): void {
+        _enviar(medio, [leerAceleracionLineal(eje)], ms)
+    }
+
+    // =========================================================================
+    // PASO 4: OPCIONAL
     // =========================================================================
 
     /**
@@ -500,7 +582,7 @@ namespace FisicaBitCinematica {
      */
     //% block="calibrate at rest (hold still 1 s)"
     //% blockId=fisicabit_cin_calibrar
-    //% group="3. Optional"
+    //% group="4. Optional"
     //% weight=100
     export function calibrarEnReposo(): void {
         _asegurarIniciado()
@@ -522,7 +604,7 @@ namespace FisicaBitCinematica {
      */
     //% block="calibrate accelerometer at rest (%muestras samples)"
     //% blockId=fisicabit_cin_calibrar_n
-    //% group="3. Optional"
+    //% group="4. Optional"
     //% weight=99
     //% muestras.min=50 muestras.max=500 muestras.defl=200
     //% deprecated=true
@@ -538,7 +620,7 @@ namespace FisicaBitCinematica {
      */
     //% block="set accelerometer sampling %tasa"
     //% blockId=fisicabit_cin_tasa
-    //% group="3. Optional"
+    //% group="4. Optional"
     //% weight=90
     //% tasa.defl=TasaAcelerometro.Hz200
     export function fijarTasa(tasa: TasaAcelerometro): void {
@@ -555,7 +637,7 @@ namespace FisicaBitCinematica {
      */
     //% block="set acceleration smoothing %suavizado"
     //% blockId=fisicabit_cin_suavizado
-    //% group="3. Optional"
+    //% group="4. Optional"
     //% weight=85
     //% suavizado.defl=SuavizadoAcelerometro.Medio
     export function fijarSuavizado(suavizado: SuavizadoAcelerometro): void {
@@ -573,7 +655,7 @@ namespace FisicaBitCinematica {
      */
     //% block="set accelerometer range %rango"
     //% blockId=fisicabit_cin_rango
-    //% group="3. Optional"
+    //% group="4. Optional"
     //% weight=80
     //% rango.defl=RangoAcelerometro.Rango2G
     export function fijarRangoAcelerometro(rango: RangoAcelerometro): void {
@@ -592,7 +674,7 @@ namespace FisicaBitCinematica {
      */
     //% block="keep gravity reference fixed %fija"
     //% blockId=fisicabit_cin_ref_fija
-    //% group="3. Optional"
+    //% group="4. Optional"
     //% weight=75
     //% fija.shadow=toggleOnOff
     //% fija.defl=false
@@ -609,7 +691,7 @@ namespace FisicaBitCinematica {
      */
     //% block="auto-zero velocity at rest %activar"
     //% blockId=fisicabit_cin_zupt
-    //% group="3. Optional"
+    //% group="4. Optional"
     //% weight=70
     //% activar.shadow=toggleOnOff
     //% activar.defl=true
@@ -624,7 +706,7 @@ namespace FisicaBitCinematica {
      */
     //% block="set local gravity %g m/s²"
     //% blockId=fisicabit_cin_g_local
-    //% group="3. Optional"
+    //% group="4. Optional"
     //% weight=65
     //% g.min=9.7 g.max=9.9 g.defl=9.80665
     export function fijarGravedadLocal(g: number): void {
@@ -639,7 +721,7 @@ namespace FisicaBitCinematica {
      */
     //% block="measured gravity (counts, ≈1024)"
     //% blockId=fisicabit_cin_mod_gravedad
-    //% group="3. Optional"
+    //% group="4. Optional"
     //% weight=60
     export function moduloGravedadEstimada(): number {
         _asegurarIniciado()
@@ -652,7 +734,7 @@ namespace FisicaBitCinematica {
      */
     //% block="high-resolution mode status"
     //% blockId=fisicabit_cin_estado_hr
-    //% group="3. Optional"
+    //% group="4. Optional"
     //% weight=55
     export function estadoAltaResolucion(): number {
         _asegurarIniciado()

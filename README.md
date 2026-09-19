@@ -126,6 +126,16 @@ basic.forever(function () {
 })
 ```
 
+Ejemplo MRUV por Bluetooth (placa fija a un carrito en un plano inclinado):
+
+```blocks
+FisicaBitBT.inicioRapido()
+FisicaBitCinematica.iniciar()
+basic.forever(function () {
+    FisicaBitCinematica.enviarVelocidad(EjeAceleracion.X, MedioEnvio.Bluetooth, 100)
+})
+```
+
 Conectar, apoyar y medir: el bloque `iniciar acelerómetro de precisión` deja el sensor listo y calibra solo con la placa quieta. Después, `aceleración (m/s²)` y `velocidad instantánea (m/s)` dan valores calibrados en unidades físicas, sin más configuración.
 
 | Paso | Bloque | Descripción |
@@ -134,7 +144,8 @@ Conectar, apoyar y medir: el bloque `iniciar acelerómetro de precisión` deja e
 | 2. Medir | `aceleración (m/s²) [vertical / X / Y / Z / magnitud]` | Aceleración lineal respecto al suelo, sin la gravedad; 0 en reposo |
 | 2. Medir | `velocidad instantánea (m/s) [eje]` | Integrada en segundo plano muestra a muestra; vuelve a 0 sola cuando la placa se detiene |
 | 2. Medir | `poner velocidad en 0`, `¿en reposo?`, `aceleración propia`, `¿caída libre?`, `pitch`, `roll` | Complementos |
-| 3. Opcional | `calibrar en reposo (quieto 1 s)`, `fijar muestreo 100/200/400 Hz`, `fijar suavizado`, `fijar rango ±2/±4/±8 g`, `referencia fija`, `velocidad a 0 automática`, `gravedad local`, `gravedad medida`, `estado alta resolución` | Ajustes finos |
+| 3. Enviar | `enviar velocidad [X] por [Bluetooth] cada [100] ms` | Un solo bloque para MRUV: tiempo y velocidad a intervalos fijos; en fisicabit.com la gráfica v(t) es una recta y su pendiente es la aceleración. Variantes: `velocidad y aceleración`, `aceleración` |
+| 4. Opcional | `calibrar en reposo (quieto 1 s)`, `fijar muestreo 100/200/400 Hz`, `fijar suavizado`, `fijar rango ±2/±4/±8 g`, `referencia fija`, `velocidad a 0 automática`, `gravedad local`, `gravedad medida`, `estado alta resolución` | Ajustes finos |
 | Avanzado | `calibrar en 6 posiciones`, `fijar calibración`, `enviar calibración por serial`, `modo alta resolución`, `aceleración cruda`, `muestras por segundo` | Calibración de fábrica y diagnóstico |
 
 Qué hace por dentro (investigado en la hoja de datos del LSM303AGR y en el driver CODAL del micro:bit v2):

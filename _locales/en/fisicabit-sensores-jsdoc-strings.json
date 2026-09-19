@@ -96,5 +96,11 @@
     "FisicaBitCinematica.fijarAutoCeroVelocidad|block": "Automatic velocity zeroing when the board is still (on by default).",
     "FisicaBitCinematica.fijarGravedadLocal|block": "Local gravity value used to convert to m/s² (default 9.80665).",
     "FisicaBitCinematica.calibrar6Posiciones|block": "Per-axis offset and scale calibration: rest the board with the indicated face up, still, and press A. Six times.",
-    "FisicaBitCinematica.estadoAltaResolucion|block": "1 = high-resolution mode active (micro:bit v2), 0 = normal mode, -1 = sensor not recognised or simulator."
+    "FisicaBitCinematica.estadoAltaResolucion|block": "1 = high-resolution mode active (micro:bit v2), 0 = normal mode, -1 = sensor not recognised or simulator.",
+    "FisicaBitCinematica.enviarVelocidad|block": "Sends time and velocity (m/s) to fisicabit.com every X ms over USB or Bluetooth. Ideal for uniformly accelerated motion: the velocity-time graph is a line whose slope is the acceleration. On the page: 1 variable, timestamp enabled.",
+    "FisicaBitCinematica.enviarVelocidad|param|ms": "Time between sends in ms (100 = 10 per second), eg: 100",
+    "FisicaBitCinematica.enviarVelocidadAceleracion|block": "Sends time, velocity (m/s) and acceleration (m/s²) to fisicabit.com every X ms over USB or Bluetooth. On the page: 2 variables, timestamp enabled.",
+    "FisicaBitCinematica.enviarVelocidadAceleracion|param|ms": "Time between sends in ms, eg: 100",
+    "FisicaBitCinematica.enviarAceleracion|block": "Sends time and acceleration (m/s²) to fisicabit.com every X ms over USB or Bluetooth. On the page: 1 variable, timestamp enabled.",
+    "FisicaBitCinematica.enviarAceleracion|param|ms": "Time between sends in ms, eg: 100"
 }
