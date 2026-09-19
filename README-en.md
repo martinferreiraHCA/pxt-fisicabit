@@ -85,6 +85,39 @@ One block configures everything: `send to fisicabit.com time and [value] every [
 | 2. Optional | `USB time (ms)` | The time sent in each line |
 | Advanced | `USB send micro:bit timestamp [on]`, `USB set decimals [2]`, `USB send line [text]`, `set sampling rate / interval` | Only if needed |
 
+### FisicaBit Kinematics: precision accelerometer
+
+```blocks
+FisicaBitCinematica.iniciar()
+basic.forever(function () {
+    FisicaBitSerial.enviar2(
+        FisicaBitCinematica.leerAceleracionLineal(EjeAceleracion.Vertical),
+        FisicaBitCinematica.velocidadInstantanea(EjeAceleracion.Vertical),
+        50
+    )
+})
+```
+
+Connect, rest, measure: `start precision accelerometer` configures the sensor and self-calibrates while the board is still. Then `acceleration (m/s²)` and `instantaneous velocity (m/s)` return calibrated physical units with no further setup.
+
+| Step | Block | Description |
+|------|-------|-------------|
+| 1. Start | `start precision accelerometer` | In `on start`, board still for 1 s |
+| 2. Measure | `acceleration (m/s²) [vertical / X / Y / Z / magnitude]` | Linear acceleration relative to the ground, gravity removed; 0 at rest |
+| 2. Measure | `instantaneous velocity (m/s) [axis]` | Integrated in the background sample by sample; auto-zeroes when the board stops |
+| 2. Measure | `reset velocity to 0`, `at rest?`, `proper acceleration`, `free fall?`, `pitch`, `roll` | Extras |
+| 3. Optional | `calibrate at rest (1 s)`, `set sampling 100/200/400 Hz`, `set smoothing`, `set range ±2/±4/±8 g`, `keep reference fixed`, `auto-zero velocity`, `local gravity`, `measured gravity`, `high-resolution status` | Fine tuning |
+| Advanced | `calibrate 6 positions`, `set calibration`, `send calibration via serial`, `high-resolution mode`, `raw acceleration`, `samples per second` | Factory calibration and diagnostics |
+
+What it does inside (from the LSM303AGR datasheet and the micro:bit v2 CODAL driver):
+
+* MakeCode's firmware leaves the chip in normal 10-bit mode at 50 Hz. This module switches it to **12-bit high-resolution mode** (0.98 mg per count, 4x finer) at **200 samples per second**, with a narrower noise bandwidth.
+* `input.acceleration` returns 1024 counts per g, not 1000. The scale is calibrated from gravity measured at rest, which corrects that factor and the chip's sensitivity tolerance.
+* Every sensor sample is processed in the background with its real timestamp; the acceleration reading averages 10 samples (50 ms) and velocity integrates all of them with the trapezoidal rule.
+* The chip's zero-g offset (up to ±80 mg, i.e. 0.8 m/s²) is cancelled by the rest reference, which self-corrects whenever the board is still. The 6-position calibration also corrects per-axis offset and scale.
+* When the board is still for more than 0.4 s the velocity returns to 0 (ZUPT), so drift does not accumulate between movements.
+* Physical limit: the micro:bit has no gyroscope, so it cannot separate gravity from acceleration if the board **rotates while moving**. Keep the orientation fixed during motion (cart on a track, free fall, elevator).
+
 ### Conversions
 
 | Block | Description |

@@ -113,6 +113,39 @@ Un solo bloque lo configura todo: `enviar a fisicabit.com tiempo y [valor] cada 
 | 2. Opcional | `tiempo USB (ms)` | El tiempo que viaja en cada línea |
 | Avanzado | `USB enviar tiempo del micro:bit [activado]`, `USB fijar decimales [2]`, `USB enviar línea [texto]`, `configurar frecuencia / intervalo` | Sólo si hace falta |
 
+### FisicaBit Cinemática: acelerómetro de precisión
+
+```blocks
+FisicaBitCinematica.iniciar()
+basic.forever(function () {
+    FisicaBitSerial.enviar2(
+        FisicaBitCinematica.leerAceleracionLineal(EjeAceleracion.Vertical),
+        FisicaBitCinematica.velocidadInstantanea(EjeAceleracion.Vertical),
+        50
+    )
+})
+```
+
+Conectar, apoyar y medir: el bloque `iniciar acelerómetro de precisión` deja el sensor listo y calibra solo con la placa quieta. Después, `aceleración (m/s²)` y `velocidad instantánea (m/s)` dan valores calibrados en unidades físicas, sin más configuración.
+
+| Paso | Bloque | Descripción |
+|------|--------|-------------|
+| 1. Iniciar | `iniciar acelerómetro de precisión` | En `al iniciar`, con la placa quieta 1 s |
+| 2. Medir | `aceleración (m/s²) [vertical / X / Y / Z / magnitud]` | Aceleración lineal respecto al suelo, sin la gravedad; 0 en reposo |
+| 2. Medir | `velocidad instantánea (m/s) [eje]` | Integrada en segundo plano muestra a muestra; vuelve a 0 sola cuando la placa se detiene |
+| 2. Medir | `poner velocidad en 0`, `¿en reposo?`, `aceleración propia`, `¿caída libre?`, `pitch`, `roll` | Complementos |
+| 3. Opcional | `calibrar en reposo (quieto 1 s)`, `fijar muestreo 100/200/400 Hz`, `fijar suavizado`, `fijar rango ±2/±4/±8 g`, `referencia fija`, `velocidad a 0 automática`, `gravedad local`, `gravedad medida`, `estado alta resolución` | Ajustes finos |
+| Avanzado | `calibrar en 6 posiciones`, `fijar calibración`, `enviar calibración por serial`, `modo alta resolución`, `aceleración cruda`, `muestras por segundo` | Calibración de fábrica y diagnóstico |
+
+Qué hace por dentro (investigado en la hoja de datos del LSM303AGR y en el driver CODAL del micro:bit v2):
+
+* El firmware de MakeCode deja el chip en modo normal de 10 bits a 50 Hz. Este módulo lo pasa a **alta resolución de 12 bits** (0,98 mg por cuenta, 4 veces más fino) y a **200 muestras por segundo**, con menor ancho de banda de ruido.
+* `input.acceleration` devuelve 1024 cuentas por g, no 1000. La escala se calibra con la gravedad medida en reposo, lo que corrige ese factor y la tolerancia de sensibilidad del chip.
+* Cada muestra del sensor se procesa en segundo plano con su instante real; la lectura de aceleración promedia 10 muestras (50 ms) y la velocidad integra todas con regla del trapecio.
+* El error de cero del chip (hasta ±80 mg, es decir 0,8 m/s²) se cancela con la referencia de reposo, que se corrige sola cada vez que la placa queda quieta. La calibración en 6 posiciones corrige además offset y escala de cada eje.
+* Cuando la placa está quieta más de 0,4 s la velocidad vuelve a 0 (ZUPT), así la deriva no se acumula entre movimientos.
+* Límite físico: el micro:bit no tiene giróscopo, así que no puede separar gravedad de aceleración si la placa **gira mientras se mueve**. Mantener la orientación fija durante el movimiento (carrito en riel, caída libre, ascensor).
+
 ### Conversiones
 
 | Bloque | Descripción |

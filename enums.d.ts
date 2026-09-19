@@ -85,6 +85,28 @@ declare const enum RangoAcelerometro {
     Rango8G = 8
 }
 
+declare const enum TasaAcelerometro {
+    //% block="100 Hz (10 ms)"
+    Hz100 = 10,
+    //% block="200 Hz (5 ms, recommended)"
+    Hz200 = 5,
+    //% block="400 Hz (2.5 ms, fast impacts)"
+    Hz400 = 2
+}
+
+declare const enum SuavizadoAcelerometro {
+    //% block="none (raw sample)"
+    Ninguno = 1,
+    //% block="light (5 samples)"
+    Suave = 5,
+    //% block="medium (10 samples, recommended)"
+    Medio = 10,
+    //% block="strong (20 samples)"
+    Fuerte = 20,
+    //% block="very strong (40 samples)"
+    MuyFuerte = 40
+}
+
 declare const enum EjeAceleracion {
     //% block="X (left/right)"
     X = 0,

@@ -270,3 +270,30 @@ basic.forever(() => {
     serial.writeValue("force_N", fuerza)
 })
 */
+
+
+// =============================================================================
+// PRUEBA 11: ACELERÓMETRO DE PRECISIÓN (cinemática)
+// =============================================================================
+// ÉXITO: Con la placa quieta, "aceleración vertical" ≈ 0,00 y "velocidad" = 0.
+//        Al levantar la placa hacia arriba: aceleración positiva breve, luego
+//        negativa al frenar; la velocidad sube y vuelve a 0 al detenerse.
+//        "estado alta resolución" = 1 en micro:bit v2 (−1 en simulador).
+//        "muestras por segundo" ≈ 200.
+// FALLA: Valores que no vuelven a 0 en reposo o excepción.
+// =============================================================================
+
+/*
+FisicaBitCinematica.iniciar()
+input.onButtonPressed(Button.A, function () {
+    FisicaBitCinematica.reiniciarVelocidad()
+})
+basic.forever(function () {
+    FisicaBitSerial.enviar3(
+        FisicaBitCinematica.leerAceleracionLineal(EjeAceleracion.Vertical),
+        FisicaBitCinematica.velocidadInstantanea(EjeAceleracion.Vertical),
+        FisicaBitCinematica.estadoAltaResolucion(),
+        50
+    )
+})
+*/
