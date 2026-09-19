@@ -206,6 +206,20 @@ Notes:
 * Practical BLE rate is up to ~20 Hz; for 50–100 Hz use USB.
 * The old `BT sample ... every ... ms` and `serial sample ... every ... ms` blocks still compile but are hidden; use the new `send to fisicabit.com time and ... every ... ms` blocks.
 
+### Connected but no data arrives (phone / Android)
+
+Symptom: fisicabit.com shows the micro:bit as connected, but the table and graph stay empty. The cause is almost always the project settings or a stale bond stored by the phone, not the page. Try, in this order:
+
+1. **Stale bond on the phone.** On Android: Settings → Bluetooth → `BBC micro:bit [xxxxx]` → **Forget**. Then reset the micro:bit (back button) and reconnect from fisicabit.com. A bond saved with keys from an earlier program makes the phone connect but never enable notifications on the data channel.
+2. **Project settings.** In MakeCode, **⚙ → Project Settings** must be **No Pairing Required**. With *JustWorks pairing* or *Passkey pairing* the project conflicts with this extension's configuration and MakeCode shows the **"Extension errors"** dialog (`conflict on yotta setting microbit-dal.bluetooth.open`); the resulting `.hex` is not in open mode and the phone connects without being able to read data. Select *No Pairing Required*, **download the .hex again** and re-flash.
+3. **Extension version.** In the editor's **Extensions** view, make sure `fisicabit-sensores` is 0.7.1 or later (earlier versions did not enforce open mode). If not, remove it, add it again from `https://github.com/martinferreiraHCA/pxt-fisicabit`, and download the `.hex` again: **firmware already on the board does not update itself**.
+4. **Blocks.** `start Bluetooth for fisicabit.com` goes **inside `on start`**, and the `send to fisicabit.com via Bluetooth ...` block **inside `forever`**. Without the start block the UART service does not exist and the page connects with no data channel.
+5. **fisicabit.com.** Choose **Bluetooth**, set the **number of variables** equal to the number of values in the block (not counting time) and keep **"Micro:bit sends timestamp"** enabled (or disabled when you use the *without time* blocks). If they do not match, lines arrive but are discarded.
+6. **Browser.** On Android only **Chrome** (or Chromium-based Edge/Samsung Internet) has Web Bluetooth; Firefox does not, and no browser on iPhone/iPad does. Keep the screen on with the tab visible: if Android backgrounds it, reception stops.
+7. **Interval.** Over BLE use 50 ms or more in the send block. If a block in the same program uses 5–10 ms the indications saturate and data arrives in bursts or not at all.
+
+When everything is right the micro:bit shows ♥ and a new line appears on fisicabit.com every interval.
+
 ### Browser compatibility
 
 | Platform | Browser | USB (Web Serial) | Bluetooth (Web Bluetooth) |
