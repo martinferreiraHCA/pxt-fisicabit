@@ -51,7 +51,7 @@
 
 //% weight=97
 //% color=#1E88E5
-//% icon=""
+//% icon="\uf1b2"
 //% block="FisicaBit Kinematics"
 //% groups="['1. Start (in on start)', '2. Measure', '3. Send to fisicabit.com', '4. Optional', 'Advanced']"
 namespace FisicaBitCinematica {
