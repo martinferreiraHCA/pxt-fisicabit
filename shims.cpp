@@ -566,4 +566,72 @@ namespace fisicabit_native {
         #endif
     }
 
+
+    // =========================================================================
+    // ACELERÓMETRO LSM303AGR (micro:bit v2) — configuración de precisión
+    // =========================================================================
+    // CODAL configura el chip en modo NORMAL (10 bits, 3,9 mg/LSB) a 50 Hz.
+    // El chip soporta modo ALTA RESOLUCIÓN (HR, 12 bits, 0,98 mg/LSB) con
+    // menor ancho de banda de ruido (ODR/9 en vez de ODR/2). CODAL decodifica
+    // los 16 bits crudos como raw/32*rango, así que cambiar el bit HR mejora
+    // la resolución 4x SIN cambiar la escala (1024 cuentas ≈ 1 g).
+    //
+    // Registros (hoja de datos LSM303AGR, DocID027765 Rev 9):
+    //   WHO_AM_I_A (0x0F) = 0x33
+    //   CTRL_REG4_A (0x23): BDU | BLE | FS1 FS0 | HR | ST1 ST0 | SPI_EN
+    // CODAL escribe CTRL_REG4 = 0x80 | FS en cada configure() (setRange /
+    // setPeriod / activación), por eso HR debe reafirmarse después.
+    // =========================================================================
+    #define FB_LSM303_A_ADDR   0x32
+    #define FB_LSM303_WHO_AM_I 0x0F
+    #define FB_LSM303_CTRL4    0x23
+
+    static bool fbEsLSM303() {
+#if MICROBIT_CODAL
+        uint8_t who = 0;
+        if (uBit._i2c.readRegister((uint16_t)FB_LSM303_A_ADDR, (uint8_t)FB_LSM303_WHO_AM_I, &who, 1) != 0) return false;
+        return who == 0x33;
+#else
+        return false;
+#endif
+    }
+
+    // Devuelve 1 si quedó en HR, 0 si quedó en normal, <0 si no es un LSM303.
+    static int fbAplicarHR(bool hr) {
+#if MICROBIT_CODAL
+        if (!fbEsLSM303()) return -1;
+        uint8_t r4 = 0;
+        if (uBit._i2c.readRegister((uint16_t)FB_LSM303_A_ADDR, (uint8_t)FB_LSM303_CTRL4, &r4, 1) != 0) return -2;
+        uint8_t deseado = (uint8_t)((r4 & 0x30) | 0x80 | (hr ? 0x08 : 0x00));
+        if ((uint8_t)(r4 & 0xB8) != (uint8_t)(deseado & 0xB8)) {
+            uBit._i2c.writeRegister((uint16_t)FB_LSM303_A_ADDR, (uint8_t)FB_LSM303_CTRL4, deseado);
+        }
+        return hr ? 1 : 0;
+#else
+        return -1;
+#endif
+    }
+
+    // Configura rango (g), período de muestreo (ms) y modo de alta
+    // resolución del acelerómetro. Devuelve el período real (ms).
+    //%
+    int acelConfigurar(int periodoMs, int rangoG, int altaRes) {
+#if MICROBIT_CODAL
+        uBit.accelerometer.getX();              // activa el sensor (configure interno)
+        uBit.accelerometer.setRange(rangoG);
+        uBit.accelerometer.setPeriod(periodoMs);
+        fbAplicarHR(altaRes != 0);
+        return uBit.accelerometer.getPeriod();
+#else
+        return periodoMs;
+#endif
+    }
+
+    // Reafirma el modo de alta resolución (CODAL lo pierde al reconfigurar).
+    // Devuelve 1 (HR), 0 (normal) o <0 (sensor no LSM303 / error I2C).
+    //%
+    int acelAsegurarHR(int altaRes) {
+        return fbAplicarHR(altaRes != 0);
+    }
+
 }

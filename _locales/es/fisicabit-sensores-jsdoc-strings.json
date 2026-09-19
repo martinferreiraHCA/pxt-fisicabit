@@ -80,5 +80,21 @@
     "FisicaBitBT.enviarSinTiempo1|block": "Envía a fisicabit.com por Bluetooth sólo un valor medido, sin el tiempo del micro:bit y sin esperar: se manda en el momento en que se ejecuta el bloque. Usalo al presionar un botón o dentro de \"para siempre\" con la pausa que quieras. En fisicabit.com: \"Micro:bit envía timestamp\" desactivado.",
     "FisicaBitBT.enviarSinTiempo2|block": "Envía a fisicabit.com por Bluetooth sólo dos valores medidos, sin el tiempo del micro:bit y sin esperar: se manda en el momento en que se ejecuta el bloque. Usalo al presionar un botón o dentro de \"para siempre\" con la pausa que quieras. En fisicabit.com: \"Micro:bit envía timestamp\" desactivado.",
     "FisicaBitBT.enviarSinTiempo3|block": "Envía a fisicabit.com por Bluetooth sólo tres valores medidos, sin el tiempo del micro:bit y sin esperar: se manda en el momento en que se ejecuta el bloque. Usalo al presionar un botón o dentro de \"para siempre\" con la pausa que quieras. En fisicabit.com: \"Micro:bit envía timestamp\" desactivado.",
-    "FisicaBitBT.enviarSinTiempo4|block": "Envía a fisicabit.com por Bluetooth sólo cuatro valores medidos, sin el tiempo del micro:bit y sin esperar: se manda en el momento en que se ejecuta el bloque. Usalo al presionar un botón o dentro de \"para siempre\" con la pausa que quieras. En fisicabit.com: \"Micro:bit envía timestamp\" desactivado."
+    "FisicaBitBT.enviarSinTiempo4|block": "Envía a fisicabit.com por Bluetooth sólo cuatro valores medidos, sin el tiempo del micro:bit y sin esperar: se manda en el momento en que se ejecuta el bloque. Usalo al presionar un botón o dentro de \"para siempre\" con la pausa que quieras. En fisicabit.com: \"Micro:bit envía timestamp\" desactivado.",
+    "FisicaBitCinematica.iniciar|block": "Inicia el acelerómetro de precisión: alta resolución (12 bits), 200 muestras por segundo, medición en segundo plano y calibración automática en reposo. Colocar en \"al iniciar\" con la placa quieta.",
+    "FisicaBitCinematica.leerAceleracionLineal|block": "Aceleración lineal del cuerpo respecto al suelo en m/s² (sin la gravedad). En reposo da 0. \"Vertical\" es positiva hacia arriba y funciona con la placa inclinada.",
+    "FisicaBitCinematica.leerAceleracionLineal|param|eje": "Eje: vertical, X, Y, Z o magnitud",
+    "FisicaBitCinematica.velocidadInstantanea|block": "Velocidad instantánea en m/s, integrando cada muestra del sensor en segundo plano. Se pone en 0 sola cuando la placa queda quieta. Mantener la orientación fija mientras se mueve.",
+    "FisicaBitCinematica.velocidadInstantanea|param|eje": "Eje: vertical, X, Y, Z o magnitud",
+    "FisicaBitCinematica.reiniciarVelocidad|block": "Pone la velocidad en 0 en todos los ejes. Usarlo al empezar cada medición con el cuerpo quieto.",
+    "FisicaBitCinematica.enReposo|block": "Verdadero cuando la placa está quieta (aceleración casi constante durante 0,2 s).",
+    "FisicaBitCinematica.leerAceleracionPropia|block": "Aceleración propia (la que siente el sensor) en m/s², sin restar la gravedad: en reposo ≈9,81, en caída libre ≈0.",
+    "FisicaBitCinematica.calibrarEnReposo|block": "Con la placa quieta 1 segundo: mide la gravedad, fija la referencia de reposo y la escala real del sensor, y pone la velocidad en 0.",
+    "FisicaBitCinematica.fijarTasa|block": "Frecuencia de muestreo del sensor. 200 Hz por defecto; 400 Hz para golpes muy breves.",
+    "FisicaBitCinematica.fijarSuavizado|block": "Cuántas muestras se promedian en la lectura de aceleración. Más muestras = menos ruido, más retardo. No afecta a la velocidad.",
+    "FisicaBitCinematica.fijarReferenciaFija|block": "Mantiene fija la referencia de gravedad (no se corrige sola en reposo).",
+    "FisicaBitCinematica.fijarAutoCeroVelocidad|block": "Puesta a cero automática de la velocidad cuando la placa está quieta (activada por defecto).",
+    "FisicaBitCinematica.fijarGravedadLocal|block": "Valor de la gravedad local usado para convertir a m/s² (por defecto 9,80665).",
+    "FisicaBitCinematica.calibrar6Posiciones|block": "Calibración de offset y escala por eje: apoyar la placa con la cara indicada hacia arriba, quieta, y apretar A. Seis veces.",
+    "FisicaBitCinematica.estadoAltaResolucion|block": "1 = alta resolución activa (micro:bit v2), 0 = modo normal, -1 = sensor no reconocido o simulador."
 }

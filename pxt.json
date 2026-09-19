@@ -14,6 +14,7 @@
     "files": [
         "README.md",
         "fisicabit.ts",
+        "cinematica.ts",
         "fisicabit_datos.ts",
         "serial_sensores.ts",
         "bluetooth_sensores.ts",
