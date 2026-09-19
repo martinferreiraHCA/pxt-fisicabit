@@ -234,6 +234,20 @@ Notas:
 * La velocidad práctica por BLE es de hasta ~20 Hz; para 50–100 Hz usá USB.
 * Los bloques viejos `BT muestrear ... cada ... ms` y `Serial muestrear ... cada ... ms` siguen compilando pero están ocultos; usá los nuevos bloques `enviar a fisicabit.com tiempo y ... cada ... ms`.
 
+### Si conecta pero no llegan datos (celular / Android)
+
+Síntoma: fisicabit.com muestra el micro:bit como conectado, pero la tabla y la gráfica quedan vacías. Casi siempre la causa está en la configuración del proyecto o en el vínculo guardado por el teléfono, no en la página. Probá en este orden:
+
+1. **Vínculo viejo en el teléfono.** En Android: Ajustes → Bluetooth → `BBC micro:bit [xxxxx]` → **Olvidar**. Después reiniciá el micro:bit (botón de atrás) y volvé a conectar desde fisicabit.com. Un vínculo guardado con claves de un programa anterior hace que el teléfono conecte pero nunca active las notificaciones del canal de datos.
+2. **Configuración del proyecto.** En MakeCode: **⚙ → Configuración del proyecto** tiene que estar en **No Pairing Required**. Con *JustWorks pairing* o *Passkey pairing* el proyecto choca con la configuración de esta extensión y MakeCode muestra el diálogo **"Errores de extensión"** (`conflict on yotta setting microbit-dal.bluetooth.open`); el `.hex` resultante no queda en modo abierto y el teléfono conecta sin poder leer datos. Elegí *No Pairing Required*, volvé a **descargar el .hex** y cargalo de nuevo.
+3. **Versión de la extensión.** En el editor, en **Extensiones**, verificá que `fisicabit-sensores` esté en la versión 0.7.1 o posterior (las anteriores no imponían el modo abierto). Si no, quitala y agregala de nuevo desde `https://github.com/martinferreiraHCA/pxt-fisicabit`, y descargá el `.hex` otra vez: **el firmware ya cargado en la placa no se actualiza solo**.
+4. **Bloques.** `iniciar Bluetooth para fisicabit.com` va **dentro de `al iniciar`**, y el bloque `enviar a fisicabit.com por Bluetooth ...` **dentro de `para siempre`**. Sin ese bloque de inicio el servicio UART no existe y la página conecta sin canal de datos.
+5. **fisicabit.com.** Elegí **Bluetooth**, poné el **número de variables** igual a la cantidad de valores del bloque (sin contar el tiempo) y dejá **"Micro:bit envía timestamp"** activado (o desactivado si usás los bloques *sin tiempo*). Si no coincide, las líneas llegan pero se descartan.
+6. **Navegador.** En Android sólo **Chrome** (o Edge/Samsung Internet basados en Chromium) tiene Web Bluetooth; Firefox no, y en iPhone/iPad ningún navegador. La pantalla del teléfono tiene que quedar encendida con la pestaña visible: si Android la pone en segundo plano se corta la recepción.
+7. **Intervalo.** Por BLE usá 50 ms o más en el bloque de envío. Si un bloque de la misma pantalla tiene 5–10 ms, se saturan las indicaciones y los datos llegan en ráfagas o no llegan.
+
+Cuando la conexión está bien, el micro:bit muestra ♥ y en fisicabit.com aparece una línea nueva por cada intervalo.
+
 ### Compatibilidad de navegadores
 
 | Plataforma | Navegador | USB (Web Serial) | Bluetooth (Web Bluetooth) |

@@ -83,21 +83,22 @@ namespace FisicaBitBT {
         return _m
     }
 
+    // Nota: el firmware (CODAL MicroBitUARTService::send) sólo transmite si
+    // hay un cliente conectado que activó las indicaciones del canal TX; en
+    // cualquier otro caso descarta la línea al instante. Por eso NO se
+    // condiciona el envío al evento "conectado": así la transmisión no
+    // depende del orden en que llegan los eventos BLE (Android, reconexiones).
     function _enviar(valores: number[], ms: number): void {
         const m = _asegurarUART()
         m.fijarPeriodo(ms)
-        if (_conectado) {
-            // "\n" en lugar de "\r\n": un byte menos por paquete BLE
-            bluetooth.uartWriteString(m.linea(valores) + "\n")
-        }
+        // "\n" en lugar de "\r\n": un byte menos por paquete BLE
+        bluetooth.uartWriteString(m.linea(valores) + "\n")
         m.esperar()
     }
 
     function _enviarSinTiempo(valores: number[]): void {
         const m = _asegurarUART()
-        if (_conectado) {
-            bluetooth.uartWriteString(m.linea(valores, false) + "\n")
-        }
+        bluetooth.uartWriteString(m.linea(valores, false) + "\n")
     }
 
     // =========================================================================
@@ -476,7 +477,7 @@ namespace FisicaBitBT {
     //% advanced=true
     export function enviarTexto(texto: string): void {
         _asegurarUART()
-        if (_conectado) bluetooth.uartWriteLine(texto)
+        bluetooth.uartWriteLine(texto)
     }
 
     /**
@@ -655,7 +656,7 @@ namespace FisicaBitBT {
     //% deprecated=true
     export function muestrear1(valor: number, ms: number): void {
         _asegurarUART()
-        if (_conectado) bluetooth.uartWriteLine("" + valor)
+        bluetooth.uartWriteLine("" + valor)
         basic.pause(ms)
     }
 
@@ -671,7 +672,7 @@ namespace FisicaBitBT {
     //% deprecated=true
     export function muestrear2(valor1: number, valor2: number, ms: number): void {
         _asegurarUART()
-        if (_conectado) bluetooth.uartWriteLine("" + valor1 + "," + valor2)
+        bluetooth.uartWriteLine("" + valor1 + "," + valor2)
         basic.pause(ms)
     }
 
@@ -687,7 +688,7 @@ namespace FisicaBitBT {
     //% deprecated=true
     export function muestrear3(valor1: number, valor2: number, valor3: number, ms: number): void {
         _asegurarUART()
-        if (_conectado) bluetooth.uartWriteLine("" + valor1 + "," + valor2 + "," + valor3)
+        bluetooth.uartWriteLine("" + valor1 + "," + valor2 + "," + valor3)
         basic.pause(ms)
     }
 }
