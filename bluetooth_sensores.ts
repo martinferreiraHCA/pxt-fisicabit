@@ -59,6 +59,13 @@ namespace FisicaBitBT {
     let _uartIniciado = false
     let _conectado = false
     let _mostrarIconos = true
+    // Código del usuario para "al conectar" / "al desconectar". En MakeCode,
+    // registrar dos veces bluetooth.onBluetoothConnected() REEMPLAZA el
+    // manejador anterior: si estos bloques llamaran a la API directo, se
+    // perdería el manejador interno (¿conectado?, reinicio del tiempo, ♥).
+    // Por eso hay un único manejador interno que llama al del usuario.
+    let _alConectarUsuario: () => void = null
+    let _alDesconectarUsuario: () => void = null
 
     function _asegurarUART(): FisicaBitDatos.Muestreador {
         if (!_m) _m = new FisicaBitDatos.Muestreador()
@@ -71,10 +78,12 @@ namespace FisicaBitBT {
                 // El tiempo arranca en 0 para cada sesión de fisicabit.com
                 _m.reiniciarTiempo()
                 if (_mostrarIconos) basic.showIcon(IconNames.Heart)
+                if (_alConectarUsuario) _alConectarUsuario()
             })
             bluetooth.onBluetoothDisconnected(function () {
                 _conectado = false
                 if (_mostrarIconos) basic.showIcon(IconNames.Target)
+                if (_alDesconectarUsuario) _alDesconectarUsuario()
             })
             _m.reiniciarTiempo()
             // Limpiar las "barritas" que CODAL muestra al arrancar BLE
@@ -199,6 +208,10 @@ namespace FisicaBitBT {
     }
 
     /**
+     * OBSOLETO: fisicabit.com admite hasta 3 variables y descarta las líneas
+     * de 4 valores. Usá el bloque de 3 valores. Se mantiene sólo para que los
+     * programas viejos sigan compilando (oculto en la caja de bloques).
+     *
      * Envía a fisicabit.com por Bluetooth el tiempo (ms) y cuatro valores
      * medidos, y espera hasta la próxima muestra. Colocar dentro de
      * "para siempre". Línea: tiempo,valor1,valor2,valor3,valor4
@@ -213,6 +226,7 @@ namespace FisicaBitBT {
      */
     //% block="send to fisicabit.com via Bluetooth time, %valor1 , %valor2 , %valor3 and %valor4 every %ms ms"
     //% blockId=fisicabit_bt_enviar_4
+    //% deprecated=true
     //% group="2. Send (inside forever)"
     //% weight=85
     //% ms.min=5 ms.max=60000 ms.defl=100
@@ -295,6 +309,10 @@ namespace FisicaBitBT {
     }
 
     /**
+     * OBSOLETO: fisicabit.com admite hasta 3 variables y descarta las líneas
+     * de 4 valores. Usá el bloque de 3 valores. Se mantiene sólo para que los
+     * programas viejos sigan compilando (oculto en la caja de bloques).
+     *
      * Envía a fisicabit.com por Bluetooth SOLO cuatro valores medidos, sin el tiempo del
      * micro:bit y sin esperar: se manda en el momento en que se ejecuta el
      * bloque. Usalo al presionar un botón, en cualquier evento, o dentro de
@@ -312,6 +330,7 @@ namespace FisicaBitBT {
      */
     //% block="send to fisicabit.com via Bluetooth without time %valor1 , %valor2 , %valor3 and %valor4"
     //% blockId=fisicabit_bt_enviar_st_4
+    //% deprecated=true
     //% group="Send without time"
     //% weight=80
     //% inlineInputMode=inline
@@ -349,7 +368,7 @@ namespace FisicaBitBT {
     //% weight=78
     export function alConectar(cuerpo: () => void): void {
         _asegurarUART()
-        bluetooth.onBluetoothConnected(cuerpo)
+        _alConectarUsuario = cuerpo
     }
 
     /**
@@ -362,7 +381,7 @@ namespace FisicaBitBT {
     //% weight=77
     export function alDesconectar(cuerpo: () => void): void {
         _asegurarUART()
-        bluetooth.onBluetoothDisconnected(cuerpo)
+        _alDesconectarUsuario = cuerpo
     }
 
     /**
@@ -463,7 +482,12 @@ namespace FisicaBitBT {
     //% decimales.min=0 decimales.max=6 decimales.defl=2
     //% advanced=true
     export function fijarDecimales(decimales: number): void {
-        _asegurarUART().decimales = Math.round(decimales)
+        // A prueba de valores fuera de rango o no numéricos (NaN → 2, tope 0..6)
+        let d = Math.round(decimales)
+        if (d !== d) d = 2
+        if (d < 0) d = 0
+        if (d > 6) d = 6
+        _asegurarUART().decimales = d
     }
 
     /**
@@ -483,9 +507,9 @@ namespace FisicaBitBT {
     /**
      * Inicia Bluetooth con UART + todos los servicios BLE nativos
      * (acelerómetro, temperatura, magnetómetro, botones, LED, pines).
-     * fisicabit.com puede leerlos directamente, pero cada servicio extra
-     * hace más lenta la conexión (sobre todo en Windows). Usar sólo si
-     * hace falta.
+     * fisicabit.com sólo lee el UART y NO usa los otros servicios; cada
+     * servicio extra hace más lenta la conexión (sobre todo en Windows y
+     * celulares). Usar sólo si otra app los necesita.
      */
     //% block="start Bluetooth for fisicabit.com with all BLE services"
     //% blockId=fisicabit_bt_inicio_completo
