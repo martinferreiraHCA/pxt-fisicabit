@@ -34,8 +34,12 @@
 //     cuentas ↔ g local (9,80665 m/s² por defecto). Corrige de una vez el
 //     factor 1024 y la tolerancia de sensibilidad del chip.
 //  4. Resta el vector gravedad de referencia (aprendido en reposo) para
-//     obtener aceleración LINEAL respecto al suelo. Cuando la placa queda
-//     quieta, la referencia se corrige sola (y el sesgo de offset también).
+//     obtener aceleración LINEAL respecto al suelo. La quietud se detecta
+//     por lecturas constantes y |a| ≈ 1 g (sin depender de la referencia):
+//     la primera vez que la placa queda quieta se adopta la gravedad medida
+//     (nunca la primera muestra, que puede ser un transitorio); si cambia
+//     la inclinación en reposo se vuelve a aprender tras 3 s quieta; y el
+//     sesgo de offset se corrige despacio en reposo.
 //  5. Promedio móvil (10 muestras = 50 ms) para la lectura: ruido /√10.
 //  6. Velocidad: integra cada muestra (trapecio, dt real) y se pone en 0
 //     automáticamente cuando detecta reposo (ZUPT), lo que elimina la
@@ -79,8 +83,15 @@ namespace FisicaBitCinematica {
     const EVT_DATA_UPDATE = 1              // ACCELEROMETER_EVT_DATA_UPDATE
     const MAX_VENTANA = 40
     const REPOSO_VENTANA = 40              // muestras para detectar reposo (0,2 s a 200 Hz)
-    const REPOSO_RANGO = 16                // cuentas: |a| casi constante (≈0,15 m/s²)
-    const REPOSO_LINEAL = 40               // cuentas: |a_lineal| media pequeña (≈0,4 m/s²)
+    const REPOSO_RANGO = 24                // cuentas: |a| casi constante (≈0,23 m/s²; el ruido solo da ≈13–17)
+    const REPOSO_RANGO_EJE = 32            // cuentas: cada eje casi constante (≈0,31 m/s²)
+    const REPOSO_GRACIA_MS = 150           // ms: un pico aislado de ruido no reinicia el contador de quietud
+    const REPOSO_LINEAL = 40               // cuentas: |a_lineal| media pequeña (≈0,4 m/s²) = reposo real
+    const REPOSO_TOL_G_INICIAL = 100       // cuentas: ||a| − 1024| antes de asentar la referencia (±10 %)
+    const REPOSO_TOL_G = 60                // cuentas: ||a| − |g_ref|| con la referencia asentada (≈0,6 m/s²)
+    const REPOSO_MS_SALTO = 3000           // ms quieta con lineal grande → cambió la inclinación en reposo:
+                                           // se adopta la nueva referencia (un MRUV suave dura menos)
+    const DESCARTE_MUESTRAS = 20           // muestras que se tiran tras reconfigurar el chip (transitorio)
     const REPOSO_MS_ZUPT = 400             // ms quieto antes de poner v = 0
     const REPOSO_MS_REF = 800              // ms quieto antes de corregir la referencia
     const DEADBAND_MS2 = 0.02              // m/s² (sólo en la lectura mostrada)
@@ -104,6 +115,8 @@ namespace FisicaBitCinematica {
     let _gx = 0, _gy = 0, _gz = -CUENTAS_G
     let _gMod = CUENTAS_G
     let _gRefValida = false
+    let _refAsentada = false               // true cuando la referencia se midió con la placa quieta
+    let _descartar = 0                     // muestras pendientes de descartar tras reconfigurar
     let _factor = G_STD / CUENTAS_G
 
     // Última muestra calibrada (cuentas) y lineal instantánea (cuentas)
@@ -126,8 +139,10 @@ namespace FisicaBitCinematica {
     let _bMod: number[] = []
     let _mIdx = 0
     let _mN = 0
-    let _reposo = false
-    let _reposoDesdeMs = 0
+    let _quieto = false                    // placa quieta (lecturas constantes)
+    let _quietoDesdeMs = 0
+    let _noQuietoDesdeMs = 0               // inicio de la interrupción actual de la quietud (0 = ninguna)
+    let _reposo = false                    // quieta Y aceleración lineal ≈ 0 (reposo real)
 
     // Velocidad (m/s)
     let _vx = 0, _vy = 0, _vz = 0, _vV = 0
@@ -159,8 +174,11 @@ namespace FisicaBitCinematica {
         const real = _hwConfigurar(_periodoMs, _rangoG, _altaRes ? 1 : 0)
         if (real > 0) _periodoMs = real
         _hr = _hwAsegurarHR(_altaRes ? 1 : 0)
-        // Al pasar a HR el chip necesita 7/ODR para asentarse
+        // Al pasar a HR el chip necesita 7/ODR para asentarse: además de la
+        // pausa se descartan las primeras muestras y se reinicia la integración
         basic.pause(60)
+        _descartar = DESCARTE_MUESTRAS
+        _tUltUs = 0
     }
 
     function _asegurarIniciado(): void {
@@ -192,6 +210,7 @@ namespace FisicaBitCinematica {
     }
 
     function _procesar(rx: number, ry: number, rz: number, tUs: number): void {
+        if (_descartar > 0) { _descartar--; return }
         // 1) Calibración de offset/escala por eje
         const ax = (rx - _offX) * _escX
         const ay = (ry - _offY) * _escY
@@ -199,9 +218,10 @@ namespace FisicaBitCinematica {
         _ax = ax; _ay = ay; _az = az
         _muestras++
 
-        // 2) Referencia inicial: primera muestra (se corrige sola en reposo)
+        // 2) Referencia inicial provisional: primera muestra. Se reemplaza por
+        //    la media medida la primera vez que la placa queda quieta.
         if (!_gRefValida) {
-            _fijarReferencia(ax, ay, az)
+            _fijarReferencia(ax, ay, az, false)
         }
 
         // 3) Aceleración lineal instantánea (cuentas)
@@ -224,42 +244,83 @@ namespace FisicaBitCinematica {
         _sAx += ax; _sAy += ay; _sAz += az
         _bIdx = (_bIdx + 1) % MAX_VENTANA
 
-        // 5) Detección de reposo: |a| casi constante y lineal media pequeña
+        // 5) Quietud: cada eje y el módulo casi constantes durante la ventana,
+        //    y módulo ≈ 1 g. No depende de la referencia de gravedad, así una
+        //    referencia mal aprendida no impide detectarla.
         const mod = Math.sqrt(ax * ax + ay * ay + az * az)
         _bMod[_mIdx] = mod
         _mIdx = (_mIdx + 1) % REPOSO_VENTANA
         if (_mN < REPOSO_VENTANA) _mN++
         let quieto = false
-        if (_mN >= REPOSO_VENTANA) {
-            let mn = _bMod[0], mx = _bMod[0]
-            for (let i = 1; i < REPOSO_VENTANA; i++) {
+        if (_mN >= REPOSO_VENTANA && _muestras >= MAX_VENTANA) {
+            let mn = _bMod[0], mx = _bMod[0], suma = 0
+            let xn = _bAx[0], xm = _bAx[0], yn = _bAy[0], ym = _bAy[0], zn = _bAz[0], zm = _bAz[0]
+            for (let i = 0; i < REPOSO_VENTANA; i++) {
                 const v = _bMod[i]
                 if (v < mn) mn = v
                 if (v > mx) mx = v
+                suma += v
+                const bx = _bAx[i], by = _bAy[i], bz = _bAz[i]
+                if (bx < xn) xn = bx
+                if (bx > xm) xm = bx
+                if (by < yn) yn = by
+                if (by > ym) ym = by
+                if (bz < zn) zn = bz
+                if (bz > zm) zm = bz
             }
-            const n = _bN > 0 ? _bN : 1
-            const mlx = _sLx / n, mly = _sLy / n, mlz = _sLz / n
-            const linMedia = Math.sqrt(mlx * mlx + mly * mly + mlz * mlz)
-            quieto = (mx - mn) < REPOSO_RANGO && linMedia < REPOSO_LINEAL
+            const modMedia = suma / REPOSO_VENTANA
+            const gEsperado = _refAsentada ? _gMod : CUENTAS_G
+            const tol = _refAsentada ? REPOSO_TOL_G : REPOSO_TOL_G_INICIAL
+            quieto = (mx - mn) < REPOSO_RANGO
+                && (xm - xn) < REPOSO_RANGO_EJE && (ym - yn) < REPOSO_RANGO_EJE && (zm - zn) < REPOSO_RANGO_EJE
+                && Math.abs(modMedia - gEsperado) < tol
         }
         const ahoraMs = control.millis()
         if (quieto) {
-            if (!_reposo) { _reposo = true; _reposoDesdeMs = ahoraMs }
-            const quietoMs = ahoraMs - _reposoDesdeMs
-            if (_zupt && quietoMs >= REPOSO_MS_ZUPT) {
+            if (!_quieto) { _quieto = true; _quietoDesdeMs = ahoraMs }
+            _noQuietoDesdeMs = 0
+            const quietoMs = ahoraMs - _quietoDesdeMs
+            const n = _bN > 0 ? _bN : 1
+            const mAx = _sAx / n, mAy = _sAy / n, mAz = _sAz / n
+            const dx = mAx - _gx, dy = mAy - _gy, dz = mAz - _gz
+            const lineal = Math.sqrt(dx * dx + dy * dy + dz * dz)
+            // Reposo real: quieta y la aceleración lineal media es ≈ 0. Si la
+            // lineal es grande estando quieta, o cambió la inclinación en
+            // reposo (referencia vieja) o hay una aceleración constante muy
+            // suave (MRUV sin vibración): se distingue por la duración.
+            _reposo = !_refAsentada || lineal < REPOSO_LINEAL
+            if (_refFija) {
+                _refAsentada = true
+            } else if (!_refAsentada || (!_reposo && quietoMs >= REPOSO_MS_SALTO)) {
+                // Primera vez quieta, o inclinación nueva sostenida: adoptar la
+                // gravedad medida como referencia y arrancar la velocidad en 0
+                _fijarReferencia(mAx, mAy, mAz, true)
                 _vx = 0; _vy = 0; _vz = 0; _vV = 0
-            }
-            if (!_refFija && quietoMs >= REPOSO_MS_REF) {
-                // Corrección lenta de la referencia con la media de la ventana
-                const n = _bN > 0 ? _bN : 1
+                _aPrevX = 0; _aPrevY = 0; _aPrevZ = 0; _aPrevV = 0
+                _reposo = true
+            } else if (_reposo && quietoMs >= REPOSO_MS_REF) {
+                // Corrección lenta (deriva térmica del offset)
                 const k = 0.02
-                _gx += k * (_sAx / n - _gx)
-                _gy += k * (_sAy / n - _gy)
-                _gz += k * (_sAz / n - _gz)
+                _gx += k * dx
+                _gy += k * dy
+                _gz += k * dz
                 _actualizarFactor()
             }
+            if (_zupt && _reposo && quietoMs >= REPOSO_MS_ZUPT) {
+                _vx = 0; _vy = 0; _vz = 0; _vV = 0
+            }
         } else {
+            // Ya no está quieta. Un pico aislado de ruido no reinicia el
+            // contador de quietud (gracia), pero mientras dure no hay reposo:
+            // ni ZUPT, ni corrección de referencia, ni velocidad congelada.
             _reposo = false
+            if (_quieto) {
+                if (_noQuietoDesdeMs === 0) _noQuietoDesdeMs = ahoraMs
+                if (ahoraMs - _noQuietoDesdeMs >= REPOSO_GRACIA_MS) {
+                    _quieto = false
+                    _noQuietoDesdeMs = 0
+                }
+            }
         }
 
         // 6) Integración de velocidad (trapecio, dt real, m/s²)
@@ -271,7 +332,10 @@ namespace FisicaBitCinematica {
             const dt = dtUs / 1000000
             const fx = lx * _factor, fy = ly * _factor, fz = lz * _factor
             const fV = -(lx * _gx + ly * _gy + lz * _gz) / _gMod * _factor
-            if (!(_reposo && _zupt && (ahoraMs - _reposoDesdeMs) >= REPOSO_MS_ZUPT)) {
+            const congelar = _reposo && _zupt && (ahoraMs - _quietoDesdeMs) >= REPOSO_MS_ZUPT
+            // Con la referencia provisional (todavía no se vio la placa quieta)
+            // integrar sólo acumularía la gravedad mal restada
+            if (_refAsentada && !congelar) {
                 _vx += (fx + _aPrevX) * 0.5 * dt
                 _vy += (fy + _aPrevY) * 0.5 * dt
                 _vz += (fz + _aPrevZ) * 0.5 * dt
@@ -282,9 +346,10 @@ namespace FisicaBitCinematica {
         _tUltUs = tUs
     }
 
-    function _fijarReferencia(gx: number, gy: number, gz: number): void {
+    function _fijarReferencia(gx: number, gy: number, gz: number, asentada: boolean): void {
         _gx = gx; _gy = gy; _gz = gz
         _gRefValida = true
+        _refAsentada = asentada
         _actualizarFactor()
     }
 
@@ -414,9 +479,9 @@ namespace FisicaBitCinematica {
     }
 
     /**
-     * Verdadero cuando la placa está quieta (aceleración casi constante
-     * durante 0,2 s). Con eso el módulo pone la velocidad en 0 y ajusta
-     * la referencia de gravedad.
+     * Verdadero cuando la placa está en reposo: lecturas constantes durante
+     * 0,2 s y aceleración lineal ≈ 0. Con eso el módulo pone la velocidad
+     * en 0 y corrige la referencia de gravedad.
      */
     //% block="at rest?"
     //% blockId=fisicabit_cin_reposo
@@ -592,10 +657,11 @@ namespace FisicaBitCinematica {
             sx += _ax; sy += _ay; sz += _az; n++
             basic.pause(_periodoMs)
         }
-        if (n > 0) _fijarReferencia(sx / n, sy / n, sz / n)
+        if (n > 0) _fijarReferencia(sx / n, sy / n, sz / n, true)
         reiniciarVelocidad()
+        _quieto = true
+        _quietoDesdeMs = control.millis()
         _reposo = true
-        _reposoDesdeMs = control.millis()
     }
 
     /**
@@ -663,6 +729,7 @@ namespace FisicaBitCinematica {
         if (_iniciado) {
             _configurarHardware()
             _gRefValida = false
+            _refAsentada = false
         }
     }
 
@@ -828,6 +895,7 @@ namespace FisicaBitCinematica {
         basic.pause(800)
         basic.clearScreen()
         _gRefValida = false
+        _refAsentada = false
         reiniciarVelocidad()
     }
 
@@ -846,6 +914,7 @@ namespace FisicaBitCinematica {
         _escX = sx > 0 ? sx : 1; _escY = sy > 0 ? sy : 1; _escZ = sz > 0 ? sz : 1
         _cal6 = true
         _gRefValida = false
+        _refAsentada = false
     }
 
     /**

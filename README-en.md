@@ -125,7 +125,7 @@ What it does inside (from the LSM303AGR datasheet and the micro:bit v2 CODAL dri
 * MakeCode's firmware leaves the chip in normal 10-bit mode at 50 Hz. This module switches it to **12-bit high-resolution mode** (0.98 mg per count, 4x finer) at **200 samples per second**, with a narrower noise bandwidth.
 * `input.acceleration` returns 1024 counts per g, not 1000. The scale is calibrated from gravity measured at rest, which corrects that factor and the chip's sensitivity tolerance.
 * Every sensor sample is processed in the background with its real timestamp; the acceleration reading averages 10 samples (50 ms) and velocity integrates all of them with the trapezoidal rule.
-* The chip's zero-g offset (up to ±80 mg, i.e. 0.8 m/s²) is cancelled by the rest reference, which self-corrects whenever the board is still. The 6-position calibration also corrects per-axis offset and scale.
+* The chip's zero-g offset (up to ±80 mg, i.e. 0.8 m/s²) is cancelled by the rest reference. Stillness is detected from constant readings with magnitude equal to 1 g, independently of the reference: the first time the board is still the measured gravity is adopted (never the first sample), a tilt change at rest is re-learned after 3 s still, and slow drift is corrected while at rest. The 6-position calibration also corrects per-axis offset and scale.
 * When the board is still for more than 0.4 s the velocity returns to 0 (ZUPT), so drift does not accumulate between movements.
 * Physical limit: the micro:bit has no gyroscope, so it cannot separate gravity from acceleration if the board **rotates while moving**. Keep the orientation fixed during motion (cart on a track, free fall, elevator).
 
