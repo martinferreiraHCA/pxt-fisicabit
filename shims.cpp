@@ -15,6 +15,8 @@
 
 #include "pxt.h"
 #include <math.h>
+#include "MicroBitSystemTimer.h"
+#include "nrf.h"
 
 #if MICROBIT_CODAL
 // Cabeceras para engancharse al pipeline de audio del mic PDM v2
@@ -632,6 +634,272 @@ namespace fisicabit_native {
     //%
     int acelAsegurarHR(int altaRes) {
         return fbAplicarHR(altaRes != 0);
+    }
+
+    // =========================================================================
+    // DS18B20 — Sonda de temperatura Dallas/Maxim por bus OneWire
+    // =========================================================================
+    // Adaptado de "microbit-dstemp" de Bill Siever (2018-2021), licencia MIT,
+    // basado a su vez en SparkFun weather:bit. Se conservan sus tiempos
+    // calibrados con osciloscopio para micro:bit v1 (DAL) y v2 (CODAL).
+    // Cambios: resolución configurable (9-12 bits), espera real del fin de
+    // conversión (el sensor responde 0 mientras convierte y 1 al terminar),
+    // sin callback de error (el código de error se consulta desde TS) y el
+    // resultado se devuelve como entero crudo (1/16 °C) sin usar float.
+    // =========================================================================
+
+#if MICROBIT_CODAL
+    #ifdef NRF_P1
+        #define FB_DS_PORT (pin < 32 ? NRF_P0 : NRF_P1)
+        #define FB_DS_PIN  ((pin) & 31)
+    #else
+        #define FB_DS_PORT (NRF_P0)
+        #define FB_DS_PIN  (pin)
+    #endif
+    #define fb_ds_wait_us(us) system_timer_wait_cycles((us)==0 ? 1 : (((10*500*(us))/470)))
+    typedef int fb_ds_gpio;
+    static void fbDsInput(fb_ds_gpio pin)            { FB_DS_PORT->PIN_CNF[FB_DS_PIN] &= 0xfffffffc; }
+    static void fbDsOutput(fb_ds_gpio pin)           { FB_DS_PORT->PIN_CNF[FB_DS_PIN] |= 3; }
+    static void fbDsWrite(fb_ds_gpio pin, int val)   { if (val) FB_DS_PORT->OUTSET = 1 << FB_DS_PIN; else FB_DS_PORT->OUTCLR = 1 << FB_DS_PIN; }
+    static bool fbDsRead(fb_ds_gpio pin)             { return (FB_DS_PORT->IN & (1 << FB_DS_PIN)) ? 1 : 0; }
+
+    static void fbDsConfigTimer() {
+        // Asegura el cristal externo (más precisión) y el timer en 32 bits
+        static NRF_TIMER_Type *timer = NULL;
+        if (timer == NULL) {
+            NVIC_DisableIRQ(TIMER1_IRQn);
+            NRF_CLOCK_Type *clock = NRF_CLOCK;
+            clock->TASKS_HFCLKSTART = 1;
+            timer = NRF_TIMER1;
+            timer->TASKS_STOP = 1;
+            timer->BITMODE = 3;
+            timer->TASKS_START = 1;
+            NVIC_EnableIRQ(TIMER1_IRQn);
+        }
+    }
+#else
+    #define fb_ds_wait_us(us) wait_us(((us)>5)?(us)-5:0)
+    typedef gpio_t* fb_ds_gpio;
+    #define fbDsInput(pin)        gpio_dir((pin), PIN_INPUT)
+    #define fbDsOutput(pin)       gpio_dir((pin), PIN_OUTPUT)
+    #define fbDsWrite(pin, val)   gpio_write((pin), (val))
+    #define fbDsRead(pin)         gpio_read((pin))
+#endif
+
+    // Tiempos (µs) del protocolo OneWire, calibrados por Siever
+    static const int FB_DS_TIME_SLOT = 90;
+    static const int FB_DS_TIME_RECOV = 15;
+    static const int FB_DS_TIME_ZERO_LOW = FB_DS_TIME_SLOT;
+    static const int FB_DS_TIME_ONE_LOW = 0;
+    static const int FB_DS_TIME_RESET_LOW = 500;
+    static const int FB_DS_TIME_POWER_UP = 1000;
+    static const int FB_DS_TIME_POST_RESET = 10;
+    static const int FB_DS_TIME_PRESENCE = 300;
+    static const int FB_DS_HIGH_ALARM = 0xFF;
+    static const int FB_DS_LOW_ALARM = 0x80;
+    static const int FB_DS_MAX_TRIES = 3;
+    static const int FB_DS_ERROR = -100000;   // centinela de error (raw)
+
+    static int fbDsUltimoError = 0;   // 0 ok, 1 no conectado, 2 no arranca, 3 CRC/lectura, 4 tiempo agotado
+
+    static void fbDsWriteBit(fb_ds_gpio ioPin, bool one) {
+        fbDsWrite(ioPin, 1);
+        fbDsOutput(ioPin);
+        fb_ds_wait_us(FB_DS_TIME_RECOV);
+        fbDsWrite(ioPin, 0);
+        fb_ds_wait_us(one ? FB_DS_TIME_ONE_LOW : FB_DS_TIME_ZERO_LOW);
+        fbDsInput(ioPin);
+        fbDsWrite(ioPin, 1);
+        fb_ds_wait_us(one ? FB_DS_TIME_SLOT : 1);
+    }
+
+    static void fbDsWriteByte(fb_ds_gpio ioPin, uint8_t b) {
+        for (int i = 0; i < 8; i++, b >>= 1) fbDsWriteBit(ioPin, (b & 0x01));
+    }
+
+    static bool fbDsReadBit(fb_ds_gpio ioPin) {
+        fbDsOutput(ioPin);
+        fbDsWrite(ioPin, 1);
+        fb_ds_wait_us(FB_DS_TIME_RECOV);
+        fbDsWrite(ioPin, 0);
+        fb_ds_wait_us(1);
+        fbDsWrite(ioPin, 1);
+        fbDsInput(ioPin);
+        bool b = true;
+#if MICROBIT_CODAL
+        uint32_t maxCounts = (int)(FB_DS_TIME_SLOT / 0.0635);
+#else
+        fb_ds_wait_us(0);
+        uint32_t maxCounts = (int)(FB_DS_TIME_SLOT / 0.57);
+#endif
+        do {
+            b = b && fbDsRead(ioPin);
+        } while (maxCounts-- > 0);
+        fbDsWrite(ioPin, 1);
+        return b;
+    }
+
+    static bool fbDsReset(fb_ds_gpio ioPin) {
+        fbDsOutput(ioPin);
+        fbDsWrite(ioPin, 1);
+        fb_ds_wait_us(FB_DS_TIME_POWER_UP);
+        fbDsWrite(ioPin, 0);
+        fb_ds_wait_us(FB_DS_TIME_RESET_LOW);
+        fbDsWrite(ioPin, 1);
+        fbDsInput(ioPin);
+        fb_ds_wait_us(FB_DS_TIME_POST_RESET);
+#if MICROBIT_CODAL
+        int maxCounts = (int)(FB_DS_TIME_PRESENCE / 0.1);
+#else
+        int maxCounts = (int)(FB_DS_TIME_PRESENCE / 1);
+#endif
+        bool presence = false;
+        do {
+            presence = presence || (fbDsRead(ioPin) == 0);
+        } while (maxCounts-- > 0);
+        bool release = fbDsRead(ioPin) == 1;
+        return presence && release;
+    }
+
+    // Byte de configuración según resolución: 9→0x1F, 10→0x3F, 11→0x5F, 12→0x7F
+    static uint8_t fbDsConfigByte(int bits) {
+        if (bits < 9) bits = 9;
+        if (bits > 12) bits = 12;
+        return (uint8_t)(0x1F | ((bits - 9) << 5));
+    }
+
+    static bool fbDsConfigure(fb_ds_gpio ioPin, int bits) {
+        if (!fbDsReset(ioPin)) return false;
+        fbDsWriteByte(ioPin, 0xCC);            // Skip ROM
+        fbDsWriteByte(ioPin, 0x4E);            // Write scratchpad
+        fbDsWriteByte(ioPin, FB_DS_HIGH_ALARM);
+        fbDsWriteByte(ioPin, FB_DS_LOW_ALARM);
+        fbDsWriteByte(ioPin, fbDsConfigByte(bits));
+        return true;
+    }
+
+    static bool fbDsStartConversion(fb_ds_gpio ioPin) {
+        if (!fbDsReset(ioPin)) return false;
+        fbDsWriteByte(ioPin, 0xCC);            // Skip ROM
+        fbDsWriteByte(ioPin, 0x44);            // Convert T
+        return true;
+    }
+
+    static bool fbDsReadScratchpad(fb_ds_gpio ioPin, int bits, int16_t &raw) {
+        uint8_t data[9];
+        uint8_t crc = 0;
+        for (int j = 0; j < 9; j++) {
+            uint8_t b = 0;
+            for (int i = 0; i < 8; i++) {
+                bool bit = fbDsReadBit(ioPin);
+                b |= (bit << i);
+                bool lsb = crc & 0x1;
+                crc >>= 1;
+                if (bit != lsb) crc ^= 0x8C;
+            }
+            data[j] = b;
+        }
+        raw = (int16_t)(((uint16_t)data[1] << 8) | data[0]);
+        // Bits no usados según la resolución quedan indefinidos: se limpian
+        int mascara = ~((1 << (12 - bits)) - 1);
+        raw = (int16_t)(raw & mascara);
+        return crc == 0 && data[2] == FB_DS_HIGH_ALARM && data[3] == FB_DS_LOW_ALARM
+            && (data[4] & 0x60) == (fbDsConfigByte(bits) & 0x60);
+    }
+
+    static fb_ds_gpio fbDsGpio(int pin
+#if !MICROBIT_CODAL
+        , gpio_t *obj
+#endif
+    ) {
+        MicroBitPin *mbp = pxt::getPin(pin);
+#if MICROBIT_CODAL
+        return mbp->name;
+#else
+        gpio_init(obj, mbp->name);
+        return obj;
+#endif
+    }
+
+    // Lee la temperatura del DS18B20 en `pin` (id de DigitalPin) con `bits`
+    // de resolución. Devuelve el valor crudo (1/16 °C) o FB_DS_ERROR.
+    //%
+    int ds18b20Leer(int pin, int bits) {
+#if MICROBIT_CODAL
+#ifdef SOFTDEVICE_PRESENT
+        if (!ble_running())
+#endif
+            fbDsConfigTimer();
+        fb_ds_gpio gpio = fbDsGpio(pin);
+#else
+        gpio_t gpioObj;
+        fb_ds_gpio gpio = fbDsGpio(pin, &gpioObj);
+#endif
+        if (bits < 9) bits = 9;
+        if (bits > 12) bits = 12;
+
+        // 1) Configurar y arrancar la conversión
+        bool ok = false;
+        for (int tries = 0; tries < FB_DS_MAX_TRIES && !ok; tries++) {
+            if (!fbDsConfigure(gpio, bits)) { fbDsUltimoError = 1; fbDsInput(gpio); return FB_DS_ERROR; }
+            ok = fbDsStartConversion(gpio);
+        }
+        if (!ok) { fbDsUltimoError = 2; fbDsInput(gpio); return FB_DS_ERROR; }
+
+        // 2) Esperar el fin de conversión: el sensor responde 0 mientras
+        //    convierte y 1 al terminar. Tiempo máximo según resolución
+        //    (94 / 188 / 375 / 750 ms) más margen. Con alimentación parásita
+        //    el sondeo no funciona: se espera el tiempo completo y se intenta.
+        int maxMs = (94 << (bits - 9)) + 60;
+        int esperado = 0;
+        bool listo = false;
+        while (esperado < maxMs) {
+            uBit.sleep(4);
+            esperado += 4;
+            if (fbDsReadBit(gpio)) { listo = true; break; }
+        }
+        if (!listo) uBit.sleep(10);
+
+        // 3) Leer el scratchpad (con CRC)
+        for (int tries = 0; tries < FB_DS_MAX_TRIES; tries++) {
+            if (fbDsReset(gpio)) {
+                fbDsWriteByte(gpio, 0xCC);     // Skip ROM
+                fbDsWriteByte(gpio, 0xBE);     // Read scratchpad
+                int16_t raw = 0;
+                if (fbDsReadScratchpad(gpio, bits, raw)) {
+                    fbDsUltimoError = 0;
+                    fbDsInput(gpio);
+                    return raw;
+                }
+            }
+        }
+        fbDsUltimoError = listo ? 3 : 4;
+        fbDsInput(gpio);
+        return FB_DS_ERROR;
+    }
+
+    // Código del último error del DS18B20 (0 = sin error).
+    //%
+    int ds18b20Error() {
+        return fbDsUltimoError;
+    }
+
+    // 1 si hay un DS18B20 respondiendo en el pin, 0 si no.
+    //%
+    int ds18b20Presente(int pin) {
+#if MICROBIT_CODAL
+#ifdef SOFTDEVICE_PRESENT
+        if (!ble_running())
+#endif
+            fbDsConfigTimer();
+        fb_ds_gpio gpio = fbDsGpio(pin);
+#else
+        gpio_t gpioObj;
+        fb_ds_gpio gpio = fbDsGpio(pin, &gpioObj);
+#endif
+        bool p = fbDsReset(gpio);
+        fbDsInput(gpio);
+        return p ? 1 : 0;
     }
 
 }

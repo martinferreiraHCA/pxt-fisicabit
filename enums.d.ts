@@ -47,6 +47,17 @@ declare const enum UnidadTemperatura {
     Kelvin = 2
 }
 
+declare const enum ResolucionDS18B20 {
+    //% block="9 bits (0.5 °C, 94 ms)"
+    Bits9 = 9,
+    //% block="10 bits (0.25 °C, 188 ms)"
+    Bits10 = 10,
+    //% block="11 bits (0.125 °C, 375 ms)"
+    Bits11 = 11,
+    //% block="12 bits (0.0625 °C, 750 ms)"
+    Bits12 = 12
+}
+
 declare const enum UnidadDistancia {
     //% block="cm"
     Centimetros = 0,

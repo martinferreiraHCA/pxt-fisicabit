@@ -1,6 +1,6 @@
 {
     "name": "fisicabit-sensores",
-    "version": "0.7.3",
+    "version": "0.8.0",
     "description": "Extensión micro:bit para experimentos de física: sensores, barreras ópticas y envío de datos a fisicabit.com con un solo bloque por USB o Bluetooth",
     "license": "MIT",
     "authors": [
@@ -26,6 +26,7 @@
         "tcs3200_sensores.ts",
         "bme280_sensores.ts",
         "dht11_sensores.ts",
+        "ds18b20_sensores.ts",
         "hcsr04_sensores.ts",
         "audio_shims.ts",
         "sonido_sensores.ts",

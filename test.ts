@@ -297,3 +297,31 @@ basic.forever(function () {
     )
 })
 */
+
+
+// =============================================================================
+// PRUEBA 12: SONDA DE TEMPERATURA DS18B20 (OneWire)
+// =============================================================================
+// HARDWARE: DS18B20 rojo → 3V, negro → GND, amarillo → P0, 4,7 kΩ entre
+//           DATA y 3V.
+// ÉXITO: "conectado" = verdadero; temperatura ambiente razonable (±0,5 °C
+//        respecto a otro termómetro); al apretar la sonda con la mano sube;
+//        "código de error" = 0. Con la sonda desconectada: código 1.
+// FALLA: Siempre 0, código de error distinto de 0 o excepción.
+// =============================================================================
+
+/*
+FisicaBitDS18B20.fijarResolucion(ResolucionDS18B20.Bits12)
+basic.forever(function () {
+    if (FisicaBitDS18B20.estaConectado(DigitalPin.P0)) {
+        FisicaBitSerial.enviar2(
+            FisicaBitDS18B20.temperatura(DigitalPin.P0, UnidadTemperatura.Celsius),
+            FisicaBitDS18B20.codigoError(),
+            1000
+        )
+    } else {
+        basic.showIcon(IconNames.No)
+        basic.pause(1000)
+    }
+})
+*/

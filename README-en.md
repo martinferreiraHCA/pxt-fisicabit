@@ -48,6 +48,7 @@ let reading = FisicaBit.leerSensorAnalogico(PinAnalogico.P0)
 | `read analog sensor on [P0]` | Reads potentiometer, LDR, NTC (0-1023) |
 | `read digital sensor on P[8]` | Reads PIR, infrared, switch (0/1) |
 | `ultrasonic distance TRIG P1 ECHO P2 in [cm]` | Measures distance with HC-SR04 |
+| `DS18B20 temperature on [P0] in [°C]` | DS18B20 waterproof temperature probe (OneWire), ±0.5 °C, −55 to 125 °C. Own **DS18B20** category with `last temperature`, `set resolution 9–12 bits`, `connected?` and `error code` |
 
 ### Optical Barrier (timing experiments)
 
@@ -177,6 +178,21 @@ HC-SR04 TRIG → micro:bit P1
 HC-SR04 ECHO → micro:bit P2
 HC-SR04 VCC  → micro:bit 3V
 HC-SR04 GND  → micro:bit GND
+```
+
+### DS18B20 temperature probe
+```
+DS18B20 red (VDD)     → micro:bit 3V
+DS18B20 black (GND)   → micro:bit GND
+DS18B20 yellow (DATA) → micro:bit P0
+4.7 kΩ resistor between DATA and 3V (breakout modules already include it)
+Several probes: one per pin (P0, P1, P2, ...)
+```
+Calorimetry example (one reading per second, 12 bits):
+```blocks
+basic.forever(function () {
+    FisicaBitSerial.enviar1(FisicaBitDS18B20.temperatura(DigitalPin.P0, UnidadTemperatura.Celsius), 1000)
+})
 ```
 
 ### FC-33 Optical Barrier (digital)

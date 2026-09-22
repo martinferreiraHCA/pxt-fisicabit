@@ -76,6 +76,7 @@ let lectura = FisicaBit.leerSensorAnalogico(PinAnalogico.P0)
 | `leer sensor analógico en [P0]` | Lee potenciómetro, LDR, NTC (0-1023) |
 | `leer sensor digital en P[8]` | Lee PIR, infrarrojo, interruptor (0/1) |
 | `HC-SR04 distancia TRIG P1 ECHO P2 en [cm]` | Mide distancia con HC-SR04 |
+| `DS18B20 temperatura en [P0] en [°C]` | Sonda de temperatura sumergible DS18B20 (OneWire), ±0,5 °C, de −55 a 125 °C. Categoría propia **DS18B20**, con `última temperatura`, `fijar resolución 9–12 bits`, `¿conectado?` y `código de error` |
 
 ### Barrera óptica (experimentos de tiempo)
 
@@ -205,6 +206,21 @@ HC-SR04 TRIG → micro:bit P1
 HC-SR04 ECHO → micro:bit P2
 HC-SR04 VCC  → micro:bit 3V
 HC-SR04 GND  → micro:bit GND
+```
+
+### Sonda de temperatura DS18B20
+```
+DS18B20 rojo (VDD)      → micro:bit 3V
+DS18B20 negro (GND)     → micro:bit GND
+DS18B20 amarillo (DATA) → micro:bit P0
+Resistencia 4,7 kΩ entre DATA y 3V (los módulos con placa ya la traen)
+Varias sondas: una por pin (P0, P1, P2, ...)
+```
+Ejemplo de calorimetría (una lectura por segundo, 12 bits):
+```blocks
+basic.forever(function () {
+    FisicaBitSerial.enviar1(FisicaBitDS18B20.temperatura(DigitalPin.P0, UnidadTemperatura.Celsius), 1000)
+})
 ```
 
 ### Barrera óptica FC-33 (digital)
