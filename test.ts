@@ -221,7 +221,7 @@ FisicaBitSerial.bucleMuestreo(20, () => {
 /*
 FisicaBitBT.inicioRapido()
 basic.forever(() => {
-    FisicaBitBT.enviar2(input.temperature(), input.lightLevel())
+    FisicaBitBT.enviar2(input.temperature(), input.lightLevel(), 100)
 })
 */
 
