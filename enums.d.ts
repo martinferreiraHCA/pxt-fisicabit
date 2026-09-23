@@ -186,12 +186,16 @@ declare const enum FrecuenciaMuestreo {
 }
 
 declare const enum ModeloToF {
-    //% block="TOF050C (50 cm)"
+    //% block="TOF050C (VL6180X, 2-50 cm)"
     TOF050C = 0,
-    //% block="TOF200C (2 m)"
+    //% block="TOF200C (VL53L0X, 3-200 cm)"
     TOF200C = 1,
-    //% block="TOF400C (4 m)"
-    TOF400C = 2
+    //% block="TOF400C (VL53L1X, 4-400 cm)"
+    TOF400C = 2,
+    //% block="GY-VL53L0XV2 (VL53L0X, 3-200 cm)"
+    VL53L0XV2 = 3,
+    //% block="auto-detect module"
+    Auto = 4
 }
 
 declare const enum FiltroToF {

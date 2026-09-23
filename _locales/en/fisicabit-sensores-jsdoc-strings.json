@@ -114,5 +114,18 @@
     "FisicaBitSerial.fijarIntervalo|block": "Sets the interval between samples in milliseconds.",
     "FisicaBitSerial.fijarIntervalo|param|ms": "Sampling interval in ms (5 to 60000)",
     "FisicaBitSerial.reiniciarTiempo|block": "Resets the time to 0.",
-    "FisicaBitSerial.tiempoSerial|block": "Time in milliseconds since USB streaming started (starts at 0)."
+    "FisicaBitSerial.tiempoSerial|block": "Time in milliseconds since USB streaming started (starts at 0).",
+    "FisicaBitToF.tofDistancia": "Measures distance with a ToF laser module in ONE block: choose the module, say which pins it is wired to and the unit. It initialises itself on first use (and retries if the sensor does not answer), applies a median filter and, if a reading fails, returns the last valid one.\n\nSuggested pins on a micro:bit expansion kit:\n  1st sensor: SDA P20 (pin \"SDA\"/\"20\") and SCL P19 (\"SCL\"/\"19\") = hardware I2C bus, the fastest. VCC → 3V, GND → GND.\n  2nd sensor: SDA P14 and SCL P13 · 3rd sensor: SDA P16 and SCL P15 (the modules share address 0x29, so each extra sensor needs its own pin pair).\n\nExample (uniform motion on a rail): [forever] → [send to fisicabit.com time and (ToF distance [TOF200C] SDA [P20] SCL [P19] in [cm]) every 50 ms]",
+    "FisicaBitToF.tofDistancia|param|modelo": "Connected module (or auto-detect)",
+    "FisicaBitToF.tofDistancia|param|scl": "Pin wired to the module's SCL",
+    "FisicaBitToF.tofDistancia|param|sda": "Pin wired to the module's SDA",
+    "FisicaBitToF.tofDistancia|param|unidad": "Unit: cm (1 decimal), mm or inches",
+    "FisicaBitToF.tofHaySensor": "True if a ToF module answers on the given pins.",
+    "FisicaBitToF.tofHaySensor|param|scl": "Pin wired to the module's SCL",
+    "FisicaBitToF.tofHaySensor|param|sda": "Pin wired to the module's SDA",
+    "FisicaBitToF.tofModuloDetectado": "Module detected on the given pins, reading the chip identity: \"TOF050C (VL6180X)\", \"TOF200C / GY-VL53L0XV2 (VL53L0X)\", \"TOF400C (VL53L1X)\" or \"none\" if nothing answers (check VCC, GND and that SDA/SCL are not swapped).",
+    "FisicaBitToF.tofModuloDetectado|param|scl": "Pin wired to the module's SCL",
+    "FisicaBitToF.tofModuloDetectado|param|sda": "Pin wired to the module's SDA",
+    "FisicaBitToF.tofPinesSugeridos": "Suggested pins for sensor number 1, 2 or 3 on a micro:bit expansion kit, as text (e.g. \"SDA P20 SCL P19\"). Show it on the display or send it over USB to know where to wire.",
+    "FisicaBitToF.tofPinesSugeridos|param|numero": "Sensor number (1 = hardware bus P20/P19)"
 }

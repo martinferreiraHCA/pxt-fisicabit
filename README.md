@@ -77,6 +77,7 @@ let lectura = FisicaBit.leerSensorAnalogico(PinAnalogico.P0)
 | `leer sensor digital en P[8]` | Lee PIR, infrarrojo, interruptor (0/1) |
 | `HC-SR04 distancia TRIG P1 ECHO P2 en [cm]` | Mide distancia con HC-SR04 |
 | `DS18B20 temperatura en [P0] en [°C]` | Sonda de temperatura sumergible DS18B20 (OneWire), ±0,5 °C, de −55 a 125 °C. Categoría propia **DS18B20**, con `última temperatura`, `fijar resolución 9–12 bits`, `¿conectado?` y `código de error` |
+| `distancia ToF [TOF200C] SDA [P20] SCL [P19] en [cm]` | Sensores láser ToF en un solo bloque: TOF050C (VL6180X), TOF200C y GY-VL53L0XV2 (VL53L0X), TOF400C (VL53L1X) o autodetectar. Elegís el módulo y los pines; se inicializa solo. Categoría **ToF — Distancia Láser**, con `pines sugeridos`, `módulo detectado` y `¿hay sensor?` |
 
 ### Barrera óptica (experimentos de tiempo)
 
@@ -206,6 +207,24 @@ HC-SR04 TRIG → micro:bit P1
 HC-SR04 ECHO → micro:bit P2
 HC-SR04 VCC  → micro:bit 3V
 HC-SR04 GND  → micro:bit GND
+```
+
+### Sensores láser ToF (TOF050C, TOF200C, GY-VL53L0XV2, TOF400C)
+```
+Módulo VCC → micro:bit 3V
+Módulo GND → micro:bit GND
+1er sensor: SDA → P20 (pin "SDA" o "20" del kit)   SCL → P19 ("SCL" o "19")   ← bus I2C por hardware
+2º sensor:  SDA → P14                               SCL → P13                  ← I2C por software
+3er sensor: SDA → P16                               SCL → P15
+```
+Los cuatro módulos usan la misma dirección I2C (0x29): cada sensor extra necesita su propio par de pines. P13–P16 son pines digitales libres en todos los kits de expansión (no tocan la pantalla LED ni los botones) y dejan P0–P2 para sensores analógicos. El bloque `pines sugeridos ToF para el sensor número [n]` devuelve ese texto en el propio programa.
+```blocks
+basic.forever(function () {
+    FisicaBitSerial.enviar2(
+        FisicaBitToF.tofDistancia(ModeloToF.TOF200C, DigitalPin.P20, DigitalPin.P19, UnidadDistancia.Centimetros),
+        FisicaBitToF.tofDistancia(ModeloToF.TOF400C, DigitalPin.P14, DigitalPin.P13, UnidadDistancia.Centimetros),
+        50)
+})
 ```
 
 ### Sonda de temperatura DS18B20

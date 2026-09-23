@@ -114,5 +114,18 @@
     "FisicaBitSerial.fijarIntervalo|block": "Configura el intervalo entre muestras en milisegundos.",
     "FisicaBitSerial.fijarIntervalo|param|ms": "Intervalo de muestreo en ms (5 a 60000)",
     "FisicaBitSerial.reiniciarTiempo|block": "Vuelve el tiempo a 0.",
-    "FisicaBitSerial.tiempoSerial|block": "Tiempo en milisegundos desde que se inició el envío por USB (arranca en 0)."
+    "FisicaBitSerial.tiempoSerial|block": "Tiempo en milisegundos desde que se inició el envío por USB (arranca en 0).",
+    "FisicaBitToF.tofDistancia": "Mide la distancia con un módulo láser ToF en UN solo bloque: elegí el módulo, indicá en qué pines está conectado y la unidad. Se inicializa solo la primera vez (y se reintenta si el sensor no responde); usa filtro de mediana y, si una medición falla, devuelve la última válida.\n\nPines sugeridos en un kit de expansión del micro:bit:\n  1er sensor: SDA P20 (pin \"SDA\"/\"20\") y SCL P19 (\"SCL\"/\"19\") = bus I2C por hardware, el más rápido. VCC → 3V, GND → GND.\n  2º sensor: SDA P14 y SCL P13 · 3er sensor: SDA P16 y SCL P15 (los módulos comparten la dirección 0x29, así que cada sensor extra necesita su propio par de pines).\n\nEjemplo (MRU en un riel): [para siempre] → [enviar a fisicabit.com tiempo y (distancia ToF [TOF200C] SDA [P20] SCL [P19] en [cm]) cada 50 ms]",
+    "FisicaBitToF.tofDistancia|param|modelo": "Módulo conectado (o autodetectar)",
+    "FisicaBitToF.tofDistancia|param|scl": "Pin conectado a SCL del módulo",
+    "FisicaBitToF.tofDistancia|param|sda": "Pin conectado a SDA del módulo",
+    "FisicaBitToF.tofDistancia|param|unidad": "Unidad: cm (1 decimal), mm o pulgadas",
+    "FisicaBitToF.tofHaySensor": "Verdadero si hay un módulo ToF respondiendo en los pines indicados.",
+    "FisicaBitToF.tofHaySensor|param|scl": "Pin conectado a SCL del módulo",
+    "FisicaBitToF.tofHaySensor|param|sda": "Pin conectado a SDA del módulo",
+    "FisicaBitToF.tofModuloDetectado": "Módulo detectado en los pines indicados, leyendo la identidad del chip: \"TOF050C (VL6180X)\", \"TOF200C / GY-VL53L0XV2 (VL53L0X)\", \"TOF400C (VL53L1X)\" o \"none\" si no responde nada (revisar VCC, GND y que SDA/SCL no estén cruzados).",
+    "FisicaBitToF.tofModuloDetectado|param|scl": "Pin conectado a SCL del módulo",
+    "FisicaBitToF.tofModuloDetectado|param|sda": "Pin conectado a SDA del módulo",
+    "FisicaBitToF.tofPinesSugeridos": "Pines sugeridos para el sensor número 1, 2 o 3 en un kit de expansión del micro:bit, como texto (por ejemplo \"SDA P20 SCL P19\"). Mostrarlo en pantalla o enviarlo por USB para saber dónde cablear.",
+    "FisicaBitToF.tofPinesSugeridos|param|numero": "Número de sensor (1 = bus por hardware P20/P19)"
 }

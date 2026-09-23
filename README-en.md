@@ -49,6 +49,7 @@ let reading = FisicaBit.leerSensorAnalogico(PinAnalogico.P0)
 | `read digital sensor on P[8]` | Reads PIR, infrared, switch (0/1) |
 | `ultrasonic distance TRIG P1 ECHO P2 in [cm]` | Measures distance with HC-SR04 |
 | `DS18B20 temperature on [P0] in [°C]` | DS18B20 waterproof temperature probe (OneWire), ±0.5 °C, −55 to 125 °C. Own **DS18B20** category with `last temperature`, `set resolution 9–12 bits`, `connected?` and `error code` |
+| `ToF distance [TOF200C] SDA [P20] SCL [P19] in [cm]` | ToF laser sensors in one block: TOF050C (VL6180X), TOF200C and GY-VL53L0XV2 (VL53L0X), TOF400C (VL53L1X) or auto-detect. Pick the module and the pins; it initialises itself. **ToF — Laser Distance** category, with `suggested pins`, `module detected` and `sensor found?` |
 
 ### Optical Barrier (timing experiments)
 
@@ -178,6 +179,24 @@ HC-SR04 TRIG → micro:bit P1
 HC-SR04 ECHO → micro:bit P2
 HC-SR04 VCC  → micro:bit 3V
 HC-SR04 GND  → micro:bit GND
+```
+
+### ToF laser sensors (TOF050C, TOF200C, GY-VL53L0XV2, TOF400C)
+```
+Module VCC → micro:bit 3V
+Module GND → micro:bit GND
+1st sensor: SDA → P20 (kit pin "SDA" or "20")   SCL → P19 ("SCL" or "19")   ← hardware I2C bus
+2nd sensor: SDA → P14                            SCL → P13                   ← software I2C
+3rd sensor: SDA → P16                            SCL → P15
+```
+All four modules share I2C address 0x29, so every extra sensor needs its own pin pair. P13–P16 are free digital pins on every expansion kit (no LED matrix or button conflicts) and leave P0–P2 for analog sensors. The `suggested ToF pins for sensor number [n]` block returns that text from the program itself.
+```blocks
+basic.forever(function () {
+    FisicaBitSerial.enviar2(
+        FisicaBitToF.tofDistancia(ModeloToF.TOF200C, DigitalPin.P20, DigitalPin.P19, UnidadDistancia.Centimetros),
+        FisicaBitToF.tofDistancia(ModeloToF.TOF400C, DigitalPin.P14, DigitalPin.P13, UnidadDistancia.Centimetros),
+        50)
+})
 ```
 
 ### DS18B20 temperature probe
