@@ -333,107 +333,255 @@ namespace FisicaBitToF {
 
 
     // =========================================================================
-    // DRIVER: VL53L0X (TOF200C) — 0 a 200 cm
+    // DRIVER: VL53L0X (TOF200C, GY-VL53L0XV2) — 3 a 200 cm
     // =========================================================================
     // Chip: VL53L0X, infrarrojo 940 nm, FOV 25°
-    // Zona muerta: 0–3 cm
     // Registros: direcciones de 8 bits
-    // Referencia: ST API / Pololu VL53L0X library
+    // Referencia: ST API VL53L0X (DataInit + StaticInit + PerformRefCalibration)
+    // en la forma de la biblioteca Pololu VL53L0X, que es la implementación
+    // mínima probada: SPADs de referencia, "tuning settings", interrupción de
+    // muestra lista, presupuesto de tiempo y calibraciones VHV / fase.
     // =========================================================================
 
-    function vl53l0x_init(): boolean {
-        // Verificar identidad del chip (register 0xC0 = 0xEE)
-        if (r8(0xC0) != 0xEE) return false
+    /** Lee N bytes consecutivos desde un registro de 8 bits. */
+    function r8multi(reg: number, n: number): Buffer {
+        let b = pins.createBuffer(1)
+        b[0] = reg
+        _b.write(b)
+        return _b.read(n)
+    }
 
-        // Modo 2.8V (activar regulador interno)
-        w8(0x89, r8(0x89) | 0x01)
+    /** Escribe N bytes consecutivos desde un registro de 8 bits. */
+    function w8multi(reg: number, datos: number[]): void {
+        let b = pins.createBuffer(datos.length + 1)
+        b[0] = reg
+        for (let i = 0; i < datos.length; i++) b[i + 1] = datos[i] & 0xFF
+        _b.write(b)
+    }
 
-        // I2C standard mode
-        w8(0x88, 0x00)
+    /** Espera hasta que (reg & mask) != 0. */
+    function poll_r8_nonzero(reg: number, mask: number, ms: number): boolean {
+        for (let i = 0; i < ms; i++) {
+            if ((r8(reg) & mask) != 0) return true
+            basic.pause(1)
+        }
+        return false
+    }
 
-        // Leer stop variable (necesaria para cada medición)
+    function l0x_getSpadInfo(): number[] {
+        // Devuelve [count, esApertura] o [] si falla
+        w8(0x80, 0x01); w8(0xFF, 0x01); w8(0x00, 0x00)
+        w8(0xFF, 0x06)
+        w8(0x83, r8(0x83) | 0x04)
+        w8(0xFF, 0x07)
+        w8(0x81, 0x01)
         w8(0x80, 0x01)
+        w8(0x94, 0x6B)
+        w8(0x83, 0x00)
+        if (!poll_r8_nonzero(0x83, 0xFF, 200)) return []
+        w8(0x83, 0x01)
+        const tmp = r8(0x92)
+        const count = tmp & 0x7F
+        const apertura = (tmp >> 7) & 0x01
+        w8(0x81, 0x00)
+        w8(0xFF, 0x06)
+        w8(0x83, r8(0x83) & ~0x04)
         w8(0xFF, 0x01)
-        w8(0x00, 0x00)
-        _s.stopVar = r8(0x91)
         w8(0x00, 0x01)
         w8(0xFF, 0x00)
         w8(0x80, 0x00)
+        return [count, apertura]
+    }
 
-        // Deshabilitar límite MSRC (mejora rango)
-        w8(0x60, r8(0x60) | 0x12)
+    function l0x_refCalibration(vhvInitByte: number): boolean {
+        w8(0x00, 0x01 | vhvInitByte)               // SYSRANGE_START
+        if (!poll_r8_nonzero(0x13, 0x07, 500)) return false
+        w8(0x0B, 0x01)                             // SYSTEM_INTERRUPT_CLEAR
+        w8(0x00, 0x00)
+        return true
+    }
 
-        // Límite de señal: 0.25 MCPS (32 = 0.25 × 128)
-        w8v16(0x44, 0x0020)
-
-        // Secuencia de medición
-        w8(0x01, 0xE8)
-
-        // Configuración de rango largo (mejor para > 50cm)
-        if (!_s.rapido) {
-            w8v16(0x51, 0x0099)  // Range config period A
-            w8v16(0x70, 0x0078)  // Range config period B
+    // ── Presupuesto de tiempo (timing budget), como en Pololu ──
+    function l0x_decodeTimeout(v: number): number {
+        return ((v & 0x00FF) << ((v & 0xFF00) >> 8)) + 1
+    }
+    function l0x_encodeTimeout(mclks: number): number {
+        let ls = 0, ms = 0
+        if (mclks > 0) {
+            ls = mclks - 1
+            while ((ls & 0xFFFFFF00) > 0) { ls >>= 1; ms++ }
+            return (ms << 8) | (ls & 0xFF)
         }
+        return 0
+    }
+    function l0x_macroPeriodNs(vcselPclks: number): number {
+        return Math.idiv((2304 * vcselPclks * 1655) + 500, 1000)
+    }
+    function l0x_mclksToUs(mclks: number, vcselPclks: number): number {
+        return Math.idiv((mclks * l0x_macroPeriodNs(vcselPclks)) + 500, 1000)
+    }
+    function l0x_usToMclks(us: number, vcselPclks: number): number {
+        const macro = l0x_macroPeriodNs(vcselPclks)
+        return Math.idiv((us * 1000) + Math.idiv(macro, 2), macro)
+    }
+    function l0x_vcselPclks(reg: number): number {
+        return (r8(reg) + 1) << 1
+    }
 
-        // ── Calibración VHV ──
-        w8(0x00, 0x41)
-        if (!poll_r8(0x13, 0x07, 0x07, 200)) return false
-        w8(0x0B, 0x01)  // Clear interrupt
-        w8(0x00, 0x00)
+    function l0x_setTimingBudget(budgetUs: number): boolean {
+        const StartOverhead = 1910, EndOverhead = 960, MsrcOverhead = 660
+        const TccOverhead = 590, DssOverhead = 690, PreRangeOverhead = 660, FinalRangeOverhead = 550
+        if (budgetUs < 20000) return false
+        let used = StartOverhead + EndOverhead
 
-        // ── Calibración de fase ──
-        w8(0x00, 0x01)
-        if (!poll_r8(0x13, 0x07, 0x07, 200)) return false
-        w8(0x0B, 0x01)
-        w8(0x00, 0x00)
+        const sc = r8(0x01)                        // SYSTEM_SEQUENCE_CONFIG
+        const tcc = (sc >> 4) & 1, dss = (sc >> 3) & 1, msrc = (sc >> 2) & 1
+        const preRange = (sc >> 6) & 1, finalRange = (sc >> 7) & 1
+
+        const preVcsel = l0x_vcselPclks(0x50)
+        const msrcMclks = r8(0x46) + 1
+        const msrcUs = l0x_mclksToUs(msrcMclks, preVcsel)
+        const preMclks = l0x_decodeTimeout(r8v16(0x51))
+        const preUs = l0x_mclksToUs(preMclks, preVcsel)
+        const finalVcsel = l0x_vcselPclks(0x70)
+
+        if (tcc) used += msrcUs + TccOverhead
+        if (dss) used += 2 * (msrcUs + DssOverhead)
+        else if (msrc) used += msrcUs + MsrcOverhead
+        if (preRange) used += preUs + PreRangeOverhead
+        if (finalRange) {
+            used += FinalRangeOverhead
+            if (used > budgetUs) return false
+            let finalMclks = l0x_usToMclks(budgetUs - used, finalVcsel)
+            if (preRange) finalMclks += preMclks
+            w8v16(0x71, l0x_encodeTimeout(finalMclks))   // FINAL_RANGE_CONFIG_TIMEOUT_MACROP_HI
+        }
+        return true
+    }
+
+    function vl53l0x_init(): boolean {
+        // Verificar identidad del chip (IDENTIFICATION_MODEL_ID = 0xEE)
+        if (r8(0xC0) != 0xEE) return false
+
+        // ── DataInit ──
+        w8(0x89, r8(0x89) | 0x01)                  // modo 2,8 V en SDA/SCL
+        w8(0x88, 0x00)                             // I2C standard mode
+        w8(0x80, 0x01); w8(0xFF, 0x01); w8(0x00, 0x00)
+        _s.stopVar = r8(0x91)
+        w8(0x00, 0x01); w8(0xFF, 0x00); w8(0x80, 0x00)
+        w8(0x60, r8(0x60) | 0x12)                  // sin límites MSRC / PRE_RANGE
+        w8v16(0x44, 0x0020)                        // límite de señal 0,25 MCPS
+        w8(0x01, 0xFF)                             // SYSTEM_SEQUENCE_CONFIG
+
+        // ── StaticInit: SPADs de referencia ──
+        const spad = l0x_getSpadInfo()
+        if (spad.length == 0) return false
+        const spadCount = spad[0]
+        const primerSpad = spad[1] ? 12 : 0        // 12 = primer SPAD de apertura
+        const mapa = r8multi(0xB0, 6)              // GLOBAL_CONFIG_SPAD_ENABLES_REF_0..5
+        let ref: number[] = [mapa[0], mapa[1], mapa[2], mapa[3], mapa[4], mapa[5]]
+        w8(0xFF, 0x01)
+        w8(0x4F, 0x00)                             // DYNAMIC_SPAD_REF_EN_START_OFFSET
+        w8(0x4E, 0x2C)                             // DYNAMIC_SPAD_NUM_REQUESTED_REF_SPAD
+        w8(0xFF, 0x00)
+        w8(0xB6, 0xB4)                             // GLOBAL_CONFIG_REF_EN_START_SELECT
+        let habilitados = 0
+        for (let i = 0; i < 48; i++) {
+            const byte = i >> 3, bit = i & 7
+            if (i < primerSpad || habilitados == spadCount) {
+                ref[byte] &= ~(1 << bit)
+            } else if ((ref[byte] >> bit) & 1) {
+                habilitados++
+            }
+        }
+        w8multi(0xB0, ref)
+
+        // ── StaticInit: "tuning settings" por defecto (vl53l0x_tuning.h) ──
+        const tun = [
+            0xFF, 0x01, 0x00, 0x00, 0xFF, 0x00, 0x09, 0x00, 0x10, 0x00, 0x11, 0x00,
+            0x24, 0x01, 0x25, 0xFF, 0x75, 0x00, 0xFF, 0x01, 0x4E, 0x2C, 0x48, 0x00,
+            0x30, 0x20, 0xFF, 0x00, 0x30, 0x09, 0x54, 0x00, 0x31, 0x04, 0x32, 0x03,
+            0x40, 0x83, 0x46, 0x25, 0x60, 0x00, 0x27, 0x00, 0x50, 0x06, 0x51, 0x00,
+            0x52, 0x96, 0x56, 0x08, 0x57, 0x30, 0x61, 0x00, 0x62, 0x00, 0x64, 0x00,
+            0x65, 0x00, 0x66, 0xA0, 0xFF, 0x01, 0x22, 0x32, 0x47, 0x14, 0x49, 0xFF,
+            0x4A, 0x00, 0xFF, 0x00, 0x7A, 0x0A, 0x7B, 0x00, 0x78, 0x21, 0xFF, 0x01,
+            0x23, 0x34, 0x42, 0x00, 0x44, 0xFF, 0x45, 0x26, 0x46, 0x05, 0x40, 0x40,
+            0x0E, 0x06, 0x20, 0x1A, 0x43, 0x40, 0xFF, 0x00, 0x34, 0x03, 0x35, 0x44,
+            0xFF, 0x01, 0x31, 0x04, 0x4B, 0x09, 0x4C, 0x05, 0x4D, 0x04, 0xFF, 0x00,
+            0x44, 0x00, 0x45, 0x20, 0x47, 0x08, 0x48, 0x28, 0x67, 0x00, 0x70, 0x04,
+            0x71, 0x01, 0x72, 0xFE, 0x76, 0x00, 0x77, 0x00, 0xFF, 0x01, 0x0D, 0x01,
+            0xFF, 0x00, 0x80, 0x01, 0x01, 0xF8, 0xFF, 0x01, 0x8E, 0x01, 0x00, 0x01,
+            0xFF, 0x00, 0x80, 0x00
+        ]
+        for (let i = 0; i < tun.length; i += 2) w8(tun[i], tun[i + 1])
+
+        // ── Interrupción "muestra lista" en GPIO1 (se lee por I2C) ──
+        w8(0x0A, 0x04)                             // SYSTEM_INTERRUPT_CONFIG_GPIO
+        w8(0x84, r8(0x84) & ~0x10)                 // GPIO_HV_MUX_ACTIVE_HIGH: activa en bajo
+        w8(0x0B, 0x01)                             // SYSTEM_INTERRUPT_CLEAR
+
+        // ── Secuencia sin MSRC ni TCC y presupuesto de tiempo ──
+        w8(0x01, 0xE8)
+        // Estable: 66 ms (más preciso). Rápida: 20 ms (más muestras por segundo).
+        l0x_setTimingBudget(_s.rapido ? 20000 : 66000)
+
+        // ── Calibraciones de referencia: VHV y fase ──
+        w8(0x01, 0x01)
+        if (!l0x_refCalibration(0x40)) return false
+        w8(0x01, 0x02)
+        if (!l0x_refCalibration(0x00)) return false
+        w8(0x01, 0xE8)
 
         return true
     }
 
     function vl53l0x_read(): number {
         // Secuencia de inicio de medición single-shot
-        w8(0x80, 0x01)
-        w8(0xFF, 0x01)
-        w8(0x00, 0x00)
+        w8(0x80, 0x01); w8(0xFF, 0x01); w8(0x00, 0x00)
         w8(0x91, _s.stopVar)
-        w8(0x00, 0x01)
-        w8(0xFF, 0x00)
-        w8(0x80, 0x00)
-        w8(0x00, 0x01)  // SYSRANGE_START
+        w8(0x00, 0x01); w8(0xFF, 0x00); w8(0x80, 0x00)
+        w8(0x00, 0x01)                             // SYSRANGE_START
 
-        // Esperar resultado (RESULT_INTERRUPT_STATUS bit 0-2)
-        if (!poll_r8(0x13, 0x07, 0x07, 200)) return -1
+        // Esperar a que se borre el bit de arranque
+        let t = 0
+        while (r8(0x00) & 0x01) {
+            if (++t > 200) return -1
+            basic.pause(1)
+        }
 
-        // Leer distancia (16 bits en RESULT_RANGE_STATUS + 10)
-        let d = r8v16(0x1E)
+        // Esperar "muestra lista" (RESULT_INTERRUPT_STATUS bits 0-2 ≠ 0)
+        if (!poll_r8_nonzero(0x13, 0x07, 300)) return -1
+
+        // Distancia en mm (RESULT_RANGE_STATUS + 10)
+        const d = r8v16(0x1E)
 
         // Limpiar interrupción
         w8(0x0B, 0x01)
 
-        // Validar
-        if (d == 0 || d > 8190) return -1
+        // 8190/8191 = fuera de rango; 0 = sin medición
+        if (d == 0 || d >= 8000) return -1
         return d
     }
 
 
     // =========================================================================
-    // DRIVER: VL53L1X (TOF400C) — 0 a 400 cm
+    // DRIVER: VL53L1X (TOF400C) — 4 a 400 cm
     // =========================================================================
     // Chip: VL53L1X, infrarrojo 940 nm, FOV 27°
-    // Zona muerta: 0–4 cm
     // Registros: direcciones de 16 bits
-    // Referencia: ST VL53L1X Ultra Lite Driver (ULD)
+    // Referencia: ST VL53L1X Ultra Lite Driver (ULD): SensorInit,
+    // SetDistanceMode(Long), SetTimingBudgetInMs, SetInterMeasurementInMs,
+    // StartRanging, CheckForDataReady, GetDistance, GetRangeStatus.
     // =========================================================================
 
     function vl53l1x_init(): boolean {
-        // Esperar boot del sensor (bit 0 de registro 0x0001)
-        if (!poll_r16(0x0001, 0x01, 0x01, 1000)) return false
+        // Esperar el arranque del firmware (FIRMWARE__SYSTEM_STATUS bit 0)
+        if (!poll_r16(0x00E5, 0x01, 0x01, 1000)) return false
 
         // Verificar identidad (MODEL_ID + MODULE_TYPE = 0xEACC)
         if (r16v16(0x010F) != 0xEACC) return false
 
-        // ── Escribir configuración por defecto del ST ULD ──
-        // 91 bytes secuenciales desde registro 0x002D hasta 0x0087
+        // ── Configuración por defecto del ST ULD: 91 bytes desde 0x002D ──
         let cfg = [
             0x00, 0x00, 0x00, 0x01, 0x02, 0x00, 0x02, 0x08,
             0x00, 0x08, 0x10, 0x01, 0x01, 0x00, 0x00, 0x00,
@@ -448,34 +596,39 @@ namespace FisicaBitToF {
             0x00, 0x02, 0xC7, 0xFF, 0x9B, 0x00, 0x00, 0x00,
             0x01, 0x01, 0x40
         ]
-        // Escribir todo en una sola transacción I2C (eficiente)
         let buf = pins.createBuffer(cfg.length + 2)
-        buf[0] = 0x00  // Registro 0x002D byte alto
-        buf[1] = 0x2D  // Registro 0x002D byte bajo
+        buf[0] = 0x00
+        buf[1] = 0x2D
         for (let i = 0; i < cfg.length; i++) buf[i + 2] = cfg[i]
         _b.write(buf)
 
-        basic.pause(100)
+        // ── Primera medición de arranque (como en VL53L1X_SensorInit) ──
+        w16(0x0087, 0x40)                          // StartRanging
+        if (!poll_r16(0x0031, 0x01, 0x01, 500)) return false
+        w16(0x0086, 0x01)                          // ClearInterrupt
+        w16(0x0087, 0x00)                          // StopRanging
+        w16(0x0008, 0x09)                          // VHV_CONFIG__TIMEOUT_MACROP_LOOP_BOUND
+        w16(0x000B, 0x00)                          // arrancar VHV desde la temperatura previa
 
-        // ── Configurar modo de distancia largo (hasta 4 m) ──
-        w16(0x004B, 0x0A)      // PHASECAL timeout
-        w16(0x0060, 0x0F)      // VCSEL period A
-        w16(0x0063, 0x0D)      // VCSEL period B
-        w16(0x0069, 0xB8)      // Valid phase high
-        w16v16(0x0078, 0x0F0D) // WOI SD0
-        w16v16(0x007A, 0x0E0E) // Initial phase SD0
+        // ── Modo de distancia largo (hasta 4 m) ──
+        w16(0x004B, 0x0A)      // PHASECAL_CONFIG__TIMEOUT_MACROP
+        w16(0x0060, 0x0F)      // RANGE_CONFIG__VCSEL_PERIOD_A
+        w16(0x0063, 0x0D)      // RANGE_CONFIG__VCSEL_PERIOD_B
+        w16(0x0069, 0xB8)      // RANGE_CONFIG__VALID_PHASE_HIGH
+        w16v16(0x0078, 0x0F0D) // SD_CONFIG__WOI_SD0
+        w16v16(0x007A, 0x0E0E) // SD_CONFIG__INITIAL_PHASE_SD0
 
-        // ── Configurar timing budget ──
-        // Estable: 50ms (preciso), Rápido: 20ms (alta frecuencia)
+        // ── Presupuesto de tiempo (valores del ULD para modo largo) ──
+        // Estable: 50 ms. Rápida: 20 ms.
         if (_s.rapido) {
-            w16v16(0x005E, 0x001E)  // Timeout macro A
-            w16v16(0x0061, 0x0022)  // Timeout macro B
+            w16v16(0x005E, 0x001E)  // RANGE_CONFIG__TIMEOUT_MACROP_A_HI
+            w16v16(0x0061, 0x0022)  // RANGE_CONFIG__TIMEOUT_MACROP_B_HI
         } else {
-            w16v16(0x005E, 0x00AD)  // Timeout macro A
-            w16v16(0x0061, 0x00C6)  // Timeout macro B
+            w16v16(0x005E, 0x01AD)
+            w16v16(0x0061, 0x01E8)
         }
 
-        // ── Configurar período entre mediciones ──
+        // ── Período entre mediciones (≥ presupuesto + 4 ms) ──
         let clk = r16v16(0x00DE) & 0x3FF
         if (clk > 0) {
             let periodoMs = _s.rapido ? 25 : 55
@@ -483,7 +636,7 @@ namespace FisicaBitToF {
             w16v32(0x006C, val)
         }
 
-        // ── Iniciar medición continua ──
+        // ── Medición continua ──
         w16(0x0087, 0x40)
         basic.pause(20)
 
@@ -491,19 +644,20 @@ namespace FisicaBitToF {
     }
 
     function vl53l1x_read(): number {
-        // Esperar datos listos (bit 0 de GPIO__TIO_HV_STATUS)
-        if (!poll_r16(0x0031, 0x01, 0x01, 200)) return -1
+        // Esperar datos listos (GPIO__TIO_HV_STATUS bit 0 = polaridad activa)
+        if (!poll_r16(0x0031, 0x01, 0x01, 300)) return -1
 
-        // Leer distancia en mm (16 bits)
+        // Distancia en mm (RESULT__FINAL_CROSSTALK_CORRECTED_RANGE_MM_SD0)
         let d = r16v16(0x0096)
 
-        // Verificar estado del rango (0 = válido)
+        // Estado del rango: el chip devuelve 9 cuando la medición es válida
+        // (el ULD lo traduce a 0); 6 = sigma, 4 = señal, 7 = wraparound, ...
         let status = r16(0x0089) & 0x1F
 
-        // Limpiar interrupción (permite la siguiente medición)
+        // Limpiar interrupción (habilita la siguiente medición)
         w16(0x0086, 0x01)
 
-        if (status != 0) return -1
+        if (status != 9) return -1
         if (d == 0) return -1
 
         return d
