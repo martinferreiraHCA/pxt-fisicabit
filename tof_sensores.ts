@@ -100,6 +100,7 @@ namespace FisicaBitToF {
         ultOk: boolean            // ¿Última medición fue válida?
         stopVar: number           // Variable stop del VL53L0X
         ultIntentoMs: number
+        hist: number[]            // últimas lecturas válidas (mediana deslizante)
         constructor(sda: DigitalPin, scl: DigitalPin) {
             this.bus = new Bus(sda, scl)
             this.modeloPedido = ModeloToF.TOF200C
@@ -111,6 +112,7 @@ namespace FisicaBitToF {
             this.ultOk = false
             this.stopVar = 0
             this.ultIntentoMs = -100000
+            this.hist = []
         }
     }
 
@@ -299,23 +301,26 @@ namespace FisicaBitToF {
         w16(0x002E, 0x01)  // Calibración de temperatura
 
         // ── Configuración de rango ──
-        w16(0x001B, 0x09)  // Período entre mediciones ~100ms
+        // Período entre mediciones en modo continuo (pasos de 10 ms):
+        // estable 50 ms (≈20 Hz), rápida 30 ms (≈33 Hz)
+        w16(0x001B, _s.rapido ? 0x02 : 0x04)
         w16(0x003E, 0x31)  // VHV repeat rate
         w16(0x0014, 0x24)  // VHV recalibración
         // Tiempo máximo de convergencia: 50ms estable, 24ms rápido
-        w16(0x001C, _s.rapido ? 0x18 : 0x32)
+        w16(0x001C, _s.rapido ? 0x18 : 0x31)
 
         // Marcar como inicializado
         w16(0x0016, 0x00)
+
+        // Medición continua: el sensor mide solo y cada lectura toma la última
+        w16(0x0018, 0x03)
         return true
     }
 
     function vl6180x_read(): number {
-        // Iniciar medición single-shot
-        w16(0x0018, 0x01)
-
-        // Esperar medición completa (bit 2 de RESULT__INTERRUPT_STATUS_GPIO)
-        if (!poll_r16(0x004F, 0x04, 0x04, 150)) return -1
+        // Esperar la próxima muestra del modo continuo
+        // (RESULT__INTERRUPT_STATUS_GPIO bits 0-2 = 4: muestra lista)
+        if (!poll_r16(0x004F, 0x07, 0x04, 150)) return -1
 
         // Leer distancia en mm
         let d = r16(0x0062)
@@ -522,8 +527,8 @@ namespace FisicaBitToF {
 
         // ── Secuencia sin MSRC ni TCC y presupuesto de tiempo ──
         w8(0x01, 0xE8)
-        // Estable: 66 ms (más preciso). Rápida: 20 ms (más muestras por segundo).
-        l0x_setTimingBudget(_s.rapido ? 20000 : 66000)
+        // Estable: 33 ms (modo por defecto de ST, ≈30 Hz). Rápida: 20 ms (≈50 Hz).
+        l0x_setTimingBudget(_s.rapido ? 20000 : 33000)
 
         // ── Calibraciones de referencia: VHV y fase ──
         w8(0x01, 0x01)
@@ -532,30 +537,24 @@ namespace FisicaBitToF {
         if (!l0x_refCalibration(0x00)) return false
         w8(0x01, 0xE8)
 
+        // ── Medición continua "back-to-back": el sensor mide sin parar y
+        //    cada lectura toma la última muestra (máxima frecuencia) ──
+        w8(0x80, 0x01); w8(0xFF, 0x01); w8(0x00, 0x00)
+        w8(0x91, _s.stopVar)
+        w8(0x00, 0x01); w8(0xFF, 0x00); w8(0x80, 0x00)
+        w8(0x00, 0x02)                             // SYSRANGE_START back-to-back
+
         return true
     }
 
     function vl53l0x_read(): number {
-        // Secuencia de inicio de medición single-shot
-        w8(0x80, 0x01); w8(0xFF, 0x01); w8(0x00, 0x00)
-        w8(0x91, _s.stopVar)
-        w8(0x00, 0x01); w8(0xFF, 0x00); w8(0x80, 0x00)
-        w8(0x00, 0x01)                             // SYSRANGE_START
-
-        // Esperar a que se borre el bit de arranque
-        let t = 0
-        while (r8(0x00) & 0x01) {
-            if (++t > 200) return -1
-            basic.pause(1)
-        }
-
-        // Esperar "muestra lista" (RESULT_INTERRUPT_STATUS bits 0-2 ≠ 0)
-        if (!poll_r8_nonzero(0x13, 0x07, 300)) return -1
+        // Esperar "muestra lista" del modo continuo (RESULT_INTERRUPT_STATUS ≠ 0)
+        if (!poll_r8_nonzero(0x13, 0x07, 150)) return -1
 
         // Distancia en mm (RESULT_RANGE_STATUS + 10)
         const d = r8v16(0x1E)
 
-        // Limpiar interrupción
+        // Limpiar interrupción (libera la siguiente muestra)
         w8(0x0B, 0x01)
 
         // 8190/8191 = fuera de rango; 0 = sin medición
@@ -610,28 +609,32 @@ namespace FisicaBitToF {
         w16(0x0008, 0x09)                          // VHV_CONFIG__TIMEOUT_MACROP_LOOP_BOUND
         w16(0x000B, 0x00)                          // arrancar VHV desde la temperatura previa
 
-        // ── Modo de distancia largo (hasta 4 m) ──
-        w16(0x004B, 0x0A)      // PHASECAL_CONFIG__TIMEOUT_MACROP
-        w16(0x0060, 0x0F)      // RANGE_CONFIG__VCSEL_PERIOD_A
-        w16(0x0063, 0x0D)      // RANGE_CONFIG__VCSEL_PERIOD_B
-        w16(0x0069, 0xB8)      // RANGE_CONFIG__VALID_PHASE_HIGH
-        w16v16(0x0078, 0x0F0D) // SD_CONFIG__WOI_SD0
-        w16v16(0x007A, 0x0E0E) // SD_CONFIG__INITIAL_PHASE_SD0
-
-        // ── Presupuesto de tiempo (valores del ULD para modo largo) ──
-        // Estable: 50 ms. Rápida: 20 ms.
         if (_s.rapido) {
-            w16v16(0x005E, 0x001E)  // RANGE_CONFIG__TIMEOUT_MACROP_A_HI
-            w16v16(0x0061, 0x0022)  // RANGE_CONFIG__TIMEOUT_MACROP_B_HI
+            // ── Rápida: modo corto (hasta 1,3 m), 20 ms (≈40 Hz) ──
+            w16(0x004B, 0x14)      // PHASECAL_CONFIG__TIMEOUT_MACROP
+            w16(0x0060, 0x07)      // RANGE_CONFIG__VCSEL_PERIOD_A
+            w16(0x0063, 0x05)      // RANGE_CONFIG__VCSEL_PERIOD_B
+            w16(0x0069, 0x38)      // RANGE_CONFIG__VALID_PHASE_HIGH
+            w16v16(0x0078, 0x0705) // SD_CONFIG__WOI_SD0
+            w16v16(0x007A, 0x0606) // SD_CONFIG__INITIAL_PHASE_SD0
+            w16v16(0x005E, 0x001D) // RANGE_CONFIG__TIMEOUT_MACROP_A_HI (20 ms, modo corto)
+            w16v16(0x0061, 0x0022) // RANGE_CONFIG__TIMEOUT_MACROP_B_HI
         } else {
-            w16v16(0x005E, 0x01AD)
-            w16v16(0x0061, 0x01E8)
+            // ── Estable: modo largo (hasta 4 m), 33 ms (≈26 Hz) ──
+            w16(0x004B, 0x0A)
+            w16(0x0060, 0x0F)
+            w16(0x0063, 0x0D)
+            w16(0x0069, 0xB8)
+            w16v16(0x0078, 0x0F0D)
+            w16v16(0x007A, 0x0E0E)
+            w16v16(0x005E, 0x0060) // 33 ms, modo largo
+            w16v16(0x0061, 0x006E)
         }
 
         // ── Período entre mediciones (≥ presupuesto + 4 ms) ──
         let clk = r16v16(0x00DE) & 0x3FF
         if (clk > 0) {
-            let periodoMs = _s.rapido ? 25 : 55
+            let periodoMs = _s.rapido ? 24 : 38
             let val = Math.round(clk * periodoMs * 1.075)
             w16v32(0x006C, val)
         }
@@ -704,54 +707,35 @@ namespace FisicaBitToF {
     }
 
     /**
-     * Lee la distancia aplicando filtro de mediana.
-     * El filtro toma N lecturas, ordena y devuelve la central,
-     * eliminando picos espurios de manera robusta.
+     * Toma UNA lectura nueva y devuelve la mediana de las últimas N lecturas
+     * válidas (mediana deslizante): quita picos espurios sin bajar la
+     * frecuencia de muestreo (sólo agrega un retardo de N/2 muestras).
      */
     function _readFiltered(s: Sensor): number {
         if (!s.listo) return 0
 
-        let n = s.filtroN
-
-        // ── Sin filtro: lectura única ──
-        if (n <= 1) {
-            let d = _doRead(s)
-            if (d >= 0) {
-                s.ultVal = d
-                s.ultOk = true
-            } else {
-                s.ultOk = false
-            }
-            return d >= 0 ? d : s.ultVal
-        }
-
-        // ── Con filtro de mediana ──
-        let lecturas: number[] = []
-        let validas = 0
-
-        for (let i = 0; i < n; i++) {
-            let d = _doRead(s)
-            if (d >= 0) {
-                lecturas.push(d)
-                validas++
-            }
-            // Pausa entre lecturas para sensores single-shot
-            if (i < n - 1 && s.driver != 2) {
-                basic.pause(5)
-            }
-        }
-
-        if (validas == 0) {
+        const n = s.filtroN
+        const d = _doRead(s)
+        if (d < 0) {
             s.ultOk = false
             return s.ultVal
         }
-
-        // Ordenar y tomar mediana
-        isort(lecturas, validas)
-        let mediana = lecturas[Math.idiv(validas, 2)]
-        s.ultVal = mediana
         s.ultOk = true
-        return mediana
+
+        if (n <= 1) {
+            s.ultVal = d
+            return d
+        }
+
+        s.hist.push(d)
+        while (s.hist.length > n) s.hist.shift()
+
+        // Copiar, ordenar y tomar la del medio
+        let copia: number[] = []
+        for (let i = 0; i < s.hist.length; i++) copia.push(s.hist[i])
+        isort(copia, copia.length)
+        s.ultVal = copia[Math.idiv(copia.length, 2)]
+        return s.ultVal
     }
 
     /** Inicializa si hace falta, reintentando como mucho una vez por segundo. */
@@ -935,11 +919,11 @@ namespace FisicaBitToF {
     }
 
     /**
-     * Ajusta el suavizado de las mediciones.
-     * Más suavizado = menos ruido pero más lento.
+     * Ajusta el suavizado: mediana de las últimas 3, 5 o 7 lecturas. No baja
+     * la frecuencia de muestreo, pero agrega un retardo de 1, 2 o 3 muestras.
      *
      * Para MRU lento: bajo o medio
-     * Para caída libre: ninguno o bajo
+     * Para caída libre o choques: ninguno o bajo
      *
      * @param filtro Intensidad del suavizado
      */
@@ -950,13 +934,16 @@ namespace FisicaBitToF {
     //% filtro.defl=FiltroToF.Bajo
     export function tofFijarSuavizado(filtro: FiltroToF): void {
         _filtroDef = filtro
-        for (let i = 0; i < _sensores.length; i++) _sensores[i].filtroN = filtro
+        for (let i = 0; i < _sensores.length; i++) {
+            _sensores[i].filtroN = filtro
+            _sensores[i].hist = []
+        }
     }
 
     /**
      * Cambia el modo de medición.
-     * Estable: mediciones precisas para análisis detallado.
-     * Rápida: más mediciones por segundo para fenómenos veloces.
+     * Estable: ≈20–30 lecturas por segundo con el alcance completo del módulo.
+     * Rápida: ≈33–50 lecturas por segundo; en el TOF400C el alcance baja a 1,3 m.
      *
      * Si el sensor ya está iniciado, se re-inicializa automáticamente.
      *
