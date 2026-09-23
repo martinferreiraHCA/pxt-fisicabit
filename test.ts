@@ -325,3 +325,27 @@ basic.forever(function () {
     }
 })
 */
+
+
+// =============================================================================
+// PRUEBA 13: SENSORES LÁSER ToF EN UN SOLO BLOQUE (dos sensores a la vez)
+// =============================================================================
+// HARDWARE: Sensor 1 (TOF200C o GY-VL53L0XV2): SDA → P20, SCL → P19.
+//           Sensor 2 (TOF400C): SDA → P14, SCL → P13. Ambos VCC → 3V, GND → GND.
+// ÉXITO: Al iniciar muestra el módulo detectado en cada bus. Las dos
+//        distancias cambian al acercar la mano; sin objeto: última válida.
+//        "¿hay sensor ToF?" = verdadero en ambos pares de pines.
+// FALLA: "none" en el módulo detectado, distancias fijas en 0 o excepción.
+// =============================================================================
+
+/*
+basic.showString(FisicaBitToF.tofModuloDetectado(DigitalPin.P20, DigitalPin.P19))
+basic.showString(FisicaBitToF.tofPinesSugeridos(2))
+basic.forever(function () {
+    FisicaBitSerial.enviar2(
+        FisicaBitToF.tofDistancia(ModeloToF.Auto, DigitalPin.P20, DigitalPin.P19, UnidadDistancia.Centimetros),
+        FisicaBitToF.tofDistancia(ModeloToF.TOF400C, DigitalPin.P14, DigitalPin.P13, UnidadDistancia.Centimetros),
+        50
+    )
+})
+*/

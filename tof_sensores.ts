@@ -2,32 +2,32 @@
 //  tof_sensores.ts — Sensores de distancia ToF (Time-of-Flight) por I2C
 // =============================================================================
 //  Proyecto: FisicaBit.com
-//  Sensores soportados:
-//    - TOF050C (chip VL6180X)  — 0 a 50 cm,  infrarrojo 850 nm, FOV 25°
-//    - TOF200C (chip VL53L0X)  — 0 a 200 cm, infrarrojo 940 nm, FOV 25°
-//    - TOF400C (chip VL53L1X)  — 0 a 400 cm, infrarrojo 940 nm, FOV 27°
+//  Módulos soportados (todos con dirección I2C 0x29):
+//    - TOF050C      (chip VL6180X) — 2 a 50 cm,   infrarrojo 850 nm, FOV 25°
+//    - TOF200C      (chip VL53L0X) — 3 a 200 cm,  infrarrojo 940 nm, FOV 25°
+//    - GY-VL53L0XV2 (chip VL53L0X) — 3 a 200 cm,  igual que el TOF200C
+//    - TOF400C      (chip VL53L1X) — 4 a 400 cm,  infrarrojo 940 nm, FOV 27°
+//    - "autodetectar": lee el registro de identidad del chip y elige el driver
 //
-//  Comunicación: I2C (dirección 7-bit: 0x29)
-//  Alimentación: 3.0V – 5.0V DC, 40 mA máx.
-//  Solo se puede usar UN sensor a la vez (comparten dirección I2C).
+//  Alimentación: 3 V – 5 V DC, 40 mA máx.
 //
-//  CABLEADO (igual para los 3 módulos):
-//    ┌──────────────────────────────────┐
-//    │  Módulo TOF                      │
-//    │  ┌──────────────────────┐        │
-//    │  │  VCC  │──── 3V       │        │
-//    │  │  GND  │──── GND      │        │
-//    │  │  SDA  │──── P20 (SDA)│        │  Bus I2C del micro:bit
-//    │  │  SCL  │──── P19 (SCL)│        │
-//    │  └──────────────────────┘        │
-//    └──────────────────────────────────┘
+//  PINES (kit de expansión / breakout del micro:bit):
+//    1er sensor: SDA → P20 (marcado "SDA" o "20"), SCL → P19 ("SCL" o "19").
+//                Es el bus I2C por hardware: el más rápido y el recomendado.
+//    2º sensor:  SDA → P14, SCL → P13  (I2C por software, ver shims.cpp)
+//    3er sensor: SDA → P16, SCL → P15
+//    Como los módulos usan la misma dirección (0x29), para usar más de uno
+//    hay que darles pines distintos. P13–P16 son pines digitales libres en
+//    todos los kits (no tocan la pantalla LED ni los botones) y dejan P0–P2
+//    libres para sensores analógicos.
 //
-//  USO TÍPICO EN BLOQUES:
-//    al iniciar:
-//      [seleccionar módulo ToF [TOF200C (2 m)]]
-//      [inicializar sensor ToF]
+//  CABLEADO (igual para todos los módulos):
+//    VCC → 3V · GND → GND · SDA → pin SDA elegido · SCL → pin SCL elegido
+//
+//  USO TÍPICO EN BLOQUES (un solo bloque, se inicializa solo):
 //    por siempre:
-//      [serial muestrear [tiempo serial] y [distancia ToF mm] cada 50 ms]
+//      [enviar a fisicabit.com tiempo y
+//         (distancia ToF [TOF200C] SDA [P20] SCL [P19] en [cm]) cada 50 ms]
 // =============================================================================
 
 
@@ -36,20 +36,116 @@
 //% color=#1E90FF
 //% icon="\uf140"
 //% block="ToF — Laser Distance"
-//% groups='["Configuration", "Measurement", "Diagnostics"]'
+//% groups='["Measurement", "Configuration", "Diagnostics"]'
 namespace FisicaBitToF {
 
     // =========================================================================
-    // Estado interno
+    // Bus I2C: por hardware (P20/P19) o por software (cualquier otro par)
     // =========================================================================
     const ADDR = 0x29
-    let _modelo = 1           // 0=VL6180X, 1=VL53L0X, 2=VL53L1X
-    let _listo = false
-    let _filtroN = 3
-    let _rapido = false
-    let _ultVal = 0           // Último valor válido (fallback)
-    let _ultOk = false        // ¿Última medición fue válida?
-    let _stopVar = 0          // Variable stop del VL53L0X
+
+    //% shim=fisicabit_native::swi2cWrite
+    function _swWrite(sda: number, scl: number, addr: number, b: Buffer): number {
+        return 3   // simulador: sin bus por software
+    }
+
+    //% shim=fisicabit_native::swi2cRead
+    function _swRead(sda: number, scl: number, addr: number, n: number): Buffer {
+        return pins.createBuffer(0)
+    }
+
+    class Bus {
+        sda: DigitalPin
+        scl: DigitalPin
+        hw: boolean
+        ok: boolean
+        constructor(sda: DigitalPin, scl: DigitalPin) {
+            this.sda = sda
+            this.scl = scl
+            this.hw = (sda == DigitalPin.P20 && scl == DigitalPin.P19)
+            this.ok = true
+        }
+        write(b: Buffer): void {
+            if (this.hw) {
+                this.ok = pins.i2cWriteBuffer(ADDR, b) == 0
+            } else {
+                this.ok = _swWrite(this.sda, this.scl, ADDR, b) == 0
+            }
+        }
+        read(n: number): Buffer {
+            if (this.hw) return pins.i2cReadBuffer(ADDR, n)
+            const r = _swRead(this.sda, this.scl, ADDR, n)
+            if (r.length < n) {
+                this.ok = false
+                return pins.createBuffer(n)
+            }
+            return r
+        }
+    }
+
+    // =========================================================================
+    // Sensor: un objeto por par de pines (permite varios módulos a la vez)
+    // =========================================================================
+    let _filtroDef = 3
+    let _rapidoDef = false
+
+    class Sensor {
+        bus: Bus
+        modeloPedido: ModeloToF
+        driver: number            // 0=VL6180X, 1=VL53L0X, 2=VL53L1X, -1=desconocido
+        listo: boolean
+        filtroN: number
+        rapido: boolean
+        ultVal: number            // Último valor válido (fallback)
+        ultOk: boolean            // ¿Última medición fue válida?
+        stopVar: number           // Variable stop del VL53L0X
+        ultIntentoMs: number
+        constructor(sda: DigitalPin, scl: DigitalPin) {
+            this.bus = new Bus(sda, scl)
+            this.modeloPedido = ModeloToF.TOF200C
+            this.driver = -1
+            this.listo = false
+            this.filtroN = _filtroDef
+            this.rapido = _rapidoDef
+            this.ultVal = 0
+            this.ultOk = false
+            this.stopVar = 0
+            this.ultIntentoMs = -100000
+        }
+    }
+
+    let _sensores: Sensor[] = []
+    let _s: Sensor = null      // sensor activo (lo usan los drivers)
+    let _b: Bus = null         // bus activo
+
+    function _obtener(sda: DigitalPin, scl: DigitalPin): Sensor {
+        for (let i = 0; i < _sensores.length; i++) {
+            const t = _sensores[i]
+            if (t.bus.sda == sda && t.bus.scl == scl) return t
+        }
+        const nuevo = new Sensor(sda, scl)
+        _sensores.push(nuevo)
+        return nuevo
+    }
+
+    function _porDefecto(): Sensor {
+        return _obtener(DigitalPin.P20, DigitalPin.P19)
+    }
+
+    function _activar(s: Sensor): void {
+        _s = s
+        _b = s.bus
+    }
+
+    function _driverDe(modelo: ModeloToF): number {
+        switch (modelo) {
+            case ModeloToF.TOF050C: return 0
+            case ModeloToF.TOF200C: return 1
+            case ModeloToF.VL53L0XV2: return 1
+            case ModeloToF.TOF400C: return 2
+            default: return -1     // Auto
+        }
+    }
 
     // =========================================================================
     // I2C — Direcciones de registro de 8 bits (VL53L0X)
@@ -58,12 +154,14 @@ namespace FisicaBitToF {
     function w8(reg: number, val: number): void {
         let b = pins.createBuffer(2)
         b[0] = reg; b[1] = val
-        pins.i2cWriteBuffer(ADDR, b)
+        _b.write(b)
     }
 
     function r8(reg: number): number {
-        pins.i2cWriteNumber(ADDR, reg, NumberFormat.UInt8BE)
-        return pins.i2cReadNumber(ADDR, NumberFormat.UInt8BE)
+        let b = pins.createBuffer(1)
+        b[0] = reg
+        _b.write(b)
+        return _b.read(1)[0]
     }
 
     function w8v16(reg: number, val: number): void {
@@ -71,13 +169,15 @@ namespace FisicaBitToF {
         b[0] = reg
         b[1] = (val >> 8) & 0xFF
         b[2] = val & 0xFF
-        pins.i2cWriteBuffer(ADDR, b)
+        _b.write(b)
     }
 
     function r8v16(reg: number): number {
-        pins.i2cWriteNumber(ADDR, reg, NumberFormat.UInt8BE)
-        let b = pins.i2cReadBuffer(ADDR, 2)
-        return (b[0] << 8) | b[1]
+        let b = pins.createBuffer(1)
+        b[0] = reg
+        _b.write(b)
+        let r = _b.read(2)
+        return (r[0] << 8) | r[1]
     }
 
     // =========================================================================
@@ -89,15 +189,15 @@ namespace FisicaBitToF {
         b[0] = (reg >> 8) & 0xFF
         b[1] = reg & 0xFF
         b[2] = val & 0xFF
-        pins.i2cWriteBuffer(ADDR, b)
+        _b.write(b)
     }
 
     function r16(reg: number): number {
         let b = pins.createBuffer(2)
         b[0] = (reg >> 8) & 0xFF
         b[1] = reg & 0xFF
-        pins.i2cWriteBuffer(ADDR, b)
-        return pins.i2cReadBuffer(ADDR, 1)[0]
+        _b.write(b)
+        return _b.read(1)[0]
     }
 
     function w16v16(reg: number, val: number): void {
@@ -106,15 +206,15 @@ namespace FisicaBitToF {
         b[1] = reg & 0xFF
         b[2] = (val >> 8) & 0xFF
         b[3] = val & 0xFF
-        pins.i2cWriteBuffer(ADDR, b)
+        _b.write(b)
     }
 
     function r16v16(reg: number): number {
         let b = pins.createBuffer(2)
         b[0] = (reg >> 8) & 0xFF
         b[1] = reg & 0xFF
-        pins.i2cWriteBuffer(ADDR, b)
-        let r = pins.i2cReadBuffer(ADDR, 2)
+        _b.write(b)
+        let r = _b.read(2)
         return (r[0] << 8) | r[1]
     }
 
@@ -126,7 +226,7 @@ namespace FisicaBitToF {
         b[3] = (val >> 16) & 0xFF
         b[4] = (val >> 8) & 0xFF
         b[5] = val & 0xFF
-        pins.i2cWriteBuffer(ADDR, b)
+        _b.write(b)
     }
 
     // =========================================================================
@@ -203,7 +303,7 @@ namespace FisicaBitToF {
         w16(0x003E, 0x31)  // VHV repeat rate
         w16(0x0014, 0x24)  // VHV recalibración
         // Tiempo máximo de convergencia: 50ms estable, 24ms rápido
-        w16(0x001C, _rapido ? 0x18 : 0x32)
+        w16(0x001C, _s.rapido ? 0x18 : 0x32)
 
         // Marcar como inicializado
         w16(0x0016, 0x00)
@@ -255,7 +355,7 @@ namespace FisicaBitToF {
         w8(0x80, 0x01)
         w8(0xFF, 0x01)
         w8(0x00, 0x00)
-        _stopVar = r8(0x91)
+        _s.stopVar = r8(0x91)
         w8(0x00, 0x01)
         w8(0xFF, 0x00)
         w8(0x80, 0x00)
@@ -270,7 +370,7 @@ namespace FisicaBitToF {
         w8(0x01, 0xE8)
 
         // Configuración de rango largo (mejor para > 50cm)
-        if (!_rapido) {
+        if (!_s.rapido) {
             w8v16(0x51, 0x0099)  // Range config period A
             w8v16(0x70, 0x0078)  // Range config period B
         }
@@ -295,7 +395,7 @@ namespace FisicaBitToF {
         w8(0x80, 0x01)
         w8(0xFF, 0x01)
         w8(0x00, 0x00)
-        w8(0x91, _stopVar)
+        w8(0x91, _s.stopVar)
         w8(0x00, 0x01)
         w8(0xFF, 0x00)
         w8(0x80, 0x00)
@@ -353,7 +453,7 @@ namespace FisicaBitToF {
         buf[0] = 0x00  // Registro 0x002D byte alto
         buf[1] = 0x2D  // Registro 0x002D byte bajo
         for (let i = 0; i < cfg.length; i++) buf[i + 2] = cfg[i]
-        pins.i2cWriteBuffer(ADDR, buf)
+        _b.write(buf)
 
         basic.pause(100)
 
@@ -367,7 +467,7 @@ namespace FisicaBitToF {
 
         // ── Configurar timing budget ──
         // Estable: 50ms (preciso), Rápido: 20ms (alta frecuencia)
-        if (_rapido) {
+        if (_s.rapido) {
             w16v16(0x005E, 0x001E)  // Timeout macro A
             w16v16(0x0061, 0x0022)  // Timeout macro B
         } else {
@@ -378,7 +478,7 @@ namespace FisicaBitToF {
         // ── Configurar período entre mediciones ──
         let clk = r16v16(0x00DE) & 0x3FF
         if (clk > 0) {
-            let periodoMs = _rapido ? 25 : 55
+            let periodoMs = _s.rapido ? 25 : 55
             let val = Math.round(clk * periodoMs * 1.075)
             w16v32(0x006C, val)
         }
@@ -414,23 +514,39 @@ namespace FisicaBitToF {
     // Dispatcher interno — enruta al driver correcto
     // =========================================================================
 
-    function _doInit(): boolean {
-        switch (_modelo) {
-            case 0: return vl6180x_init()
-            case 1: return vl53l0x_init()
-            case 2: return vl53l1x_init()
-            default: return false
-        }
+    /** Detecta el chip leyendo su registro de identidad (bus activo). */
+    function _detectar(): number {
+        if (r16(0x0000) == 0xB4 && _b.ok) return 0          // VL6180X
+        if (r16v16(0x010F) == 0xEACC && _b.ok) return 2      // VL53L1X
+        if (r8(0xC0) == 0xEE && _b.ok) return 1              // VL53L0X
+        return -1
     }
 
-    function _doRead(): number {
-        if (!_listo) return -1
-        switch (_modelo) {
-            case 0: return vl6180x_read()
-            case 1: return vl53l0x_read()
-            case 2: return vl53l1x_read()
-            default: return -1
+    function _doInit(s: Sensor): boolean {
+        _activar(s)
+        s.bus.ok = true
+        s.driver = _driverDe(s.modeloPedido)
+        if (s.driver < 0) s.driver = _detectar()
+        if (s.driver < 0) return false
+        let ok = false
+        switch (s.driver) {
+            case 0: ok = vl6180x_init(); break
+            case 1: ok = vl53l0x_init(); break
+            case 2: ok = vl53l1x_init(); break
         }
+        return ok && s.bus.ok
+    }
+
+    function _doRead(s: Sensor): number {
+        if (!s.listo) return -1
+        _activar(s)
+        let d = -1
+        switch (s.driver) {
+            case 0: d = vl6180x_read(); break
+            case 1: d = vl53l0x_read(); break
+            case 2: d = vl53l1x_read(); break
+        }
+        return s.bus.ok ? d : -1
     }
 
     /**
@@ -438,21 +554,21 @@ namespace FisicaBitToF {
      * El filtro toma N lecturas, ordena y devuelve la central,
      * eliminando picos espurios de manera robusta.
      */
-    function _readFiltered(): number {
-        if (!_listo) return 0
+    function _readFiltered(s: Sensor): number {
+        if (!s.listo) return 0
 
-        let n = _filtroN
+        let n = s.filtroN
 
         // ── Sin filtro: lectura única ──
         if (n <= 1) {
-            let d = _doRead()
+            let d = _doRead(s)
             if (d >= 0) {
-                _ultVal = d
-                _ultOk = true
+                s.ultVal = d
+                s.ultOk = true
             } else {
-                _ultOk = false
+                s.ultOk = false
             }
-            return d >= 0 ? d : _ultVal
+            return d >= 0 ? d : s.ultVal
         }
 
         // ── Con filtro de mediana ──
@@ -460,28 +576,156 @@ namespace FisicaBitToF {
         let validas = 0
 
         for (let i = 0; i < n; i++) {
-            let d = _doRead()
+            let d = _doRead(s)
             if (d >= 0) {
                 lecturas.push(d)
                 validas++
             }
             // Pausa entre lecturas para sensores single-shot
-            if (i < n - 1 && _modelo != 2) {
+            if (i < n - 1 && s.driver != 2) {
                 basic.pause(5)
             }
         }
 
         if (validas == 0) {
-            _ultOk = false
-            return _ultVal
+            s.ultOk = false
+            return s.ultVal
         }
 
         // Ordenar y tomar mediana
         isort(lecturas, validas)
         let mediana = lecturas[Math.idiv(validas, 2)]
-        _ultVal = mediana
-        _ultOk = true
+        s.ultVal = mediana
+        s.ultOk = true
         return mediana
+    }
+
+    /** Inicializa si hace falta, reintentando como mucho una vez por segundo. */
+    function _asegurar(s: Sensor): boolean {
+        if (s.listo) return true
+        const ahora = control.millis()
+        if (ahora - s.ultIntentoMs < 1000) return false
+        s.ultIntentoMs = ahora
+        s.listo = _doInit(s)
+        if (!s.listo) s.ultOk = false
+        return s.listo
+    }
+
+    function _convertir(mm: number, unidad: UnidadDistancia): number {
+        switch (unidad) {
+            case UnidadDistancia.Milimetros: return mm
+            case UnidadDistancia.Pulgadas: return Math.round(mm / 25.4 * 100) / 100
+            default: return Math.round(mm) / 10          // cm con 1 decimal
+        }
+    }
+
+    function _nombreDriver(d: number): string {
+        switch (d) {
+            case 0: return "TOF050C (VL6180X)"
+            case 1: return "TOF200C / GY-VL53L0XV2 (VL53L0X)"
+            case 2: return "TOF400C (VL53L1X)"
+            default: return "none"
+        }
+    }
+
+    // =========================================================================
+    // BLOQUES PÚBLICOS — Medición en un solo bloque
+    // =========================================================================
+
+    /**
+     * Mide la distancia con un módulo láser ToF en UN solo bloque: elegí el
+     * módulo, indicá en qué pines está conectado y la unidad. Se inicializa
+     * solo la primera vez (y se reintenta si el sensor no responde); usa
+     * filtro de mediana y, si una medición falla, devuelve la última válida.
+     *
+     * Pines sugeridos en un kit de expansión del micro:bit:
+     *   1er sensor: SDA P20 (pin "SDA"/"20") y SCL P19 ("SCL"/"19") = bus
+     *               I2C por hardware, el más rápido. VCC → 3V, GND → GND.
+     *   2º sensor:  SDA P14 y SCL P13 · 3er sensor: SDA P16 y SCL P15
+     *               (los módulos comparten la dirección 0x29, así que cada
+     *               sensor extra necesita su propio par de pines).
+     *
+     * Ejemplo (MRU en un riel): [para siempre] → [enviar a fisicabit.com
+     * tiempo y (distancia ToF [TOF200C] SDA [P20] SCL [P19] en [cm]) cada 50 ms]
+     * @param modelo Módulo conectado (o autodetectar)
+     * @param sda Pin conectado a SDA del módulo
+     * @param scl Pin conectado a SCL del módulo
+     * @param unidad Unidad: cm (1 decimal), mm o pulgadas
+     */
+    //% block="ToF distance %modelo SDA %sda SCL %scl in %unidad"
+    //% blockId=fisicabit_tof_distancia
+    //% group="Measurement"
+    //% weight=100
+    //% inlineInputMode=inline
+    //% modelo.defl=ModeloToF.TOF200C
+    //% sda.defl=DigitalPin.P20
+    //% scl.defl=DigitalPin.P19
+    //% unidad.defl=UnidadDistancia.Centimetros
+    export function tofDistancia(modelo: ModeloToF, sda: DigitalPin, scl: DigitalPin, unidad: UnidadDistancia): number {
+        const s = _obtener(sda, scl)
+        if (s.modeloPedido != modelo) {
+            s.modeloPedido = modelo
+            s.listo = false
+            s.ultIntentoMs = -100000
+        }
+        if (!_asegurar(s)) return _convertir(s.ultVal, unidad)
+        return _convertir(_readFiltered(s), unidad)
+    }
+
+    /**
+     * Pines sugeridos para el sensor número 1, 2 o 3 en un kit de expansión
+     * del micro:bit, como texto (por ejemplo "SDA P20 SCL P19"). Mostrarlo
+     * en pantalla o enviarlo por USB para saber dónde cablear.
+     * @param numero Número de sensor (1 = bus por hardware P20/P19)
+     */
+    //% block="suggested ToF pins for sensor number %numero"
+    //% blockId=fisicabit_tof_pines
+    //% group="Measurement"
+    //% weight=95
+    //% numero.min=1 numero.max=3 numero.defl=1
+    export function tofPinesSugeridos(numero: number): string {
+        if (numero <= 1) return "SDA P20 SCL P19"
+        if (numero == 2) return "SDA P14 SCL P13"
+        return "SDA P16 SCL P15"
+    }
+
+    /**
+     * Módulo detectado en los pines indicados, leyendo la identidad del chip:
+     * "TOF050C (VL6180X)", "TOF200C / GY-VL53L0XV2 (VL53L0X)",
+     * "TOF400C (VL53L1X)" o "none" si no responde nada (revisar VCC, GND y
+     * que SDA/SCL no estén cruzados).
+     * @param sda Pin conectado a SDA del módulo
+     * @param scl Pin conectado a SCL del módulo
+     */
+    //% block="ToF module detected SDA %sda SCL %scl"
+    //% blockId=fisicabit_tof_detectado
+    //% group="Diagnostics"
+    //% weight=82
+    //% sda.defl=DigitalPin.P20
+    //% scl.defl=DigitalPin.P19
+    export function tofModuloDetectado(sda: DigitalPin, scl: DigitalPin): string {
+        const s = _obtener(sda, scl)
+        _activar(s)
+        s.bus.ok = true
+        return _nombreDriver(_detectar())
+    }
+
+    /**
+     * Verdadero si hay un módulo ToF respondiendo en los pines indicados.
+     * @param sda Pin conectado a SDA del módulo
+     * @param scl Pin conectado a SCL del módulo
+     */
+    //% block="ToF sensor found? SDA %sda SCL %scl"
+    //% blockId=fisicabit_tof_hay
+    //% group="Diagnostics"
+    //% weight=81
+    //% sda.defl=DigitalPin.P20
+    //% scl.defl=DigitalPin.P19
+    export function tofHaySensor(sda: DigitalPin, scl: DigitalPin): boolean {
+        const s = _obtener(sda, scl)
+        _activar(s)
+        s.bus.ok = true
+        return _detectar() >= 0
     }
 
 
@@ -490,8 +734,9 @@ namespace FisicaBitToF {
     // =========================================================================
 
     /**
-     * Selecciona el módulo ToF que vas a usar.
-     * Llamar ANTES de inicializar.
+     * (Modo clásico, sensor en P20/P19) Selecciona el módulo ToF que vas a
+     * usar. Llamar ANTES de inicializar. Con el bloque "distancia ToF ..."
+     * de un solo paso no hace falta.
      *
      * @param modelo El módulo conectado al micro:bit
      */
@@ -501,8 +746,9 @@ namespace FisicaBitToF {
     //% weight=100
     //% modelo.defl=ModeloToF.TOF200C
     export function tofSeleccionarModulo(modelo: ModeloToF): void {
-        _modelo = modelo
-        _listo = false
+        const s = _porDefecto()
+        s.modeloPedido = modelo
+        s.listo = false
     }
 
     /**
@@ -521,10 +767,11 @@ namespace FisicaBitToF {
     //% group="Configuration"
     //% weight=99
     export function tofInicializar(): void {
-        _listo = _doInit()
-        _ultVal = 0
-        _ultOk = false
-        if (_listo) {
+        const s = _porDefecto()
+        s.listo = _doInit(s)
+        s.ultVal = 0
+        s.ultOk = false
+        if (s.listo) {
             basic.showIcon(IconNames.Yes)
         } else {
             basic.showIcon(IconNames.No)
@@ -548,7 +795,8 @@ namespace FisicaBitToF {
     //% weight=95
     //% filtro.defl=FiltroToF.Bajo
     export function tofFijarSuavizado(filtro: FiltroToF): void {
-        _filtroN = filtro
+        _filtroDef = filtro
+        for (let i = 0; i < _sensores.length; i++) _sensores[i].filtroN = filtro
     }
 
     /**
@@ -566,9 +814,11 @@ namespace FisicaBitToF {
     //% weight=94
     //% modo.defl=ModoToF.Estable
     export function tofFijarModo(modo: ModoToF): void {
-        _rapido = (modo == ModoToF.Rapida)
-        if (_listo) {
-            _listo = _doInit()
+        _rapidoDef = (modo == ModoToF.Rapida)
+        for (let i = 0; i < _sensores.length; i++) {
+            const s = _sensores[i]
+            s.rapido = _rapidoDef
+            if (s.listo) s.listo = _doInit(s)
         }
     }
 
@@ -578,29 +828,32 @@ namespace FisicaBitToF {
     // =========================================================================
 
     /**
-     * Mide la distancia en milímetros.
-     * Incluye filtro de mediana para eliminar picos espurios.
-     * Ideal para muestreo serial o Bluetooth en experimentos de movimiento.
+     * (Modo clásico, sensor en P20/P19) Mide la distancia en milímetros.
+     * Incluye filtro de mediana para eliminar picos espurios. Si todavía no
+     * se inicializó, lo hace solo con el módulo seleccionado.
      */
     //% block="ToF distance (mm)"
     //% blockId=fisicabit_tof_mm
     //% group="Measurement"
     //% weight=90
     export function tofDistanciaMm(): number {
-        return _readFiltered()
+        const s = _porDefecto()
+        if (!_asegurar(s)) return s.ultVal
+        return _readFiltered(s)
     }
 
     /**
-     * Mide la distancia en centímetros (entero).
-     * Útil para mostrar en la pantalla LED o para cálculos simples.
+     * (Modo clásico, sensor en P20/P19) Mide la distancia en centímetros
+     * (entero). Útil para mostrar en la pantalla LED o para cálculos simples.
      */
     //% block="ToF distance (cm)"
     //% blockId=fisicabit_tof_cm
     //% group="Measurement"
     //% weight=89
     export function tofDistanciaCm(): number {
-        let mm = _readFiltered()
-        return Math.idiv(mm, 10)
+        const s = _porDefecto()
+        if (!_asegurar(s)) return Math.idiv(s.ultVal, 10)
+        return Math.idiv(_readFiltered(s), 10)
     }
 
     /**
@@ -613,7 +866,9 @@ namespace FisicaBitToF {
     //% group="Measurement"
     //% weight=85
     export function tofMedicionValida(): boolean {
-        return _ultOk
+        let ok = false
+        for (let i = 0; i < _sensores.length; i++) if (_sensores[i].ultOk) ok = true
+        return ok
     }
 
 
@@ -630,7 +885,7 @@ namespace FisicaBitToF {
     //% group="Diagnostics"
     //% weight=80
     export function tofSensorConectado(): boolean {
-        return _listo
+        return _porDefecto().listo
     }
 
     /**
@@ -642,11 +897,14 @@ namespace FisicaBitToF {
     //% group="Diagnostics"
     //% weight=75
     export function tofReiniciar(): void {
-        _listo = false
-        basic.pause(50)
-        _listo = _doInit()
-        _ultVal = 0
-        _ultOk = false
+        for (let i = 0; i < _sensores.length; i++) {
+            const s = _sensores[i]
+            s.listo = false
+            basic.pause(50)
+            s.listo = _doInit(s)
+            s.ultVal = 0
+            s.ultOk = false
+        }
     }
 
     /**
@@ -659,6 +917,8 @@ namespace FisicaBitToF {
     //% group="Diagnostics"
     //% weight=70
     export function tofDistanciaCrudaMm(): number {
-        return _doRead()
+        const s = _porDefecto()
+        if (!_asegurar(s)) return -1
+        return _doRead(s)
     }
 }

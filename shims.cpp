@@ -902,4 +902,128 @@ namespace fisicabit_native {
         return p ? 1 : 0;
     }
 
+    // =========================================================================
+    // I2C POR SOFTWARE — bus I2C en cualquier par de pines (SDA, SCL)
+    // =========================================================================
+    // Permite conectar sensores I2C fuera de P19/P20, por ejemplo un segundo
+    // sensor ToF que tiene la misma dirección (0x29) que el primero.
+    // Bit-bang a ~50-100 kHz, salidas en colector abierto (pull-up interno
+    // más el del módulo), con soporte de clock stretching. Sólo micro:bit v2.
+    // =========================================================================
+#if MICROBIT_CODAL
+    static void fbI2cRelease(int pin) { FB_DS_PORT->PIN_CNF[FB_DS_PIN] = 0x0000000C; }   // entrada + pull-up
+    static void fbI2cLow(int pin)     { FB_DS_PORT->OUTCLR = 1 << FB_DS_PIN; FB_DS_PORT->PIN_CNF[FB_DS_PIN] = 0x00000001; }
+    static bool fbI2cReadPin(int pin) { return (FB_DS_PORT->IN & (1 << FB_DS_PIN)) != 0; }
+
+    static bool fbI2cSclHigh(int scl) {
+        fbI2cRelease(scl);
+        int t = 3000;
+        while (!fbI2cReadPin(scl) && t-- > 0) fb_ds_wait_us(1);
+        return t > 0;
+    }
+    static void fbI2cStart(int sda, int scl) {
+        fbI2cRelease(sda); fbI2cSclHigh(scl); fb_ds_wait_us(4);
+        fbI2cLow(sda); fb_ds_wait_us(4);
+        fbI2cLow(scl); fb_ds_wait_us(2);
+    }
+    static void fbI2cStop(int sda, int scl) {
+        fbI2cLow(sda); fb_ds_wait_us(2);
+        fbI2cSclHigh(scl); fb_ds_wait_us(4);
+        fbI2cRelease(sda); fb_ds_wait_us(4);
+    }
+    static bool fbI2cWriteByte(int sda, int scl, uint8_t b) {
+        for (int i = 7; i >= 0; i--) {
+            if (b & (1 << i)) fbI2cRelease(sda); else fbI2cLow(sda);
+            fb_ds_wait_us(2);
+            if (!fbI2cSclHigh(scl)) return false;
+            fb_ds_wait_us(4);
+            fbI2cLow(scl);
+            fb_ds_wait_us(2);
+        }
+        fbI2cRelease(sda);
+        fb_ds_wait_us(2);
+        if (!fbI2cSclHigh(scl)) return false;
+        fb_ds_wait_us(2);
+        bool ack = !fbI2cReadPin(sda);
+        fb_ds_wait_us(2);
+        fbI2cLow(scl);
+        fb_ds_wait_us(2);
+        return ack;
+    }
+    static uint8_t fbI2cReadByte(int sda, int scl, bool ack) {
+        uint8_t b = 0;
+        fbI2cRelease(sda);
+        for (int i = 7; i >= 0; i--) {
+            fb_ds_wait_us(2);
+            fbI2cSclHigh(scl);
+            fb_ds_wait_us(2);
+            if (fbI2cReadPin(sda)) b |= (1 << i);
+            fb_ds_wait_us(2);
+            fbI2cLow(scl);
+            fb_ds_wait_us(2);
+        }
+        if (ack) fbI2cLow(sda); else fbI2cRelease(sda);
+        fb_ds_wait_us(2);
+        fbI2cSclHigh(scl);
+        fb_ds_wait_us(4);
+        fbI2cLow(scl);
+        fbI2cRelease(sda);
+        fb_ds_wait_us(2);
+        return b;
+    }
+    static bool fbI2cPines(int sda, int scl, int &sdaN, int &sclN) {
+        MicroBitPin *a = pxt::getPin(sda);
+        MicroBitPin *b = pxt::getPin(scl);
+        if (!a || !b || a == b) return false;
+        sdaN = a->name; sclN = b->name;
+        return true;
+    }
+#endif
+
+    // Escribe `b` al dispositivo `addr` (7 bits) por I2C de software en los
+    // pines `sda`/`scl` (ids de DigitalPin). 0 = OK, 1 = sin ACK de dirección,
+    // 2 = sin ACK de datos, 3 = no disponible (v1) o pines inválidos.
+    //%
+    int swi2cWrite(int sda, int scl, int addr, Buffer b) {
+#if MICROBIT_CODAL
+        int sdaN, sclN;
+        if (!fbI2cPines(sda, scl, sdaN, sclN)) return 3;
+        fbI2cStart(sdaN, sclN);
+        int rc = 0;
+        if (!fbI2cWriteByte(sdaN, sclN, (uint8_t)(addr << 1))) rc = 1;
+        else {
+            for (int i = 0; i < b->length; i++) {
+                if (!fbI2cWriteByte(sdaN, sclN, b->data[i])) { rc = 2; break; }
+            }
+        }
+        fbI2cStop(sdaN, sclN);
+        return rc;
+#else
+        return 3;
+#endif
+    }
+
+    // Lee `n` bytes (máx. 64) del dispositivo `addr` por I2C de software.
+    // Devuelve un buffer vacío si el dispositivo no responde.
+    //%
+    Buffer swi2cRead(int sda, int scl, int addr, int n) {
+#if MICROBIT_CODAL
+        int sdaN, sclN;
+        if (n < 0) n = 0;
+        if (n > 64) n = 64;
+        if (!fbI2cPines(sda, scl, sdaN, sclN)) return mkBuffer(NULL, 0);
+        uint8_t tmp[64];
+        fbI2cStart(sdaN, sclN);
+        if (!fbI2cWriteByte(sdaN, sclN, (uint8_t)((addr << 1) | 1))) {
+            fbI2cStop(sdaN, sclN);
+            return mkBuffer(NULL, 0);
+        }
+        for (int i = 0; i < n; i++) tmp[i] = fbI2cReadByte(sdaN, sclN, i < n - 1);
+        fbI2cStop(sdaN, sclN);
+        return mkBuffer(tmp, n);
+#else
+        return mkBuffer(NULL, 0);
+#endif
+    }
+
 }
