@@ -349,3 +349,26 @@ basic.forever(function () {
     )
 })
 */
+
+
+// =============================================================================
+// PRUEBA 14: ToF DE PRECISIÓN (muestreador nativo, pin INT y envío por muestra)
+// =============================================================================
+// HARDWARE: TOF200C / GY-VL53L0XV2: SDA → P20, SCL → P19, INT (GPIO1) → P8.
+// ÉXITO: "frecuencia real" ≈ 30 (estable) o ≈ 50 tras "fijar modo rápida".
+//        En fisicabit.com (USB, 1 variable, timestamp ON) llega una línea por
+//        muestra con intervalos regulares (33 ms o 20 ms) y la distancia
+//        calibrada coincide con la regla a 100 mm.
+// FALLA: frecuencia 0, intervalos irregulares o distancias sin corregir.
+// =============================================================================
+
+/*
+FisicaBitToF.tofIniciarPrecision(ModeloToF.TOF200C, DigitalPin.P20, DigitalPin.P19, DigitalPin.P8)
+basic.showNumber(FisicaBitToF.tofFrecuenciaReal(DigitalPin.P20, DigitalPin.P19))
+input.onButtonPressed(Button.A, function () {
+    FisicaBitToF.tofCalibrarOffset(DigitalPin.P20, DigitalPin.P19, 100)
+})
+basic.forever(function () {
+    FisicaBitToF.tofEnviarDistancia(ModeloToF.TOF200C, DigitalPin.P20, DigitalPin.P19, UnidadDistancia.Centimetros, MedioEnvio.USB)
+})
+*/
