@@ -189,7 +189,18 @@ Module GND → micro:bit GND
 2nd sensor: SDA → P14                            SCL → P13                   ← software I2C
 3rd sensor: SDA → P16                            SCL → P15
 ```
+Module **INT / GPIO1** pin (optional, for precision timing): sensor 1 → **P8**, sensor 2 → **P12**, sensor 3 → **P1**. Leave XSHUT unconnected.
+
 All four modules share I2C address 0x29, so every extra sensor needs its own pin pair. P13–P16 are free digital pins on every expansion kit (no LED matrix or button conflicts) and leave P0–P2 for analog sensors. The `suggested ToF pins for sensor number [n]` block returns that text from the program itself.
+**Lab-grade precision.** After initialisation a C++ sampler reads the sensor in the background (hardware I2C bus at 400 kHz, or the software bus with assembler-timed delays) and stores every sample with the instant the sensor finished measuring. With the INT pin wired (`start precision ToF ... INT [P8]`) that instant is captured by the hardware interrupt, with microsecond precision. The `send ToF distance ... via [USB]` block streams every sample with its real time at the sensor's rate: ≈30 Hz stable, ≈50 Hz fast, ≈10 Hz precise (`set ToF mode`). `calibrate ToF ... with target at [100] mm` removes the chip and cover-glass offset. `ToF actual sampling rate` verifies the rate.
+
+```blocks
+FisicaBitToF.tofIniciarPrecision(ModeloToF.TOF200C, DigitalPin.P20, DigitalPin.P19, DigitalPin.P8)
+basic.forever(function () {
+    FisicaBitToF.tofEnviarDistancia(ModeloToF.TOF200C, DigitalPin.P20, DigitalPin.P19, UnidadDistancia.Centimetros, MedioEnvio.USB)
+})
+```
+
 ```blocks
 basic.forever(function () {
     FisicaBitSerial.enviar2(

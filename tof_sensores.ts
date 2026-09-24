@@ -28,6 +28,15 @@
 //    por siempre:
 //      [enviar a fisicabit.com tiempo y
 //         (distancia ToF [TOF200C] SDA [P20] SCL [P19] en [cm]) cada 50 ms]
+//
+//  PRECISIÓN (muestreador en C++, shims.cpp):
+//    Tras la inicialización, las lecturas las hace un muestreador nativo que
+//    consulta el sensor en segundo plano y guarda cada muestra con su instante
+//    (µs del timer del sistema). Con el pin INT/GPIO1 del módulo conectado
+//    (sugerido: P8 / P12 / P1), el instante es el de la interrupción de
+//    hardware. El bloque "enviar distancia ToF ..." manda cada muestra con
+//    ese tiempo, a la frecuencia real del sensor. Bus I2C por hardware a
+//    400 kHz; bus por software con retardos en ensamblador (≈400 kHz).
 // =============================================================================
 
 
@@ -52,6 +61,33 @@ namespace FisicaBitToF {
     //% shim=fisicabit_native::swi2cRead
     function _swRead(sda: number, scl: number, addr: number, n: number): Buffer {
         return pins.createBuffer(0)
+    }
+
+    // ── Muestreador nativo (shims.cpp): lee el sensor en segundo plano con
+    //    marca de tiempo por hardware. En el simulador no existe (devuelve 0).
+    //% shim=fisicabit_native::tofIniciar
+    function _hwTofIniciar(idx: number, tipo: number, sda: number, scl: number, intPin: number): number {
+        return 0
+    }
+    //% shim=fisicabit_native::tofDetener
+    function _hwTofDetener(idx: number): number {
+        return 0
+    }
+    //% shim=fisicabit_native::tofSeq
+    function _hwTofSeq(idx: number): number {
+        return 0
+    }
+    //% shim=fisicabit_native::tofDist
+    function _hwTofDist(idx: number): number {
+        return -1
+    }
+    //% shim=fisicabit_native::tofTiempoDecimas
+    function _hwTofTiempoDecimas(idx: number): number {
+        return 0
+    }
+    //% shim=fisicabit_native::tofEstadistica
+    function _hwTofEstadistica(idx: number, cual: number): number {
+        return 0
     }
 
     class Bus {
@@ -87,7 +123,8 @@ namespace FisicaBitToF {
     // Sensor: un objeto por par de pines (permite varios módulos a la vez)
     // =========================================================================
     let _filtroDef = 3
-    let _rapidoDef = false
+    let _modoDef = 0                // 0 estable, 1 rápida, 2 precisa
+    const MAX_SENSORES = 3          // sensores con muestreador nativo
 
     class Sensor {
         bus: Bus
@@ -95,7 +132,12 @@ namespace FisicaBitToF {
         driver: number            // 0=VL6180X, 1=VL53L0X, 2=VL53L1X, -1=desconocido
         listo: boolean
         filtroN: number
-        rapido: boolean
+        modo: number              // 0 estable, 1 rápida, 2 precisa
+        idx: number               // índice en el muestreador nativo (-1 = sin)
+        intPin: number            // id de DigitalPin del pin INT o -1
+        nativo: boolean           // true si el muestreador nativo está activo
+        ultSeq: number            // última muestra consumida del muestreador
+        offsetMm: number          // corrección de offset (calibración)
         ultVal: number            // Último valor válido (fallback)
         ultOk: boolean            // ¿Última medición fue válida?
         stopVar: number           // Variable stop del VL53L0X
@@ -107,7 +149,12 @@ namespace FisicaBitToF {
             this.driver = -1
             this.listo = false
             this.filtroN = _filtroDef
-            this.rapido = _rapidoDef
+            this.modo = _modoDef
+            this.idx = -1
+            this.intPin = -1
+            this.nativo = false
+            this.ultSeq = 0
+            this.offsetMm = 0
             this.ultVal = 0
             this.ultOk = false
             this.stopVar = 0
@@ -126,6 +173,7 @@ namespace FisicaBitToF {
             if (t.bus.sda == sda && t.bus.scl == scl) return t
         }
         const nuevo = new Sensor(sda, scl)
+        nuevo.idx = _sensores.length < MAX_SENSORES ? _sensores.length : -1
         _sensores.push(nuevo)
         return nuevo
     }
@@ -303,11 +351,11 @@ namespace FisicaBitToF {
         // ── Configuración de rango ──
         // Período entre mediciones en modo continuo (pasos de 10 ms):
         // estable 50 ms (≈20 Hz), rápida 30 ms (≈33 Hz)
-        w16(0x001B, _s.rapido ? 0x02 : 0x04)
+        w16(0x001B, _s.modo == 1 ? 0x02 : (_s.modo == 2 ? 0x09 : 0x04))
         w16(0x003E, 0x31)  // VHV repeat rate
         w16(0x0014, 0x24)  // VHV recalibración
         // Tiempo máximo de convergencia: 50ms estable, 24ms rápido
-        w16(0x001C, _s.rapido ? 0x18 : 0x31)
+        w16(0x001C, _s.modo == 1 ? 0x18 : 0x31)
 
         // Marcar como inicializado
         w16(0x0016, 0x00)
@@ -528,7 +576,8 @@ namespace FisicaBitToF {
         // ── Secuencia sin MSRC ni TCC y presupuesto de tiempo ──
         w8(0x01, 0xE8)
         // Estable: 33 ms (modo por defecto de ST, ≈30 Hz). Rápida: 20 ms (≈50 Hz).
-        l0x_setTimingBudget(_s.rapido ? 20000 : 33000)
+        // Precisa: 100 ms (≈10 Hz, el menor ruido).
+        l0x_setTimingBudget(_s.modo == 1 ? 20000 : (_s.modo == 2 ? 100000 : 33000))
 
         // ── Calibraciones de referencia: VHV y fase ──
         w8(0x01, 0x01)
@@ -609,7 +658,7 @@ namespace FisicaBitToF {
         w16(0x0008, 0x09)                          // VHV_CONFIG__TIMEOUT_MACROP_LOOP_BOUND
         w16(0x000B, 0x00)                          // arrancar VHV desde la temperatura previa
 
-        if (_s.rapido) {
+        if (_s.modo == 1) {
             // ── Rápida: modo corto (hasta 1,3 m), 20 ms (≈40 Hz) ──
             w16(0x004B, 0x14)      // PHASECAL_CONFIG__TIMEOUT_MACROP
             w16(0x0060, 0x07)      // RANGE_CONFIG__VCSEL_PERIOD_A
@@ -627,14 +676,19 @@ namespace FisicaBitToF {
             w16(0x0069, 0xB8)
             w16v16(0x0078, 0x0F0D)
             w16v16(0x007A, 0x0E0E)
-            w16v16(0x005E, 0x0060) // 33 ms, modo largo
-            w16v16(0x0061, 0x006E)
+            if (_s.modo == 2) {
+                w16v16(0x005E, 0x02E1) // 100 ms, modo largo (precisa)
+                w16v16(0x0061, 0x0388)
+            } else {
+                w16v16(0x005E, 0x0060) // 33 ms, modo largo
+                w16v16(0x0061, 0x006E)
+            }
         }
 
         // ── Período entre mediciones (≥ presupuesto + 4 ms) ──
         let clk = r16v16(0x00DE) & 0x3FF
         if (clk > 0) {
-            let periodoMs = _s.rapido ? 24 : 38
+            let periodoMs = _s.modo == 1 ? 24 : (_s.modo == 2 ? 105 : 38)
             let val = Math.round(clk * periodoMs * 1.075)
             w16v32(0x006C, val)
         }
@@ -680,6 +734,8 @@ namespace FisicaBitToF {
     }
 
     function _doInit(s: Sensor): boolean {
+        if (s.idx >= 0) _hwTofDetener(s.idx)     // pausar el muestreador mientras se configura
+        s.nativo = false
         _activar(s)
         s.bus.ok = true
         s.driver = _driverDe(s.modeloPedido)
@@ -691,11 +747,23 @@ namespace FisicaBitToF {
             case 1: ok = vl53l0x_init(); break
             case 2: ok = vl53l1x_init(); break
         }
-        return ok && s.bus.ok
+        ok = ok && s.bus.ok
+        if (ok && s.idx >= 0) {
+            // Delegar las lecturas al muestreador en C++ (marca de tiempo real)
+            s.nativo = _hwTofIniciar(s.idx, s.driver, s.bus.sda, s.bus.scl, s.intPin) == 1
+            s.ultSeq = 0
+        }
+        return ok
     }
 
     function _doRead(s: Sensor): number {
         if (!s.listo) return -1
+        if (s.nativo) {
+            const seq = _hwTofSeq(s.idx)
+            if (seq == s.ultSeq) return -2        // todavía no hay muestra nueva
+            s.ultSeq = seq
+            return _hwTofDist(s.idx)
+        }
         _activar(s)
         let d = -1
         switch (s.driver) {
@@ -715,12 +783,15 @@ namespace FisicaBitToF {
         if (!s.listo) return 0
 
         const n = s.filtroN
-        const d = _doRead(s)
+        let d = _doRead(s)
+        if (d == -2) return s.ultVal             // sin muestra nueva: repetir la última
         if (d < 0) {
             s.ultOk = false
             return s.ultVal
         }
         s.ultOk = true
+        d += s.offsetMm
+        if (d < 0) d = 0
 
         if (n <= 1) {
             s.ultVal = d
@@ -808,6 +879,186 @@ namespace FisicaBitToF {
         }
         if (!_asegurar(s)) return _convertir(s.ultVal, unidad)
         return _convertir(_readFiltered(s), unidad)
+    }
+
+    /**
+     * Espera la próxima muestra del sensor (hasta maxMs) y devuelve true si
+     * llegó. Sólo con muestreador nativo; en otro caso devuelve true al instante.
+     */
+    function _esperarMuestra(s: Sensor, maxMs: number): boolean {
+        if (!s.nativo) return true
+        let esperado = 0
+        while (_hwTofSeq(s.idx) == s.ultSeq) {
+            if (esperado >= maxMs) return false
+            basic.pause(1)
+            esperado++
+        }
+        return true
+    }
+
+    function _decimalesDe(unidad: UnidadDistancia): number {
+        if (unidad == UnidadDistancia.Milimetros) return 0
+        if (unidad == UnidadDistancia.Pulgadas) return 2
+        return 1
+    }
+
+    /**
+     * Envía a fisicabit.com cada muestra nueva del sensor con el instante
+     * exacto en que el sensor la midió (no el de envío): una línea
+     * "tiempo,distancia" por muestra, a la frecuencia real del sensor
+     * (≈30 Hz estable, ≈50 Hz rápida, ≈10 Hz precisa). Con el pin INT
+     * conectado el tiempo es el de la interrupción de hardware (µs).
+     * Poner dentro de "para siempre"; no hace falta "cada ... ms".
+     *
+     * Ejemplo (MRU en riel, por USB): [para siempre] → [enviar distancia ToF
+     * [TOF200C] SDA [P20] SCL [P19] en [cm] por [USB]]
+     * @param modelo Módulo conectado (o autodetectar)
+     * @param sda Pin conectado a SDA del módulo
+     * @param scl Pin conectado a SCL del módulo
+     * @param unidad Unidad: cm (1 decimal), mm o pulgadas
+     * @param medio USB o Bluetooth
+     */
+    //% block="send ToF distance %modelo SDA %sda SCL %scl in %unidad via %medio"
+    //% blockId=fisicabit_tof_enviar
+    //% group="Measurement"
+    //% weight=98
+    //% inlineInputMode=inline
+    //% modelo.defl=ModeloToF.TOF200C
+    //% sda.defl=DigitalPin.P20
+    //% scl.defl=DigitalPin.P19
+    //% unidad.defl=UnidadDistancia.Centimetros
+    //% medio.defl=MedioEnvio.USB
+    export function tofEnviarDistancia(modelo: ModeloToF, sda: DigitalPin, scl: DigitalPin, unidad: UnidadDistancia, medio: MedioEnvio): void {
+        const s = _obtener(sda, scl)
+        if (s.modeloPedido != modelo) {
+            s.modeloPedido = modelo
+            s.listo = false
+            s.ultIntentoMs = -100000
+        }
+        if (!_asegurar(s)) {
+            basic.pause(100)
+            return
+        }
+        if (!_esperarMuestra(s, 500)) return
+        const mm = _readFiltered(s)
+        // Tiempo de la muestra en la base de tiempo de fisicabit.com
+        let tMs: number
+        const baseMs = control.millis() - (medio == MedioEnvio.Bluetooth ? FisicaBitBT.tiempo() : FisicaBitSerial.tiempoSerial())
+        if (s.nativo) tMs = _hwTofTiempoDecimas(s.idx) / 10 - baseMs
+        else tMs = control.millis() - baseMs
+        if (tMs < 0) tMs = 0
+        const linea = FisicaBitDatos.formatear(tMs, 1) + "," + FisicaBitDatos.formatear(_convertir(mm, unidad), _decimalesDe(unidad))
+        if (medio == MedioEnvio.Bluetooth) FisicaBitBT.enviarTexto(linea)
+        else FisicaBitSerial.enviarLinea(linea)
+    }
+
+    /**
+     * Arranque de precisión: además de SDA y SCL, conecta el pin INT (GPIO1)
+     * del módulo a un pin del micro:bit. Así cada muestra lleva el instante
+     * exacto en que el sensor terminó de medir, capturado por interrupción de
+     * hardware (precisión de microsegundos) en lugar de por sondeo (±1-6 ms).
+     * Pines INT sugeridos: sensor 1 → P8, sensor 2 → P12, sensor 3 → P1.
+     * Poner en "al iniciar"; después usar "distancia ToF" o "enviar distancia
+     * ToF" con los mismos pines.
+     * @param modelo Módulo conectado (o autodetectar)
+     * @param sda Pin conectado a SDA del módulo
+     * @param scl Pin conectado a SCL del módulo
+     * @param intPin Pin conectado a INT / GPIO1 del módulo
+     */
+    //% block="start precision ToF %modelo SDA %sda SCL %scl INT %intPin"
+    //% blockId=fisicabit_tof_iniciar_precision
+    //% group="Configuration"
+    //% weight=100
+    //% inlineInputMode=inline
+    //% modelo.defl=ModeloToF.TOF200C
+    //% sda.defl=DigitalPin.P20
+    //% scl.defl=DigitalPin.P19
+    //% intPin.defl=DigitalPin.P8
+    export function tofIniciarPrecision(modelo: ModeloToF, sda: DigitalPin, scl: DigitalPin, intPin: DigitalPin): void {
+        const s = _obtener(sda, scl)
+        s.modeloPedido = modelo
+        s.intPin = intPin
+        s.listo = false
+        s.ultIntentoMs = -100000
+        _asegurar(s)
+    }
+
+    /**
+     * Calibra el offset del sensor: poné un objeto plano a una distancia
+     * conocida (por ejemplo 100 mm medidos con regla), ejecutá el bloque y
+     * la extensión corrige todas las lecturas siguientes. Quita el error de
+     * cero del chip y el desplazamiento por vidrio o carcasa. Tarda ~1 s.
+     * @param sda Pin conectado a SDA del módulo
+     * @param scl Pin conectado a SCL del módulo
+     * @param distanciaMm Distancia real al objeto en mm
+     */
+    //% block="calibrate ToF SDA %sda SCL %scl with target at %distanciaMm mm"
+    //% blockId=fisicabit_tof_calibrar_offset
+    //% group="Configuration"
+    //% weight=93
+    //% sda.defl=DigitalPin.P20
+    //% scl.defl=DigitalPin.P19
+    //% distanciaMm.min=20 distanciaMm.max=2000 distanciaMm.defl=100
+    export function tofCalibrarOffset(sda: DigitalPin, scl: DigitalPin, distanciaMm: number): void {
+        const s = _obtener(sda, scl)
+        if (!_asegurar(s)) return
+        const offsetPrevio = s.offsetMm
+        s.offsetMm = 0
+        let suma = 0, n = 0
+        for (let i = 0; i < 40 && n < 20; i++) {
+            if (!_esperarMuestra(s, 300)) break
+            const d = _doRead(s)
+            if (d >= 0) { suma += d; n++ }
+            if (!s.nativo) basic.pause(30)
+        }
+        if (n >= 5) {
+            s.offsetMm = Math.round(distanciaMm - suma / n)
+            s.hist = []
+            basic.showIcon(IconNames.Yes)
+        } else {
+            s.offsetMm = offsetPrevio
+            basic.showIcon(IconNames.No)
+        }
+        basic.pause(500)
+        basic.clearScreen()
+    }
+
+    /**
+     * Instante (ms desde el encendido, 1 decimal) en que el sensor midió la
+     * última muestra. Con pin INT: tiempo de la interrupción de hardware.
+     * @param sda Pin conectado a SDA del módulo
+     * @param scl Pin conectado a SCL del módulo
+     */
+    //% block="ToF last sample time (ms) SDA %sda SCL %scl"
+    //% blockId=fisicabit_tof_tiempo_muestra
+    //% group="Diagnostics"
+    //% weight=79
+    //% sda.defl=DigitalPin.P20
+    //% scl.defl=DigitalPin.P19
+    export function tofTiempoMuestra(sda: DigitalPin, scl: DigitalPin): number {
+        const s = _obtener(sda, scl)
+        if (!s.nativo) return control.millis()
+        return _hwTofTiempoDecimas(s.idx) / 10
+    }
+
+    /**
+     * Frecuencia real de muestreo del sensor (Hz), medida durante 1 segundo.
+     * Sirve para verificar el modo: ≈30 Hz estable, ≈50 Hz rápida, ≈10 Hz precisa.
+     * @param sda Pin conectado a SDA del módulo
+     * @param scl Pin conectado a SCL del módulo
+     */
+    //% block="ToF actual sampling rate (Hz) SDA %sda SCL %scl"
+    //% blockId=fisicabit_tof_hz
+    //% group="Diagnostics"
+    //% weight=78
+    //% sda.defl=DigitalPin.P20
+    //% scl.defl=DigitalPin.P19
+    export function tofFrecuenciaReal(sda: DigitalPin, scl: DigitalPin): number {
+        const s = _obtener(sda, scl)
+        if (!_asegurar(s) || !s.nativo) return 0
+        const antes = _hwTofEstadistica(s.idx, 0) + _hwTofEstadistica(s.idx, 1)
+        basic.pause(1000)
+        return _hwTofEstadistica(s.idx, 0) + _hwTofEstadistica(s.idx, 1) - antes
     }
 
     /**
@@ -955,10 +1206,10 @@ namespace FisicaBitToF {
     //% weight=94
     //% modo.defl=ModoToF.Estable
     export function tofFijarModo(modo: ModoToF): void {
-        _rapidoDef = (modo == ModoToF.Rapida)
+        _modoDef = modo
         for (let i = 0; i < _sensores.length; i++) {
             const s = _sensores[i]
-            s.rapido = _rapidoDef
+            s.modo = _modoDef
             if (s.listo) s.listo = _doInit(s)
         }
     }

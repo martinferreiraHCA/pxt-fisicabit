@@ -210,10 +210,12 @@ declare const enum FiltroToF {
 }
 
 declare const enum ModoToF {
-    //% block="stable (accurate)"
+    //% block="stable (30 Hz, full range)"
     Estable = 0,
-    //% block="fast (high speed)"
-    Rapida = 1
+    //% block="fast (50 Hz)"
+    Rapida = 1,
+    //% block="precise (10 Hz, lowest noise)"
+    Precisa = 2
 }
 
 declare const enum UnidadPresion {

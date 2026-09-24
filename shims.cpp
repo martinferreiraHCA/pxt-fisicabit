@@ -911,6 +911,20 @@ namespace fisicabit_native {
     // más el del módulo), con soporte de clock stretching. Sólo micro:bit v2.
     // =========================================================================
 #if MICROBIT_CODAL
+    // Retardo determinista en ensamblador (Cortex-M4 a 64 MHz): el bucle
+    // "subs + bne" tarda 3 ciclos por vuelta → n ≈ ciclos/3. Con esto el bus
+    // por software queda en ≈400 kHz (cuarto de período ≈ 0,6 µs), la misma
+    // velocidad que el bus por hardware. No depende de temporizadores ni de
+    // llamadas a función, así que el jitter es de nanosegundos.
+    static inline void fbDelayCycles(uint32_t n) {
+        __asm volatile (
+            "1: subs %0, %0, #1 \n"
+            "   bne 1b          \n"
+            : "+r"(n) : : "cc");
+    }
+    #define FB_I2C_Q() fbDelayCycles(13)     // ≈0,6 µs (cuarto de período)
+    #define FB_I2C_H() fbDelayCycles(27)     // ≈1,25 µs (medio período)
+
     static void fbI2cRelease(int pin) { FB_DS_PORT->PIN_CNF[FB_DS_PIN] = 0x0000000C; }   // entrada + pull-up
     static void fbI2cLow(int pin)     { FB_DS_PORT->OUTCLR = 1 << FB_DS_PIN; FB_DS_PORT->PIN_CNF[FB_DS_PIN] = 0x00000001; }
     static bool fbI2cReadPin(int pin) { return (FB_DS_PORT->IN & (1 << FB_DS_PIN)) != 0; }
@@ -922,53 +936,53 @@ namespace fisicabit_native {
         return t > 0;
     }
     static void fbI2cStart(int sda, int scl) {
-        fbI2cRelease(sda); fbI2cSclHigh(scl); fb_ds_wait_us(4);
-        fbI2cLow(sda); fb_ds_wait_us(4);
-        fbI2cLow(scl); fb_ds_wait_us(2);
+        fbI2cRelease(sda); fbI2cSclHigh(scl); FB_I2C_H();
+        fbI2cLow(sda); FB_I2C_H();
+        fbI2cLow(scl); FB_I2C_Q();
     }
     static void fbI2cStop(int sda, int scl) {
-        fbI2cLow(sda); fb_ds_wait_us(2);
-        fbI2cSclHigh(scl); fb_ds_wait_us(4);
-        fbI2cRelease(sda); fb_ds_wait_us(4);
+        fbI2cLow(sda); FB_I2C_Q();
+        fbI2cSclHigh(scl); FB_I2C_H();
+        fbI2cRelease(sda); FB_I2C_H();
     }
     static bool fbI2cWriteByte(int sda, int scl, uint8_t b) {
         for (int i = 7; i >= 0; i--) {
             if (b & (1 << i)) fbI2cRelease(sda); else fbI2cLow(sda);
-            fb_ds_wait_us(2);
+            FB_I2C_Q();
             if (!fbI2cSclHigh(scl)) return false;
-            fb_ds_wait_us(4);
+            FB_I2C_H();
             fbI2cLow(scl);
-            fb_ds_wait_us(2);
+            FB_I2C_Q();
         }
         fbI2cRelease(sda);
-        fb_ds_wait_us(2);
+        FB_I2C_Q();
         if (!fbI2cSclHigh(scl)) return false;
-        fb_ds_wait_us(2);
+        FB_I2C_Q();
         bool ack = !fbI2cReadPin(sda);
-        fb_ds_wait_us(2);
+        FB_I2C_Q();
         fbI2cLow(scl);
-        fb_ds_wait_us(2);
+        FB_I2C_Q();
         return ack;
     }
     static uint8_t fbI2cReadByte(int sda, int scl, bool ack) {
         uint8_t b = 0;
         fbI2cRelease(sda);
         for (int i = 7; i >= 0; i--) {
-            fb_ds_wait_us(2);
+            FB_I2C_Q();
             fbI2cSclHigh(scl);
-            fb_ds_wait_us(2);
+            FB_I2C_Q();
             if (fbI2cReadPin(sda)) b |= (1 << i);
-            fb_ds_wait_us(2);
+            FB_I2C_Q();
             fbI2cLow(scl);
-            fb_ds_wait_us(2);
+            FB_I2C_Q();
         }
         if (ack) fbI2cLow(sda); else fbI2cRelease(sda);
-        fb_ds_wait_us(2);
+        FB_I2C_Q();
         fbI2cSclHigh(scl);
-        fb_ds_wait_us(4);
+        FB_I2C_H();
         fbI2cLow(scl);
         fbI2cRelease(sda);
-        fb_ds_wait_us(2);
+        FB_I2C_Q();
         return b;
     }
     static bool fbI2cPines(int sda, int scl, int &sdaN, int &sclN) {
@@ -1023,6 +1037,251 @@ namespace fisicabit_native {
         return mkBuffer(tmp, n);
 #else
         return mkBuffer(NULL, 0);
+#endif
+    }
+
+    // =========================================================================
+    // ToF DE PRECISIÓN — muestreador en C++ con marca de tiempo por hardware
+    // =========================================================================
+    // Objetivo: que cada muestra del sensor láser llegue con el instante real
+    // en que el sensor terminó de medir, y sin que el programa en bloques
+    // tenga que esperar. Dos modos:
+    //   · Con pin INT: el módulo avisa "muestra lista" por su pin INT/GPIO1;
+    //     el flanco genera una interrupción del nRF52 cuyo timestamp (µs) se
+    //     guarda con la muestra. Precisión de tiempo ≈ decenas de µs.
+    //   · Sin INT: un fiber consulta el registro "muestra lista" cada ~1 ms
+    //     y marca el tiempo al detectarla (jitter ≈ 1–6 ms).
+    // La lectura por I2C se hace en C++ (bus por hardware a 400 kHz o el bus
+    // por software de arriba), fuera del intérprete de TypeScript.
+    // =========================================================================
+#if MICROBIT_CODAL
+    #define FB_TOF_MAX 3
+    #define FB_TOF_ADDR 0x29
+    struct FbTof {
+        int tipo;                    // 0 VL6180X, 1 VL53L0X, 2 VL53L1X, -1 inactivo
+        int sdaN, sclN;              // GPIO
+        bool hw;                     // bus por hardware (P20/P19)
+        int intPinId;                // id del pin INT o -1
+        int intEvt;                  // flanco que indica "muestra lista"
+        volatile uint32_t seq;       // número de muestra (cambia con cada una)
+        volatile int32_t  dist;      // mm; -1 = inválida
+        volatile uint32_t tUs;       // instante de la muestra (µs del timer del sistema)
+        volatile int32_t  estado;    // estado crudo del chip
+        volatile uint32_t validas;
+        volatile uint32_t invalidas;
+    };
+    static FbTof fbTof[FB_TOF_MAX];
+    static bool fbTofFiber = false;
+    static bool fbTofInit = false;
+
+    static bool fbTofWrite(FbTof &s, uint8_t *b, int len) {
+        if (s.hw) return uBit.i2c.write(FB_TOF_ADDR << 1, b, len) == DEVICE_OK;
+        fbI2cStart(s.sdaN, s.sclN);
+        bool ok = fbI2cWriteByte(s.sdaN, s.sclN, (uint8_t)(FB_TOF_ADDR << 1));
+        for (int i = 0; ok && i < len; i++) ok = fbI2cWriteByte(s.sdaN, s.sclN, b[i]);
+        fbI2cStop(s.sdaN, s.sclN);
+        return ok;
+    }
+    static bool fbTofRead(FbTof &s, uint8_t *b, int len) {
+        if (s.hw) return uBit.i2c.read(FB_TOF_ADDR << 1, b, len) == DEVICE_OK;
+        fbI2cStart(s.sdaN, s.sclN);
+        if (!fbI2cWriteByte(s.sdaN, s.sclN, (uint8_t)((FB_TOF_ADDR << 1) | 1))) {
+            fbI2cStop(s.sdaN, s.sclN);
+            return false;
+        }
+        for (int i = 0; i < len; i++) b[i] = fbI2cReadByte(s.sdaN, s.sclN, i < len - 1);
+        fbI2cStop(s.sdaN, s.sclN);
+        return true;
+    }
+    static bool fbTofR8(FbTof &s, uint8_t reg, uint8_t *b, int len) {
+        return fbTofWrite(s, &reg, 1) && fbTofRead(s, b, len);
+    }
+    static bool fbTofW8(FbTof &s, uint8_t reg, uint8_t v) {
+        uint8_t b[2] = { reg, v };
+        return fbTofWrite(s, b, 2);
+    }
+    static bool fbTofR16(FbTof &s, uint16_t reg, uint8_t *b, int len) {
+        uint8_t r[2] = { (uint8_t)(reg >> 8), (uint8_t)reg };
+        return fbTofWrite(s, r, 2) && fbTofRead(s, b, len);
+    }
+    static bool fbTofW16(FbTof &s, uint16_t reg, uint8_t v) {
+        uint8_t b[3] = { (uint8_t)(reg >> 8), (uint8_t)reg, v };
+        return fbTofWrite(s, b, 3);
+    }
+
+    // ¿Hay una muestra nueva lista? (no bloquea)
+    static bool fbTofListo(FbTof &s) {
+        uint8_t b = 0;
+        switch (s.tipo) {
+            case 0: return fbTofR16(s, 0x004F, &b, 1) && (b & 0x07) == 0x04;
+            case 1: return fbTofR8(s, 0x13, &b, 1) && (b & 0x07) != 0;
+            case 2: return fbTofR16(s, 0x0031, &b, 1) && (b & 0x01) == 1;
+        }
+        return false;
+    }
+
+    // Lee la muestra, limpia la interrupción del chip y la publica con su tiempo
+    static void fbTofTomar(FbTof &s, uint32_t tUs) {
+        uint8_t b[2] = { 0, 0 };
+        int d = -1, st = 0;
+        bool ok = false;
+        switch (s.tipo) {
+            case 0:   // VL6180X
+                ok = fbTofR16(s, 0x0062, b, 1); d = b[0];
+                fbTofR16(s, 0x004D, &b[1], 1); st = b[1] >> 4;
+                fbTofW16(s, 0x0015, 0x07);
+                if (!ok || (st != 0 && st != 11) || d >= 255) d = -1;
+                break;
+            case 1:   // VL53L0X
+                ok = fbTofR8(s, 0x1E, b, 2); d = (b[0] << 8) | b[1];
+                fbTofW8(s, 0x0B, 0x01);
+                if (!ok || d == 0 || d >= 8000) d = -1;
+                break;
+            case 2:   // VL53L1X
+                ok = fbTofR16(s, 0x0096, b, 2); d = (b[0] << 8) | b[1];
+                fbTofR16(s, 0x0089, &b[0], 1); st = b[0] & 0x1F;
+                fbTofW16(s, 0x0086, 0x01);
+                if (!ok || st != 9 || d == 0) d = -1;
+                break;
+        }
+        s.estado = st;
+        s.dist = d;
+        s.tUs = tUs;
+        if (d >= 0) s.validas++; else s.invalidas++;
+        s.seq++;
+    }
+
+    // Flanco en el pin INT: el timestamp del evento se capturó en la ISR
+    static void fbTofOnInt(Event e) {
+        for (int i = 0; i < FB_TOF_MAX; i++) {
+            FbTof &s = fbTof[i];
+            if (s.tipo >= 0 && s.intPinId == (int)e.source) {
+                fbTofTomar(s, (uint32_t)e.timestamp);
+            }
+        }
+    }
+
+    // Sondeo para los sensores sin pin INT
+    static void fbTofLoop(void *) {
+        while (true) {
+            for (int i = 0; i < FB_TOF_MAX; i++) {
+                FbTof &s = fbTof[i];
+                if (s.tipo < 0 || s.intPinId >= 0) continue;
+                if (fbTofListo(s)) fbTofTomar(s, (uint32_t)system_timer_current_time_us());
+            }
+            fiber_sleep(1);
+        }
+    }
+
+    static void fbTofAsegurarInit() {
+        if (fbTofInit) return;
+        for (int i = 0; i < FB_TOF_MAX; i++) { fbTof[i].tipo = -1; fbTof[i].intPinId = -1; }
+        fbTofInit = true;
+    }
+#endif
+
+    // Pausa el muestreo del sensor `idx` (para reconfigurarlo desde TS).
+    //%
+    int tofDetener(int idx) {
+#if MICROBIT_CODAL
+        fbTofAsegurarInit();
+        if (idx < 0 || idx >= FB_TOF_MAX) return 0;
+        FbTof &s = fbTof[idx];
+        s.tipo = -1;
+        if (s.intPinId >= 0) {
+            uBit.messageBus.ignore(s.intPinId, s.intEvt, fbTofOnInt);
+            s.intPinId = -1;
+        }
+        return 1;
+#else
+        return 0;
+#endif
+    }
+
+    // Registra el sensor `idx` (0..2) ya inicializado por TS en el muestreador:
+    // tipo 0/1/2, pines SDA/SCL (ids de DigitalPin) y pin INT (id o -1).
+    // Devuelve 1 si quedó muestreando.
+    //%
+    int tofIniciar(int idx, int tipo, int sda, int scl, int intPin) {
+#if MICROBIT_CODAL
+        fbTofAsegurarInit();
+        if (idx < 0 || idx >= FB_TOF_MAX || tipo < 0 || tipo > 2) return 0;
+        tofDetener(idx);
+        FbTof &s = fbTof[idx];
+        MicroBitPin *pa = pxt::getPin(sda);
+        MicroBitPin *pb = pxt::getPin(scl);
+        if (!pa || !pb) return 0;
+        s.sdaN = pa->name; s.sclN = pb->name;
+        s.hw = (sda == MICROBIT_ID_IO_P20 && scl == MICROBIT_ID_IO_P19);
+        if (s.hw) uBit.i2c.setFrequency(400000);
+        s.seq = 0; s.dist = -1; s.tUs = 0; s.estado = 0; s.validas = 0; s.invalidas = 0;
+        if (intPin >= 0) {
+            MicroBitPin *pi = pxt::getPin(intPin);
+            if (pi && pi != pa && pi != pb) {
+                s.intPinId = pi->id;
+                // VL53L1X: INT activo en alto (flanco de subida); VL53L0X y
+                // VL6180X: activo en bajo (flanco de bajada)
+                s.intEvt = (tipo == 2) ? DEVICE_PIN_EVT_RISE : DEVICE_PIN_EVT_FALL;
+                pi->setPull(codal::PullMode::Up);
+                pi->eventOn(DEVICE_PIN_EVENT_ON_EDGE);
+                uBit.messageBus.listen(s.intPinId, s.intEvt, fbTofOnInt);
+            }
+        }
+        s.tipo = tipo;
+        if (!fbTofFiber) {
+            create_fiber(fbTofLoop, NULL);
+            fbTofFiber = true;
+        }
+        return 1;
+#else
+        return 0;
+#endif
+    }
+
+    // Número de la última muestra del sensor `idx` (cambia con cada muestra).
+    //%
+    int tofSeq(int idx) {
+#if MICROBIT_CODAL
+        if (idx < 0 || idx >= FB_TOF_MAX || !fbTofInit) return 0;
+        return (int)fbTof[idx].seq;
+#else
+        return 0;
+#endif
+    }
+
+    // Distancia (mm) de la última muestra, -1 si fue inválida.
+    //%
+    int tofDist(int idx) {
+#if MICROBIT_CODAL
+        if (idx < 0 || idx >= FB_TOF_MAX || !fbTofInit) return -1;
+        return fbTof[idx].dist;
+#else
+        return -1;
+#endif
+    }
+
+    // Instante de la última muestra en décimas de milisegundo (timer del sistema).
+    //%
+    int tofTiempoDecimas(int idx) {
+#if MICROBIT_CODAL
+        if (idx < 0 || idx >= FB_TOF_MAX || !fbTofInit) return 0;
+        return (int)(fbTof[idx].tUs / 100);
+#else
+        return 0;
+#endif
+    }
+
+    // Estadísticas: cual = 0 muestras válidas, 1 inválidas, 2 estado crudo.
+    //%
+    int tofEstadistica(int idx, int cual) {
+#if MICROBIT_CODAL
+        if (idx < 0 || idx >= FB_TOF_MAX || !fbTofInit) return 0;
+        FbTof &s = fbTof[idx];
+        if (cual == 0) return (int)s.validas;
+        if (cual == 1) return (int)s.invalidas;
+        return s.estado;
+#else
+        return 0;
 #endif
     }
 
