@@ -77,6 +77,7 @@ let lectura = FisicaBit.leerSensorAnalogico(PinAnalogico.P0)
 | `leer sensor digital en P[8]` | Lee PIR, infrarrojo, interruptor (0/1) |
 | `HC-SR04 distancia TRIG P1 ECHO P2 en [cm]` | Mide distancia con HC-SR04 |
 | `DS18B20 temperatura en [P0] en [°C]` | Sonda de temperatura sumergible DS18B20 (OneWire), ±0,5 °C, de −55 a 125 °C. Categoría propia **DS18B20**, con `última temperatura`, `fijar resolución 9–12 bits`, `¿conectado?` y `código de error` |
+| `MAX6675 temperatura SCK [P13] CS [P16] SO [P14] en [°C]` | Termocupla tipo K con módulo MAX6675 (SPI), de 0 a 1023 °C, resolución 0,25 °C, ±2 °C: llamas, ebullición, curvas de enfriamiento. Categoría propia **MAX6675**, con `última temperatura`, `fijar corrección`, `¿conectado?`, `código de error` y `valor crudo` |
 | `distancia ToF [TOF200C] SDA [P20] SCL [P19] en [cm]` | Sensores láser ToF en un solo bloque: TOF050C (VL6180X), TOF200C y GY-VL53L0XV2 (VL53L0X), TOF400C (VL53L1X) o autodetectar. Elegís el módulo y los pines; se inicializa solo. Categoría **ToF — Distancia Láser**, con `pines sugeridos`, `módulo detectado` y `¿hay sensor?` |
 
 ### Barrera óptica (experimentos de tiempo)
@@ -250,6 +251,23 @@ Ejemplo de calorimetría (una lectura por segundo, 12 bits):
 ```blocks
 basic.forever(function () {
     FisicaBitSerial.enviar1(FisicaBitDS18B20.temperatura(DigitalPin.P0, UnidadTemperatura.Celsius), 1000)
+})
+```
+
+### Termocupla tipo K con MAX6675
+```
+MAX6675 VCC → micro:bit 3V      (no usar 5 V: la salida SO va al nivel de VCC)
+MAX6675 GND → micro:bit GND
+MAX6675 SCK → micro:bit P13     (reloj)
+MAX6675 CS  → micro:bit P16     (selección)
+MAX6675 SO  → micro:bit P14     (datos; en algunos módulos dice DO o MISO)
+Termocupla: rojo → "−", amarillo → "+" (si la lectura baja al calentar, invertirlos)
+Varios módulos: comparten SCK y SO, cada uno con su propio CS
+```
+Rango 0 a 1023 °C, paso 0,25 °C, ±2 °C. El chip entrega un valor nuevo cada 220 ms; leer más seguido devuelve el mismo valor sin bloquear. Para afinar, calibrar en agua con hielo con `fijar corrección MAX6675`. Ejemplo de curva de enfriamiento (dos lecturas por segundo):
+```blocks
+basic.forever(function () {
+    FisicaBitSerial.enviar1(FisicaBitMAX6675.temperatura(DigitalPin.P13, DigitalPin.P16, DigitalPin.P14, UnidadTemperatura.Celsius), 500)
 })
 ```
 

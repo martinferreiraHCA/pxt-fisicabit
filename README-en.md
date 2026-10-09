@@ -49,6 +49,7 @@ let reading = FisicaBit.leerSensorAnalogico(PinAnalogico.P0)
 | `read digital sensor on P[8]` | Reads PIR, infrared, switch (0/1) |
 | `ultrasonic distance TRIG P1 ECHO P2 in [cm]` | Measures distance with HC-SR04 |
 | `DS18B20 temperature on [P0] in [°C]` | DS18B20 waterproof temperature probe (OneWire), ±0.5 °C, −55 to 125 °C. Own **DS18B20** category with `last temperature`, `set resolution 9–12 bits`, `connected?` and `error code` |
+| `MAX6675 temperature SCK [P13] CS [P16] SO [P14] in [°C]` | Type K thermocouple with a MAX6675 module (SPI), 0 to 1023 °C, 0.25 °C resolution, ±2 °C: flames, boiling, cooling curves. Own **MAX6675** category with `last temperature`, `set correction`, `connected?`, `error code` and `raw value` |
 | `ToF distance [TOF200C] SDA [P20] SCL [P19] in [cm]` | ToF laser sensors in one block: TOF050C (VL6180X), TOF200C and GY-VL53L0XV2 (VL53L0X), TOF400C (VL53L1X) or auto-detect. Pick the module and the pins; it initialises itself. **ToF — Laser Distance** category, with `suggested pins`, `module detected` and `sensor found?` |
 
 ### Optical Barrier (timing experiments)
@@ -222,6 +223,23 @@ Calorimetry example (one reading per second, 12 bits):
 ```blocks
 basic.forever(function () {
     FisicaBitSerial.enviar1(FisicaBitDS18B20.temperatura(DigitalPin.P0, UnidadTemperatura.Celsius), 1000)
+})
+```
+
+### Type K thermocouple with MAX6675
+```
+MAX6675 VCC → micro:bit 3V      (do not use 5 V: the SO output swings to VCC)
+MAX6675 GND → micro:bit GND
+MAX6675 SCK → micro:bit P13     (clock)
+MAX6675 CS  → micro:bit P16     (chip select)
+MAX6675 SO  → micro:bit P14     (data; some modules label it DO or MISO)
+Thermocouple: red → "−", yellow → "+" (if the reading drops when heated, swap them)
+Several modules: share SCK and SO, each with its own CS
+```
+Range 0 to 1023 °C, 0.25 °C steps, ±2 °C. The chip delivers a new value every 220 ms; reading more often returns the same value without blocking. For better accuracy, calibrate in ice water with `set MAX6675 correction`. Cooling-curve example (two readings per second):
+```blocks
+basic.forever(function () {
+    FisicaBitSerial.enviar1(FisicaBitMAX6675.temperatura(DigitalPin.P13, DigitalPin.P16, DigitalPin.P14, UnidadTemperatura.Celsius), 500)
 })
 ```
 
