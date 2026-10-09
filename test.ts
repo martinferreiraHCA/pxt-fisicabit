@@ -372,3 +372,33 @@ basic.forever(function () {
     FisicaBitToF.tofEnviarDistancia(ModeloToF.TOF200C, DigitalPin.P20, DigitalPin.P19, UnidadDistancia.Centimetros, MedioEnvio.USB)
 })
 */
+
+
+// =============================================================================
+// PRUEBA 15: TERMOCUPLA TIPO K CON MAX6675 (SPI)
+// =============================================================================
+// HARDWARE: MAX6675 VCC → 3V, GND → GND, SCK → P13, CS → P16, SO → P14.
+//           Termocupla en el conector del módulo (rojo "−", amarillo "+").
+// ÉXITO: "conectado" = verdadero; temperatura ambiente razonable (±2 °C
+//        respecto a otro termómetro) en pasos de 0,25 °C; al acercar un
+//        encendedor sube rápido (cientos de °C) y baja al retirarlo;
+//        "código de error" = 0. Con la termocupla desenchufada del módulo:
+//        código 2. Con el módulo desconectado: código 1 y valor crudo
+//        65535 o 0.
+// FALLA: Siempre 0, código de error distinto de 0 o excepción.
+// =============================================================================
+
+/*
+basic.forever(function () {
+    if (FisicaBitMAX6675.estaConectado(DigitalPin.P13, DigitalPin.P16, DigitalPin.P14)) {
+        FisicaBitSerial.enviar2(
+            FisicaBitMAX6675.temperatura(DigitalPin.P13, DigitalPin.P16, DigitalPin.P14, UnidadTemperatura.Celsius),
+            FisicaBitMAX6675.codigoError(),
+            500
+        )
+    } else {
+        basic.showIcon(IconNames.No)
+        basic.pause(1000)
+    }
+})
+*/

@@ -35,7 +35,9 @@ declare const enum TipoSensorExterno {
     //% block="infrared sensor"
     Infrarrojo = 6,
     //% block="DS18B20 temperature"
-    DS18B20 = 7
+    DS18B20 = 7,
+    //% block="MAX6675 thermocouple K"
+    MAX6675 = 8
 }
 
 declare const enum UnidadTemperatura {
