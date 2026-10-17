@@ -1285,4 +1285,263 @@ namespace fisicabit_native {
 #endif
     }
 
+    // =========================================================================
+    // ULTRASONIDO HC-SR04 / HY-SRF05 — muestreador en C++ con tiempos de hardware
+    // =========================================================================
+    // El sensor mide el tiempo de vuelo de un pulso de 40 kHz: TRIG recibe un
+    // pulso de 10 µs y ECHO queda en alto el tiempo de ida y vuelta. Acá:
+    //   · Un fiber dispara el TRIG a período fijo (sólo si ECHO está en bajo).
+    //   · Los flancos de ECHO llegan como eventos del pin con el timestamp
+    //     capturado en la interrupción (µs): ancho = bajada − subida, sin
+    //     esperas bloqueantes y sin depender del intérprete de bloques.
+    //   · Instante de la muestra = subida + ancho/2 (cuando el sonido tocó el
+    //     objeto). Velocidad del sonido según la temperatura del aire.
+    //   · Modo de un solo cable (HY-SRF05 con OUT a GND, módulos de 3 pines):
+    //     el mismo pin dispara y escucha.
+    // =========================================================================
+#if MICROBIT_CODAL
+    #define FB_US_MAX 3
+    struct FbUs {
+        bool activo;
+        MicroBitPin *trig;
+        MicroBitPin *echo;
+        int echoId;
+        bool unCable;
+        int maxMm;
+        int periodoMs;
+        uint32_t timeoutUs;
+        uint32_t velMmPorS;          // velocidad del sonido en mm/s
+        volatile bool esperando;
+        volatile bool subio;
+        uint32_t tTrigUs;
+        uint32_t tRiseUs;
+        uint32_t tUltTrigUs;
+        volatile uint32_t seq;
+        volatile int32_t  distMm;    // -1 = sin eco / fuera de rango
+        volatile int32_t  ecoUs;
+        volatile uint32_t tUs;
+        volatile uint32_t validas;
+        volatile uint32_t invalidas;
+    };
+    static FbUs fbUs[FB_US_MAX];
+    static bool fbUsInit = false;
+    static bool fbUsFiber = false;
+
+    static void fbUsPublicar(FbUs &s, int dist, int eco, uint32_t tUs) {
+        s.distMm = dist;
+        s.ecoUs = eco;
+        s.tUs = tUs;
+        if (dist >= 0) s.validas++; else s.invalidas++;
+        s.seq++;
+    }
+
+    static void fbUsOnEdge(Event e) {
+        for (int i = 0; i < FB_US_MAX; i++) {
+            FbUs &s = fbUs[i];
+            if (!s.activo || s.echoId != (int)e.source) continue;
+            if (e.value == DEVICE_PIN_EVT_RISE) {
+                if (s.esperando) { s.tRiseUs = (uint32_t)e.timestamp; s.subio = true; }
+            } else if (e.value == DEVICE_PIN_EVT_FALL) {
+                if (s.esperando && s.subio) {
+                    uint32_t eco = (uint32_t)e.timestamp - s.tRiseUs;
+                    s.esperando = false;
+                    s.subio = false;
+                    // mm = eco(µs) · v(mm/s) / 1e6 / 2
+                    int dist = (int)(((uint64_t)eco * s.velMmPorS + 1000000ULL) / 2000000ULL);
+                    if (eco < 100 || dist > s.maxMm) fbUsPublicar(s, -1, (int)eco, (uint32_t)e.timestamp);
+                    else fbUsPublicar(s, dist, (int)eco, s.tRiseUs + eco / 2);
+                }
+            }
+        }
+    }
+
+    static void fbUsDisparar(FbUs &s, uint32_t now) {
+        if (s.unCable) s.echo->eventOn(DEVICE_PIN_EVENT_NONE);
+        s.trig->setDigitalValue(0);
+        fbDelayCycles(64);                 // ≈3 µs en bajo
+        s.trig->setDigitalValue(1);
+        fbDelayCycles(214);                // ≈10 µs en alto
+        s.trig->setDigitalValue(0);
+        if (s.unCable) {
+            s.echo->getDigitalValue();     // vuelve a entrada
+            s.echo->eventOn(DEVICE_PIN_EVENT_ON_EDGE);
+        }
+        s.tTrigUs = now;
+        s.tUltTrigUs = now;
+        s.subio = false;
+        s.esperando = true;
+    }
+
+    static void fbUsLoop(void *) {
+        while (true) {
+            uint32_t now = (uint32_t)system_timer_current_time_us();
+            for (int i = 0; i < FB_US_MAX; i++) {
+                FbUs &s = fbUs[i];
+                if (!s.activo) continue;
+                if (s.esperando && (uint32_t)(now - s.tTrigUs) > s.timeoutUs) {
+                    // Sin eco dentro del alcance: muestra inválida
+                    s.esperando = false;
+                    s.subio = false;
+                    fbUsPublicar(s, -1, 0, now);
+                }
+                if (!s.esperando && (uint32_t)(now - s.tUltTrigUs) >= (uint32_t)s.periodoMs * 1000u) {
+                    // Sólo disparar con ECHO en bajo (algunos clones lo dejan en alto ~200 ms)
+                    if (s.unCable || s.echo->getDigitalValue() == 0) fbUsDisparar(s, now);
+                }
+            }
+            fiber_sleep(1);
+        }
+    }
+
+    static void fbUsAsegurarInit() {
+        if (fbUsInit) return;
+        for (int i = 0; i < FB_US_MAX; i++) { fbUs[i].activo = false; fbUs[i].echoId = -1; }
+        fbUsInit = true;
+    }
+
+    static void fbUsAplicarConfig(FbUs &s, int maxMm, int periodoMs, int velMmPorS) {
+        if (maxMm < 50) maxMm = 50;
+        if (maxMm > 6000) maxMm = 6000;
+        s.maxMm = maxMm;
+        s.velMmPorS = (uint32_t)(velMmPorS > 0 ? velMmPorS : 343400);
+        // tiempo de vuelo máximo + margen
+        uint32_t vueloUs = (uint32_t)(((uint64_t)maxMm * 2ull * 1000000ull) / s.velMmPorS);
+        s.timeoutUs = vueloUs + 3000;
+        if (periodoMs <= 0) periodoMs = (int)(vueloUs / 1000) + 8;    // auto: vuelo + descanso del eco
+        if (periodoMs < 15) periodoMs = 15;
+        if (periodoMs > 500) periodoMs = 500;
+        s.periodoMs = periodoMs;
+    }
+#endif
+
+    // Detiene el sensor `idx`.
+    //%
+    int usDetener(int idx) {
+#if MICROBIT_CODAL
+        fbUsAsegurarInit();
+        if (idx < 0 || idx >= FB_US_MAX) return 0;
+        FbUs &s = fbUs[idx];
+        s.activo = false;
+        if (s.echoId >= 0) {
+            uBit.messageBus.ignore(s.echoId, DEVICE_PIN_EVT_RISE, fbUsOnEdge);
+            uBit.messageBus.ignore(s.echoId, DEVICE_PIN_EVT_FALL, fbUsOnEdge);
+            s.echo->eventOn(DEVICE_PIN_EVENT_NONE);
+            s.echoId = -1;
+        }
+        return 1;
+#else
+        return 0;
+#endif
+    }
+
+    // Arranca el sensor `idx` (0..2): pines TRIG/ECHO (ids de DigitalPin; el
+    // mismo pin = un solo cable), alcance máximo en mm, período en ms (0 =
+    // automático) y velocidad del sonido en mm/s. Devuelve 1 si quedó midiendo.
+    //%
+    int usIniciar(int idx, int trigPin, int echoPin, int maxMm, int periodoMs, int velMmPorS) {
+#if MICROBIT_CODAL
+        fbUsAsegurarInit();
+        if (idx < 0 || idx >= FB_US_MAX) return 0;
+        usDetener(idx);
+        FbUs &s = fbUs[idx];
+        MicroBitPin *pt = pxt::getPin(trigPin);
+        MicroBitPin *pe = pxt::getPin(echoPin);
+        if (!pt || !pe) return 0;
+        s.trig = pt;
+        s.echo = pe;
+        s.unCable = (pt == pe);
+        s.echoId = pe->id;
+        s.seq = 0; s.distMm = -1; s.ecoUs = 0; s.tUs = 0; s.validas = 0; s.invalidas = 0;
+        s.esperando = false; s.subio = false; s.tTrigUs = 0; s.tUltTrigUs = 0;
+        fbUsAplicarConfig(s, maxMm, periodoMs, velMmPorS);
+        pt->setDigitalValue(0);
+        if (!s.unCable) {
+            pe->setPull(codal::PullMode::Down);
+            pe->getDigitalValue();
+            pe->eventOn(DEVICE_PIN_EVENT_ON_EDGE);
+        }
+        uBit.messageBus.listen(s.echoId, DEVICE_PIN_EVT_RISE, fbUsOnEdge);
+        uBit.messageBus.listen(s.echoId, DEVICE_PIN_EVT_FALL, fbUsOnEdge);
+        s.activo = true;
+        if (!fbUsFiber) {
+            create_fiber(fbUsLoop, NULL);
+            fbUsFiber = true;
+        }
+        return 1;
+#else
+        return 0;
+#endif
+    }
+
+    // Cambia alcance (mm), período (ms, 0 = auto) y velocidad del sonido (mm/s) sin reiniciar.
+    //%
+    int usConfigurar(int idx, int maxMm, int periodoMs, int velMmPorS) {
+#if MICROBIT_CODAL
+        fbUsAsegurarInit();
+        if (idx < 0 || idx >= FB_US_MAX || !fbUs[idx].activo) return 0;
+        fbUsAplicarConfig(fbUs[idx], maxMm, periodoMs, velMmPorS);
+        return fbUs[idx].periodoMs;
+#else
+        return 0;
+#endif
+    }
+
+    // Número de la última muestra (cambia con cada disparo).
+    //%
+    int usSeq(int idx) {
+#if MICROBIT_CODAL
+        if (idx < 0 || idx >= FB_US_MAX || !fbUsInit) return 0;
+        return (int)fbUs[idx].seq;
+#else
+        return 0;
+#endif
+    }
+
+    // Distancia (mm) de la última muestra; -1 si no hubo eco válido.
+    //%
+    int usDist(int idx) {
+#if MICROBIT_CODAL
+        if (idx < 0 || idx >= FB_US_MAX || !fbUsInit) return -1;
+        return fbUs[idx].distMm;
+#else
+        return -1;
+#endif
+    }
+
+    // Ancho del último eco en µs.
+    //%
+    int usEco(int idx) {
+#if MICROBIT_CODAL
+        if (idx < 0 || idx >= FB_US_MAX || !fbUsInit) return 0;
+        return fbUs[idx].ecoUs;
+#else
+        return 0;
+#endif
+    }
+
+    // Instante de la última muestra en décimas de ms (timer del sistema).
+    //%
+    int usTiempoDecimas(int idx) {
+#if MICROBIT_CODAL
+        if (idx < 0 || idx >= FB_US_MAX || !fbUsInit) return 0;
+        return (int)(fbUs[idx].tUs / 100);
+#else
+        return 0;
+#endif
+    }
+
+    // Estadísticas: cual = 0 válidas, 1 inválidas, 2 período real (ms).
+    //%
+    int usEstadistica(int idx, int cual) {
+#if MICROBIT_CODAL
+        if (idx < 0 || idx >= FB_US_MAX || !fbUsInit) return 0;
+        FbUs &s = fbUs[idx];
+        if (cual == 0) return (int)s.validas;
+        if (cual == 1) return (int)s.invalidas;
+        return s.periodoMs;
+#else
+        return 0;
+#endif
+    }
+
 }
