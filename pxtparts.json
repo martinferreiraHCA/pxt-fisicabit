@@ -1,0 +1,247 @@
+{
+    "hcsr04": {
+        "visual": {
+            "image": "parts/hcsr04.svg",
+            "width": 160,
+            "height": 100,
+            "pinDistance": 20,
+            "pinLocations": [
+                {
+                    "x": 50.0,
+                    "y": 100
+                },
+                {
+                    "x": 70.0,
+                    "y": 100
+                },
+                {
+                    "x": 90.0,
+                    "y": 100
+                },
+                {
+                    "x": 110.0,
+                    "y": 100
+                }
+            ]
+        },
+        "numberOfPins": 4,
+        "pinDefinitions": [
+            {
+                "target": "threeVolt",
+                "style": "male",
+                "orientation": "-Z"
+            },
+            {
+                "target": {
+                    "pinInstantiationIdx": 0
+                },
+                "style": "male",
+                "orientation": "-Z"
+            },
+            {
+                "target": {
+                    "pinInstantiationIdx": 1
+                },
+                "style": "male",
+                "orientation": "-Z"
+            },
+            {
+                "target": "ground",
+                "style": "male",
+                "orientation": "-Z"
+            }
+        ],
+        "instantiations": [
+            {
+                "kind": "function",
+                "fullyQualifiedName": "FisicaBitHCSR04.medirDistanciaUltrasonido,FisicaBitHCSR04.medirDistanciaUltrasonidoCrudo",
+                "argumentRoles": [
+                    {
+                        "pinInstantiationIdx": 0,
+                        "partParameter": "pinTrig"
+                    },
+                    {
+                        "pinInstantiationIdx": 1,
+                        "partParameter": "pinEcho"
+                    },
+                    {
+                        "partParameter": "unidad"
+                    }
+                ]
+            },
+            {
+                "kind": "function",
+                "fullyQualifiedName": "FisicaBitHCSR04.enviarDistanciaHCSR04",
+                "argumentRoles": [
+                    {
+                        "pinInstantiationIdx": 0,
+                        "partParameter": "pinTrig"
+                    },
+                    {
+                        "pinInstantiationIdx": 1,
+                        "partParameter": "pinEcho"
+                    },
+                    {
+                        "partParameter": "unidad"
+                    },
+                    {
+                        "partParameter": "medio"
+                    }
+                ]
+            },
+            {
+                "kind": "function",
+                "fullyQualifiedName": "FisicaBitHCSR04.frecuenciaRealUltrasonido,FisicaBitHCSR04.tiempoUltimoEco",
+                "argumentRoles": [
+                    {
+                        "pinInstantiationIdx": 0,
+                        "partParameter": "pinTrig"
+                    },
+                    {
+                        "pinInstantiationIdx": 1,
+                        "partParameter": "pinEcho"
+                    }
+                ]
+            },
+            {
+                "kind": "function",
+                "fullyQualifiedName": "FisicaBitHCSR04.calibrarUltrasonido",
+                "argumentRoles": [
+                    {
+                        "pinInstantiationIdx": 0,
+                        "partParameter": "pinTrig"
+                    },
+                    {
+                        "pinInstantiationIdx": 1,
+                        "partParameter": "pinEcho"
+                    },
+                    {
+                        "partParameter": "distanciaMm"
+                    }
+                ]
+            }
+        ],
+        "assembly": [
+            {
+                "part": true,
+                "pinIndices": [
+                    0,
+                    3
+                ]
+            },
+            {
+                "pinIndices": [
+                    1,
+                    2
+                ]
+            }
+        ]
+    },
+    "hysrf05": {
+        "visual": {
+            "image": "parts/hysrf05.svg",
+            "width": 180,
+            "height": 100,
+            "pinDistance": 20,
+            "pinLocations": [
+                {
+                    "x": 50.0,
+                    "y": 100
+                },
+                {
+                    "x": 70.0,
+                    "y": 100
+                },
+                {
+                    "x": 90.0,
+                    "y": 100
+                },
+                {
+                    "x": 130.0,
+                    "y": 100
+                }
+            ]
+        },
+        "numberOfPins": 4,
+        "pinDefinitions": [
+            {
+                "target": "threeVolt",
+                "style": "male",
+                "orientation": "-Z"
+            },
+            {
+                "target": {
+                    "pinInstantiationIdx": 0
+                },
+                "style": "male",
+                "orientation": "-Z"
+            },
+            {
+                "target": {
+                    "pinInstantiationIdx": 1
+                },
+                "style": "male",
+                "orientation": "-Z"
+            },
+            {
+                "target": "ground",
+                "style": "male",
+                "orientation": "-Z"
+            }
+        ],
+        "instantiations": [
+            {
+                "kind": "function",
+                "fullyQualifiedName": "FisicaBitHCSR04.medirDistanciaSRF05",
+                "argumentRoles": [
+                    {
+                        "pinInstantiationIdx": 0,
+                        "partParameter": "pinTrig"
+                    },
+                    {
+                        "pinInstantiationIdx": 1,
+                        "partParameter": "pinEcho"
+                    },
+                    {
+                        "partParameter": "unidad"
+                    }
+                ]
+            },
+            {
+                "kind": "function",
+                "fullyQualifiedName": "FisicaBitHCSR04.enviarDistanciaSRF05",
+                "argumentRoles": [
+                    {
+                        "pinInstantiationIdx": 0,
+                        "partParameter": "pinTrig"
+                    },
+                    {
+                        "pinInstantiationIdx": 1,
+                        "partParameter": "pinEcho"
+                    },
+                    {
+                        "partParameter": "unidad"
+                    },
+                    {
+                        "partParameter": "medio"
+                    }
+                ]
+            }
+        ],
+        "assembly": [
+            {
+                "part": true,
+                "pinIndices": [
+                    0,
+                    3
+                ]
+            },
+            {
+                "pinIndices": [
+                    1,
+                    2
+                ]
+            }
+        ]
+    }
+}

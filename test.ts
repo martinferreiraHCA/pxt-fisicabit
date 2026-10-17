@@ -402,3 +402,26 @@ basic.forever(function () {
     }
 })
 */
+
+
+// =============================================================================
+// PRUEBA 15: ULTRASONIDO HC-SR04 / HY-SRF05 (muestreador nativo, envío por eco)
+// =============================================================================
+// HARDWARE: VCC → 3V, GND → GND, TRIG → P8, ECHO → P12 (HY-SRF05: OUT libre).
+// ÉXITO: El simulador muestra el sensor cableado. "frecuencia real" ≈ 55 con
+//        alcance 150 cm. En fisicabit.com (USB, 1 variable, timestamp ON) llega
+//        una línea por eco a intervalos regulares (≈18 ms) y la distancia a una
+//        pared coincide con la cinta tras calibrar a 300 mm (botón A).
+// FALLA: frecuencia 0, distancias fijas, eco siempre inválido.
+// =============================================================================
+
+/*
+FisicaBitHCSR04.fijarAlcanceUltrasonido(150)
+basic.showNumber(FisicaBitHCSR04.frecuenciaRealUltrasonido(DigitalPin.P8, DigitalPin.P12))
+input.onButtonPressed(Button.A, function () {
+    FisicaBitHCSR04.calibrarUltrasonido(DigitalPin.P8, DigitalPin.P12, 300)
+})
+basic.forever(function () {
+    FisicaBitHCSR04.enviarDistanciaHCSR04(DigitalPin.P8, DigitalPin.P12, UnidadDistancia.Centimetros, MedioEnvio.USB)
+})
+*/

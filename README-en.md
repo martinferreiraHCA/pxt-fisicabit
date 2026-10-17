@@ -47,7 +47,7 @@ let reading = FisicaBit.leerSensorAnalogico(PinAnalogico.P0)
 |-------|-------------|
 | `read analog sensor on [P0]` | Reads potentiometer, LDR, NTC (0-1023) |
 | `read digital sensor on P[8]` | Reads PIR, infrared, switch (0/1) |
-| `ultrasonic distance TRIG P1 ECHO P2 in [cm]` | Measures distance with HC-SR04 |
+| `HC-SR04 distance TRIG [P8] ECHO [P12] in [cm]` / `HY-SRF05 distance ...` | Ultrasonic sensors with a native sampler (interrupt-timed echo, ≈38–55 Hz) and wiring shown in the simulator. **Ultrasonic** category, with `send ... distance`, `set max range`, `air temperature`, `calibrate` and `actual sampling rate` |
 | `DS18B20 temperature on [P0] in [°C]` | DS18B20 waterproof temperature probe (OneWire), ±0.5 °C, −55 to 125 °C. Own **DS18B20** category with `last temperature`, `set resolution 9–12 bits`, `connected?` and `error code` |
 | `MAX6675 temperature SCK [P13] CS [P16] SO [P14] in [°C]` | Type K thermocouple with a MAX6675 module (SPI), 0 to 1023 °C, 0.25 °C resolution, ±2 °C: flames, boiling, cooling curves. Own **MAX6675** category with `last temperature`, `set correction`, `connected?`, `error code` and `raw value` |
 | `ToF distance [TOF200C] SDA [P20] SCL [P19] in [cm]` | ToF laser sensors in one block: TOF050C (VL6180X), TOF200C and GY-VL53L0XV2 (VL53L0X), TOF400C (VL53L1X) or auto-detect. Pick the module and the pins; it initialises itself. **ToF — Laser Distance** category, with `suggested pins`, `module detected` and `sensor found?` |
@@ -174,12 +174,28 @@ Why these blocks connect reliably:
 
 ## Wiring examples
 
-### HC-SR04 Ultrasonic Sensor
+### HC-SR04 and HY-SRF05 ultrasonic sensors
+
+When these blocks are used, the **MakeCode simulator shows the sensor with its wires** on the chosen pins, like a servo or a speaker, and "Print instructions" gives the step-by-step wiring guide.
+
+![HC-SR04 → micro:bit wiring](https://raw.githubusercontent.com/martinferreiraHCA/pxt-fisicabit/main/docs/img/hc-sr04-microbit.png)
+
+![HY-SRF05 → micro:bit wiring](https://raw.githubusercontent.com/martinferreiraHCA/pxt-fisicabit/main/docs/img/hy-srf05-microbit.png)
+
 ```
-HC-SR04 TRIG → micro:bit P1
-HC-SR04 ECHO → micro:bit P2
-HC-SR04 VCC  → micro:bit 3V
-HC-SR04 GND  → micro:bit GND
+VCC → 3V · GND → GND · TRIG → P8 · ECHO → P12      (HY-SRF05: OUT unconnected)
+Expansion kit: headers 8 and 12 (G·V·S). With 5 V on VCC: 1 kΩ / 2 kΩ divider on ECHO.
+Second sensor: TRIG P1 · ECHO P2. Third: TRIG P15 · ECHO P16.
+HY-SRF05 single-wire mode: OUT → GND, one pin → P8 and the same pin in TRIG and ECHO of the block.
+```
+
+**Acquisition optimised for fast phenomena.** A C++ sampler triggers the sensor at a fixed period and captures the ECHO edges by interrupt with microsecond timestamps, without blocking the program. Every sample carries the real instant the sound hit the object. The period adapts to the range (`set ultrasonic max range`): 150 cm → ≈55 Hz, 300 cm → ≈38 Hz. The speed of sound is corrected with the air temperature, the filter is a sliding median that does not lower the rate, there is step rejection and offset calibration against a known distance. `send HC-SR04 distance ... via USB` streams one line per echo with its real time.
+
+```blocks
+FisicaBitHCSR04.fijarAlcanceUltrasonido(150)
+basic.forever(function () {
+    FisicaBitHCSR04.enviarDistanciaHCSR04(DigitalPin.P8, DigitalPin.P12, UnidadDistancia.Centimetros, MedioEnvio.USB)
+})
 ```
 
 ### ToF laser sensors (TOF050C, TOF200C, GY-VL53L0XV2, TOF400C)
