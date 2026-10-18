@@ -864,6 +864,7 @@ namespace FisicaBitToF {
      */
     //% block="ToF distance %modelo SDA %sda SCL %scl in %unidad"
     //% blockId=fisicabit_tof_distancia
+    //% parts="tof" trackArgs=1,2
     //% group="Measurement"
     //% weight=100
     //% inlineInputMode=inline
@@ -921,6 +922,7 @@ namespace FisicaBitToF {
      */
     //% block="send ToF distance %modelo SDA %sda SCL %scl in %unidad via %medio"
     //% blockId=fisicabit_tof_enviar
+    //% parts="tof" trackArgs=1,2
     //% group="Measurement"
     //% weight=98
     //% inlineInputMode=inline
@@ -968,6 +970,7 @@ namespace FisicaBitToF {
      */
     //% block="start precision ToF %modelo SDA %sda SCL %scl INT %intPin"
     //% blockId=fisicabit_tof_iniciar_precision
+    //% parts="tof" trackArgs=1,2
     //% group="Configuration"
     //% weight=100
     //% inlineInputMode=inline
@@ -995,6 +998,7 @@ namespace FisicaBitToF {
      */
     //% block="calibrate ToF SDA %sda SCL %scl with target at %distanciaMm mm"
     //% blockId=fisicabit_tof_calibrar_offset
+    //% parts="tof" trackArgs=0,1
     //% group="Configuration"
     //% weight=93
     //% sda.defl=DigitalPin.P20
@@ -1032,6 +1036,7 @@ namespace FisicaBitToF {
      */
     //% block="ToF last sample time (ms) SDA %sda SCL %scl"
     //% blockId=fisicabit_tof_tiempo_muestra
+    //% parts="tof" trackArgs=0,1
     //% group="Diagnostics"
     //% weight=79
     //% sda.defl=DigitalPin.P20
@@ -1050,6 +1055,7 @@ namespace FisicaBitToF {
      */
     //% block="ToF actual sampling rate (Hz) SDA %sda SCL %scl"
     //% blockId=fisicabit_tof_hz
+    //% parts="tof" trackArgs=0,1
     //% group="Diagnostics"
     //% weight=78
     //% sda.defl=DigitalPin.P20
@@ -1089,6 +1095,7 @@ namespace FisicaBitToF {
      */
     //% block="ToF module detected SDA %sda SCL %scl"
     //% blockId=fisicabit_tof_detectado
+    //% parts="tof" trackArgs=0,1
     //% group="Diagnostics"
     //% weight=82
     //% sda.defl=DigitalPin.P20
@@ -1107,6 +1114,7 @@ namespace FisicaBitToF {
      */
     //% block="ToF sensor found? SDA %sda SCL %scl"
     //% blockId=fisicabit_tof_hay
+    //% parts="tof" trackArgs=0,1
     //% group="Diagnostics"
     //% weight=81
     //% sda.defl=DigitalPin.P20
