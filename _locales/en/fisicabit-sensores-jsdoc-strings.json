@@ -110,7 +110,7 @@
     "FisicaBitHCSR04.enviarDistanciaSRF05|param|pinEcho": "Pin wired to ECHO",
     "FisicaBitHCSR04.enviarDistanciaSRF05|param|pinTrig": "Pin wired to TRIG",
     "FisicaBitHCSR04.enviarDistanciaSRF05|param|unidad": "Unit: cm (1 decimal), mm or inches",
-    "FisicaBitHCSR04.estadoUltrasonido": "Sensor status in one word, to show on the display or send over USB and know at once whether the wiring is right: \"OK\" = measuring; \"SIN ECO\" = the sensor does not answer (check VCC: many HC-SR04 need 5 V; GND; and that there is an object within range); \"ECHO ALTO\" = the ECHO pin is stuck high (TRIG and ECHO swapped or module unpowered).",
+    "FisicaBitHCSR04.estadoUltrasonido": "Sensor status in a few words, to show on the display and know at once what is going on: \"OK 38Hz\" = measuring with the native sampler; \"OK SIMPLE 45cm\" = measuring with the classic method (the native sampler did not start); \"SIN ECO\" = the sensor does not answer (check VCC: many HC-SR04 need 5 V; GND; and that there is an object within range); \"ECHO ALTO\" = the ECHO pin is stuck high (TRIG and ECHO swapped or module unpowered).",
     "FisicaBitHCSR04.estadoUltrasonido|param|pinEcho": "Pin wired to ECHO",
     "FisicaBitHCSR04.estadoUltrasonido|param|pinTrig": "Pin wired to TRIG",
     "FisicaBitHCSR04.fijarAlcanceUltrasonido": "Maximum range you want to measure. It sets how long the echo is awaited and therefore the sampling rate: 150 cm → ≈55 Hz, 300 cm → ≈38 Hz, 400 cm → ≈31 Hz. For a cart on a 1.5 m rail use 150 cm.",

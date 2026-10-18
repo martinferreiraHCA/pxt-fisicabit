@@ -92,6 +92,7 @@ namespace FisicaBitHCSR04 {
         listo: boolean
         ultSeq: number
         ultIntentoMs: number
+        nativoDesdeMs: number   // arranque del muestreador nativo (vigilancia)
         hist: number[]
         ultVal: number          // última distancia válida (mm, con offset)
         ultOk: boolean
@@ -105,6 +106,7 @@ namespace FisicaBitHCSR04 {
             this.listo = false
             this.ultSeq = 0
             this.ultIntentoMs = -100000
+            this.nativoDesdeMs = 0
             this.hist = []
             this.ultVal = 0
             this.ultOk = false
@@ -133,6 +135,7 @@ namespace FisicaBitHCSR04 {
             // Pines empaquetados: las funciones nativas admiten 4 parámetros como máximo
             s.nativo = _hwIniciar(s.idx, (s.trig << 16) | s.echo, _maxMm, _periodoMs) == 1
             if (s.nativo) _hwConfigurar(s.idx, _maxMm, _periodoMs, _velMmPorS())
+            s.nativoDesdeMs = control.millis()
         }
         s.listo = true
         s.ultSeq = 0
@@ -166,7 +169,16 @@ namespace FisicaBitHCSR04 {
         _asegurar(s)
         if (s.nativo) {
             const seq = _hwSeq(s.idx)
-            if (seq == s.ultSeq) return -2
+            if (seq == s.ultSeq) {
+                // Vigilancia: si el muestreador nativo no produjo ninguna muestra
+                // en 500 ms, volver al método clásico (pulso bloqueante)
+                if (seq == 0 && control.millis() - s.nativoDesdeMs > 500) {
+                    _hwDetener(s.idx)
+                    s.nativo = false
+                    return _lecturaTS(s)
+                }
+                return -2
+            }
             s.ultSeq = seq
             return _hwDist(s.idx)
         }
@@ -520,10 +532,11 @@ namespace FisicaBitHCSR04 {
     // =========================================================================
 
     /**
-     * Estado del sensor en una palabra, para mostrar en pantalla o enviar
-     * por USB y saber al instante si el cableado está bien:
-     * "OK" = mide; "SIN ECO" = el sensor no responde (revisar VCC: muchos
-     * HC-SR04 necesitan 5 V; GND; y que haya un objeto a menos del alcance);
+     * Estado del sensor en pocas palabras, para mostrar en pantalla y saber
+     * al instante qué pasa: "OK 38Hz" = mide con el muestreador nativo;
+     * "OK SIMPLE 45cm" = mide con el método clásico (el nativo no arrancó);
+     * "SIN ECO" = el sensor no responde (revisar VCC: muchos HC-SR04
+     * necesitan 5 V; GND; y que haya un objeto a menos del alcance);
      * "ECHO ALTO" = el pin ECHO quedó en alto (TRIG y ECHO cruzados o
      * módulo sin alimentación).
      * @param pinTrig Pin conectado a TRIG
@@ -539,12 +552,21 @@ namespace FisicaBitHCSR04 {
     export function estadoUltrasonido(pinTrig: DigitalPin, pinEcho: DigitalPin): string {
         const s = _obtener(pinTrig, pinEcho)
         _asegurar(s)
-        if (!s.nativo) return "SIM"
-        const v0 = _hwEstadistica(s.idx, 0)
-        basic.pause(400)
-        if (_hwEstadistica(s.idx, 0) > v0) return "OK"
-        if (_hwEstadistica(s.idx, 3) == 1) return "ECHO ALTO"
-        return "SIN ECO"
+        if (s.nativo) {
+            const v0 = _hwEstadistica(s.idx, 0)
+            const i0 = _hwEstadistica(s.idx, 1)
+            basic.pause(400)
+            const dv = _hwEstadistica(s.idx, 0) - v0
+            const di = _hwEstadistica(s.idx, 1) - i0
+            if (dv > 0) return "OK " + Math.round(dv * 2.5) + "Hz"
+            if (di > 0) return _hwEstadistica(s.idx, 3) == 1 ? "ECHO ALTO" : "SIN ECO"
+            // El muestreador nativo no produjo ninguna muestra: pasar al modo simple
+            _hwDetener(s.idx)
+            s.nativo = false
+        }
+        const d = _lecturaTS(s)
+        if (d > 0) return "OK SIMPLE " + Math.idiv(d, 10) + "cm"
+        return pins.digitalReadPin(pinEcho) == 1 ? "ECHO ALTO" : "SIN ECO"
     }
 
     /**
