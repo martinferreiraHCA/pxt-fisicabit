@@ -1,6 +1,6 @@
 {
     "name": "fisicabit-sensores",
-    "version": "0.12.8",
+    "version": "0.13.0",
     "description": "Extensión micro:bit para experimentos de física: sensores, barreras ópticas y envío de datos a fisicabit.com con un solo bloque por USB o Bluetooth",
     "license": "MIT",
     "authors": [
@@ -46,7 +46,8 @@
         "_locales/pt-BR/tutorial-bluetooth.md",
         "pxtparts.json",
         "parts/hcsr04.svg",
-        "parts/hysrf05.svg"
+        "parts/hysrf05.svg",
+        "parts/tof.svg"
     ],
     "testFiles": [
         "test.ts"
