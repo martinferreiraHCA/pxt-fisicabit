@@ -557,13 +557,9 @@ namespace fisicabitKinematics {
     // =========================================================================
 
     function _send(channel: FbChannel, values: number[], ms: number): void {
-        if (channel === FbChannel.Bluetooth) {
-            if (values.length === 1) fisicabitBluetooth.send1(values[0], ms)
-            else fisicabitBluetooth.send2(values[0], values[1], ms)
-        } else {
-            if (values.length === 1) fisicabitSerial.send1(values[0], ms)
-            else fisicabitSerial.send2(values[0], values[1], ms)
-        }
+        // Bluetooth is provided by the optional fisicabit-bluetooth extension;
+        // without it the data goes over USB serial.
+        fisicabitData.channelSend(channel, values, ms)
     }
 
     /**

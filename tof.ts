@@ -947,13 +947,12 @@ namespace fisicabitToF {
         const mm = _readFiltered(s)
         // Sample time in the fisicabit.com time base
         let tMs: number
-        const baseMs = control.millis() - (channel == FbChannel.Bluetooth ? fisicabitBluetooth.time() : fisicabitSerial.time())
+        const baseMs = control.millis() - fisicabitData.channelTime(channel)
         if (s.native) tMs = _hwTofTimeTenths(s.idx) / 10 - baseMs
         else tMs = control.millis() - baseMs
         if (tMs < 0) tMs = 0
         const line = fisicabitData.format(tMs, 1) + "," + fisicabitData.format(_convert(mm, unit), _decimalsOf(unit))
-        if (channel == FbChannel.Bluetooth) fisicabitBluetooth.sendText(line)
-        else fisicabitSerial.sendLine(line)
+        fisicabitData.channelSendText(channel, line)
     }
 
     /**

@@ -168,4 +168,66 @@ namespace fisicabitData {
             })
         }
     }
+
+    // =========================================================================
+    // Optional Bluetooth transport
+    // =========================================================================
+    // The separate "fisicabit-bluetooth" extension registers itself here when
+    // the program starts. Blocks that offer a channel choice (USB / Bluetooth)
+    // in kinematics, ToF and ultrasonic call these helpers; when the Bluetooth
+    // extension is not installed they fall back to USB serial, so a program
+    // never silently loses its data.
+    let _btTime: () => number = null
+    let _btSendText: (text: string) => void = null
+    let _btSend: (values: number[], ms: number) => void = null
+
+    /**
+     * Internal helper, not a block. Registers the Bluetooth transport; called
+     * once at start-up by the fisicabit-bluetooth extension.
+     * @param time returns the Bluetooth session time in ms
+     * @param sendText sends one text line over Bluetooth UART
+     * @param send sends time + values and waits for the sampling period
+     */
+    export function registerBluetooth(time: () => number, sendText: (text: string) => void, send: (values: number[], ms: number) => void): void {
+        _btTime = time
+        _btSendText = sendText
+        _btSend = send
+    }
+
+    /** Internal helper, not a block. True when the fisicabit-bluetooth extension is installed. */
+    export function bluetoothAvailable(): boolean {
+        return _btSend != null
+    }
+
+    /**
+     * Internal helper, not a block. Session time of the chosen channel (ms since reset).
+     * @param channel USB or Bluetooth
+     */
+    export function channelTime(channel: FbChannel): number {
+        if (channel == FbChannel.Bluetooth && _btTime) return _btTime()
+        return fisicabitSerial.time()
+    }
+
+    /**
+     * Internal helper, not a block. Sends one CSV line over the chosen channel.
+     * @param channel USB or Bluetooth
+     * @param text the line to send (without newline)
+     */
+    export function channelSendText(channel: FbChannel, text: string): void {
+        if (channel == FbChannel.Bluetooth && _btSendText) _btSendText(text)
+        else fisicabitSerial.sendLine(text)
+    }
+
+    /**
+     * Internal helper, not a block. Sends time + one or two values over the
+     * chosen channel and waits for the sampling period.
+     * @param channel USB or Bluetooth
+     * @param values one or two measured values
+     * @param ms sampling period in milliseconds
+     */
+    export function channelSend(channel: FbChannel, values: number[], ms: number): void {
+        if (channel == FbChannel.Bluetooth && _btSend) { _btSend(values, ms); return }
+        if (values.length == 1) fisicabitSerial.send1(values[0], ms)
+        else fisicabitSerial.send2(values[0], values[1], ms)
+    }
 }

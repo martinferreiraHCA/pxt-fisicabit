@@ -253,12 +253,11 @@ namespace fisicabitUltrasonic {
     function _send(s: UltrasonicSensor, unit: FbDistanceUnit, channel: FbChannel): void {
         if (!_waitSample(s, 600)) return
         const mm = _readFiltered(s)
-        const baseMs = control.millis() - (channel == FbChannel.Bluetooth ? fisicabitBluetooth.time() : fisicabitSerial.time())
+        const baseMs = control.millis() - fisicabitData.channelTime(channel)
         let tMs = s.native ? _hwTimeTenths(s.idx) / 10 - baseMs : control.millis() - baseMs
         if (tMs < 0) tMs = 0
         const line = fisicabitData.format(tMs, 1) + "," + fisicabitData.format(_convert(mm, unit), _decimalsFor(unit))
-        if (channel == FbChannel.Bluetooth) fisicabitBluetooth.sendText(line)
-        else fisicabitSerial.sendLine(line)
+        fisicabitData.channelSendText(channel, line)
     }
 
     // =========================================================================
