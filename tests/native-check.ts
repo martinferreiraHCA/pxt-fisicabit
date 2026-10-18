@@ -27,7 +27,6 @@
 //      the extension must exit with code 0.
 // =============================================================================
 
-fisicabitBluetooth.quickStart()
 fisicabitKinematics.start()                                        // accelConfigure / accelEnsureHighRes
 fisicabitToF.tofStartPrecision(FbToFModel.TOF200C, DigitalPin.P20, DigitalPin.P19, DigitalPin.P8)
 fisicabitHX711.hx711Init(DigitalPin.P0, DigitalPin.P1)             // hx711ReadRawNative

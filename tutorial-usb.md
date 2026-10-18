@@ -13,8 +13,6 @@ In this tutorial you will program the micro:bit to stream sensor readings to **f
 
 You need: a micro:bit, its USB cable, and Chrome or Edge.
 
-If MakeCode asks **"Extensions cannot be used together"** (radio and bluetooth), click **Remove radio**: this extension includes Bluetooth and a new project includes the radio extension by default.
-
 ## Step 1: Show that the program is running
 
 Drag ``||basic:show icon||`` into ``||basic:on start||``, so the micro:bit displays a check mark when the program starts.

@@ -2,7 +2,7 @@
 
 > 🇪🇸 Versión en español: [README-es.md](https://github.com/martinferreiraHCA/pxt-fisicabit/blob/main/README-es.md)
 
-MakeCode extension for physics experiments with the micro:bit: sensors, photogates, a precision accelerometer, and one-block data streaming to [fisicabit.com](https://fisicabit.com) over USB or Bluetooth.
+MakeCode extension for physics experiments with the micro:bit: sensors, photogates, a precision accelerometer, and one-block data streaming to [fisicabit.com](https://fisicabit.com) over USB. Bluetooth streaming is provided by the companion extension [fisicabit-bluetooth](https://github.com/martinferreiraHCA/pxt-fisicabit-bluetooth), kept separate so that this extension stays compatible with the `radio` extension.
 
 ## ~ hint
 
@@ -27,16 +27,16 @@ Or search for **fisicabit-sensores** in the Extensions dialog.
 Open these links in MakeCode. The tutorial is shown in the editor language (English, Spanish or Portuguese) and already includes the FisicaBit blocks:
 
 * **USB:** https://makecode.microbit.org/#tutorial:https://github.com/martinferreiraHCA/pxt-fisicabit/tutorial-usb
-* **Bluetooth:** https://makecode.microbit.org/#tutorial:https://github.com/martinferreiraHCA/pxt-fisicabit/tutorial-bluetooth
+* **Bluetooth:** https://makecode.microbit.org/#tutorial:https://github.com/martinferreiraHCA/pxt-fisicabit-bluetooth/tutorial-bluetooth (companion extension)
 
-The tutorials live in `tutorial-usb.md` and `tutorial-bluetooth.md` (English, base language) with translations under `_locales/es/` and `_locales/pt-BR/`. To test recent changes open the link in an incognito window, since MakeCode caches tutorials.
+The USB tutorial lives in `tutorial-usb.md` (English, base language; the Bluetooth one in the fisicabit-bluetooth repository) with translations under `_locales/es/` and `_locales/pt-BR/`. To test recent changes open the link in an incognito window, since MakeCode caches tutorials.
 
 ## Toolbox categories
 
 | Category | Purpose |
 |----------|---------|
 | **FisicaBit USB** | Send time and values to fisicabit.com over the USB cable (Web Serial, 115200 baud) |
-| **FisicaBit Bluetooth** | The same over Bluetooth LE (UART service) |
+| **FisicaBit Bluetooth** | The same over Bluetooth LE, in the separate extension [fisicabit-bluetooth](https://github.com/martinferreiraHCA/pxt-fisicabit-bluetooth) |
 | **FisicaBit kinematics** | Precision accelerometer: linear acceleration, velocity, rest detection |
 | **Ultrasonic** | HC-SR04 / HY-SRF05 distance with a background sampler; wiring shown in the simulator |
 | **ToF laser** | VL53L0X / VL53L1X / VL6180X laser distance modules (I2C); wiring shown in the simulator |
@@ -123,7 +123,7 @@ basic.forever(function () {
 })
 ```
 
-Uniformly accelerated motion over Bluetooth (board fixed to a cart on an incline):
+Uniformly accelerated motion over Bluetooth (board fixed to a cart on an incline; needs the fisicabit-bluetooth extension):
 
 ```blocks
 fisicabitBluetooth.quickStart()
@@ -168,31 +168,6 @@ What it does inside (from the LSM303AGR datasheet and the micro:bit V2 CODAL dri
 | `[C++] read native ADC channel [0]` | 12-bit ADC reading (0-4095) through CODAL |
 | `[C++] read ADC average channel [0] samples [16]` | Oversampled ADC to reduce noise |
 | `[C++] measure pulse pin P[2] level [HIGH] timeout [25000] µs` | Precise pulse timing |
-
-### FisicaBit Bluetooth — stream to fisicabit.com wirelessly
-
-```blocks
-fisicabitBluetooth.quickStart()
-basic.forever(function () {
-    fisicabitBluetooth.send1(input.acceleration(Dimension.X), 100)
-})
-```
-
-| Step | Block | Description |
-|------|-------|-------------|
-| 1. Start | `start Bluetooth for fisicabit.com` | **First** in `on start`: UART service, max TX power, ◎ / ♥ icons on the display |
-| 2. Send | `send to fisicabit.com via Bluetooth time and [value] every [100] ms` | Inside `forever`. 2, 3 and 4-value variants. Over BLE use 50 ms or more |
-| Send without time | `send to fisicabit.com via Bluetooth without time [value]` | Sends only the measured values, no time and no wait. On fisicabit.com disable "micro:bit sends timestamp" |
-| 3. Optional | `Bluetooth connected?`, `on connected / on disconnected`, `reset Bluetooth time to 0`, `Bluetooth time (ms)`, `Bluetooth fast loop every [50] ms`, `show connection icons` | Connection state and time control |
-| Advanced | `send micro:bit timestamp`, `set decimals`, `send text`, `start with all BLE services`, `set sampling rate / interval` | Only if needed |
-
-Why these blocks connect reliably:
-
-* Only the UART service is started by default. Every extra BLE service slows down discovery (especially on Windows) and can trip the firmware's 4 s supervision timeout.
-* Transmit power is set to the maximum (7).
-* Lines are short (time starts at 0, 2 decimals, `\n` terminator), so a sample fits in a single 20-byte BLE packet.
-* Sampling keeps its rhythm while no page is connected and data resumes automatically after a reconnect. Time restarts at 0 on every connection.
-* If BLE falls behind, the sampler resynchronises instead of bursting stale samples.
 
 ## Wiring examples
 
@@ -298,32 +273,9 @@ Receiver: 3V → Phototransistor → Pin (signal)
                                  ├── R(10KΩ) → GND
 ```
 
-## Bluetooth setup
+## Bluetooth
 
-1. In MakeCode open **⚙ Settings → Project Settings** and select **No Pairing Required**. The extension does not change this setting itself; fisicabit.com connects without bonding, so *JustWorks* or *Passkey* pairing makes the phone connect but never receive data.
-2. Put `start Bluetooth for fisicabit.com` as the first block in `on start`.
-3. Flash the program, wait for the ◎ icon, then click **Bluetooth** on fisicabit.com and pick `BBC micro:bit [xxxxx]`.
-4. If a previously paired micro:bit refuses to connect, remove ("forget") it from the operating system's Bluetooth settings and try again.
-
-Notes:
-
-* Bluetooth and the **Radio** extension cannot be used in the same program. USB serial keeps working alongside Bluetooth.
-* Practical BLE rate is up to ~20 Hz; for 50–100 Hz use USB.
-* The old `BT sample ... every ... ms` and `serial sample ... every ... ms` blocks still compile but are hidden; use the `send to fisicabit.com time and ... every ... ms` blocks.
-
-### Connected but no data arrives (phone / Android)
-
-Symptom: fisicabit.com shows the micro:bit as connected, but the table and graph stay empty. The cause is almost always the project settings or a stale bond stored by the phone. Try, in this order:
-
-1. **Stale bond on the phone.** On Android: Settings → Bluetooth → `BBC micro:bit [xxxxx]` → **Forget**. Then reset the micro:bit (back button) and reconnect from fisicabit.com.
-2. **Project settings.** **⚙ → Project Settings** must be **No Pairing Required**. Otherwise the `.hex` requires bonding and the phone connects but cannot read data. Select *No Pairing Required*, **download the .hex again** and re-flash.
-3. **Extension version.** In the editor's **Extensions** view make sure `fisicabit-sensores` is up to date. If not, remove it, add it again from `https://github.com/martinferreiraHCA/pxt-fisicabit`, and download the `.hex` again: **firmware already on the board does not update itself**.
-4. **Blocks.** `start Bluetooth for fisicabit.com` goes **inside `on start`**, and the `send to fisicabit.com via Bluetooth ...` block **inside `forever`**. Without the start block the UART service does not exist and the page connects with no data channel.
-5. **fisicabit.com.** Choose **Bluetooth**, set the **number of variables** equal to the number of values in the block (not counting time) and keep **"micro:bit sends timestamp"** enabled (or disabled when you use the *without time* blocks). If they do not match, lines arrive but are discarded.
-6. **Browser.** On Android only **Chrome** (or Chromium-based Edge/Samsung Internet) has Web Bluetooth; Firefox does not, and no browser on iPhone/iPad does. Keep the screen on with the tab visible: if Android backgrounds it, reception stops.
-7. **Interval.** Over BLE use 50 ms or more in the send block. If a block in the same program uses 5–10 ms the indications saturate and data arrives in bursts or not at all.
-
-When everything is right the micro:bit shows ♥ and a new line appears on fisicabit.com every interval.
+Wireless streaming lives in the companion extension **fisicabit-bluetooth** (`github:martinferreiraHCA/pxt-fisicabit-bluetooth`). It depends on this one, so adding it brings both. The `send ... via [Bluetooth]` choice in the kinematics, ToF and ultrasonic blocks routes the data through that extension when it is installed and falls back to USB when it is not. The split keeps `fisicabit-sensores` usable together with the `radio` extension.
 
 ### Browser compatibility
 

@@ -13,8 +13,6 @@ Neste tutorial você vai programar o micro:bit para enviar as leituras dos senso
 
 Você precisa de: um micro:bit, o cabo USB e Chrome ou Edge.
 
-Se o MakeCode perguntar **"As extensões não podem ser usadas juntas"** (radio e bluetooth), escolha **Remover radio**: esta extensão inclui Bluetooth e um projeto novo traz a extensão radio por padrão.
-
 ## Passo 1: Mostrar que o programa está rodando
 
 Arraste ``||basic:mostrar ícone||`` para dentro de ``||basic:ao iniciar||``, para o micro:bit mostrar um sinal de certo quando o programa iniciar.

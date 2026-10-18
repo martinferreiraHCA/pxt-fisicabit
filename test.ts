@@ -26,10 +26,10 @@
 //   - Tests 1-4 are pure logic (unit conversions, CSV formatting, acoustics,
 //     suggested pins) compared against exact expected values. FAIL = the
 //     extension no longer computes the documented formula.
-//   - Tests 5-9 and 18 use only the micro:bit (internal sensors, unconnected
-//     pins, USB, Bluetooth stack, accelerometer, microphone). PASS = values in
-//     their documented ranges and no crash. Keep the board still in test 9.
-//   - Tests 10-17 need an external sensor on the pins named in the test. With
+//   - Tests 5-8 and 17 use only the micro:bit (internal sensors, unconnected
+//     pins, USB, accelerometer, microphone). PASS = values in their
+//     documented ranges and no crash. Keep the board still in test 8.
+//   - Tests 9-16 need an external sensor on the pins named in the test. With
 //     the sensor: PASS when the reading is plausible. Without it: SKIP(<reason>)
 //     and never a crash or hang — a FAIL or a simulator error with no sensor
 //     connected is a regression. In the simulator the DS18B20 and HX711
@@ -43,7 +43,7 @@
 const TEST_NAMES = [
     "fisicabit conversions", "fisicabitData format+Sampler", "fisicabitSound acoustics math",
     "fisicabitToF suggested pins", "fisicabit internal+analog sensors", "fisicabit photogate helpers",
-    "fisicabitSerial USB sending", "fisicabitBluetooth sending", "fisicabitKinematics accelerometer",
+    "fisicabitSerial USB sending", "fisicabitKinematics accelerometer",
     "fisicabitUltrasonic HC-SR04 P8/P12", "fisicabitToF laser SDA P20 SCL P19", "fisicabitDS18B20 probe P0",
     "fisicabitMAX6675 SCK P13 CS P16 SO P14", "fisicabitDHT11 DATA P16", "fisicabitBME280 I2C 0x76",
     "fisicabitHX711 DOUT P0 SCK P1", "fisicabitColorimeter TCS230", "fisicabitSound+AudioNative mic"
@@ -215,31 +215,10 @@ function test7(): number {
     return verdict()
 }
 
-// ── TEST 8: fisicabitBluetooth UART service and sending blocks ───────────────
-// PASS: no crash. Data is only received when fisicabit.com is connected over
-// Bluetooth; isConnected is just reported.
-function test8(): number {
-    fisicabitBluetooth.quickStart()
-    fisicabitBluetooth.showIcons(false)
-    fisicabitBluetooth.setDecimals(1)
-    fisicabitBluetooth.setRate(FbSampleRate.Hz100)
-    fisicabitBluetooth.sendTimestamp(true)
-    fisicabitBluetooth.resetTime()
-    let connected = fisicabitBluetooth.isConnected()
-    fisicabitBluetooth.send1(1.5, 10)
-    fisicabitBluetooth.send2(1, 2, 10)
-    fisicabitBluetooth.sendWithoutTime1(3)
-    fisicabitBluetooth.sendText("# bluetooth test")
-    let t = fisicabitBluetooth.time()
-    expectTrue("bluetooth time 0..2000 ms", t >= 0 && t < 2000)
-    serial.writeLine("  bluetooth connected=" + connected)
-    return verdict()
-}
-
-// ── TEST 9: fisicabitKinematics precision accelerometer (keep the board still)
+// ── TEST 8: fisicabitKinematics precision accelerometer (keep the board still)
 // PASS: after calibration at rest, |a| < 2 m/s², |v| < 0.5 m/s, at rest, valid
 // pitch/roll, 1000 mg = 9.81 m/s². Takes ~2 s.
-function test9(): number {
+function test8(): number {
     fisicabitKinematics.setRate(FbAccelerometerRate.Hz200)
     fisicabitKinematics.setSmoothing(FbAccelerometerSmoothing.Medium)
     fisicabitKinematics.start()
@@ -259,10 +238,10 @@ function test9(): number {
     return verdict()
 }
 
-// ── TEST 10: fisicabitUltrasonic HC-SR04 / HY-SRF05 on TRIG P8, ECHO P12 ─────
+// ── TEST 9: fisicabitUltrasonic HC-SR04 / HY-SRF05 on TRIG P8, ECHO P12 ─────
 // PASS: status starts with "OK" and distance 2..600 cm.
 // SKIP: status "NO ECHO" / "ECHO HIGH" (no sensor or miswired).
-function test10(): number {
+function test9(): number {
     fisicabitUltrasonic.setRange(300)
     fisicabitUltrasonic.setAirTemperature(20)
     fisicabitUltrasonic.setFilter(FbUltrasonicFilter.Light)
@@ -274,9 +253,9 @@ function test10(): number {
     return verdict()
 }
 
-// ── TEST 11: fisicabitToF laser sensor on SDA P20, SCL P19 ───────────────────
+// ── TEST 10: fisicabitToF laser sensor on SDA P20, SCL P19 ───────────────────
 // PASS: sensor found, module name not "none", distance 0..4000 mm. SKIP: no sensor.
-function test11(): number {
+function test10(): number {
     let found = fisicabitToF.tofSensorFound(DigitalPin.P20, DigitalPin.P19)
     let module = fisicabitToF.tofDetectedModule(DigitalPin.P20, DigitalPin.P19)
     let mm = fisicabitToF.tofDistance(FbToFModel.Auto, DigitalPin.P20, DigitalPin.P19, FbDistanceUnit.Millimeters)
@@ -287,9 +266,9 @@ function test11(): number {
     return verdict()
 }
 
-// ── TEST 12: fisicabitDS18B20 probe on P0 (4.7 kΩ pull-up) ───────────────────
+// ── TEST 11: fisicabitDS18B20 probe on P0 (4.7 kΩ pull-up) ───────────────────
 // PASS: connected, -55..125 °C, valid, error code 0. SKIP: probe not connected.
-function test12(): number {
+function test11(): number {
     fisicabitDS18B20.setResolution(FbDS18B20Resolution.Bits12)
     if (!fisicabitDS18B20.isConnected(DigitalPin.P0)) return skip("no DS18B20, error code " + fisicabitDS18B20.errorCode())
     let c = fisicabitDS18B20.temperature(DigitalPin.P0, FbTemperatureUnit.Celsius)
@@ -300,9 +279,9 @@ function test12(): number {
     return verdict()
 }
 
-// ── TEST 13: fisicabitMAX6675 thermocouple, SCK P13, CS P16, SO P14 ──────────
+// ── TEST 12: fisicabitMAX6675 thermocouple, SCK P13, CS P16, SO P14 ──────────
 // PASS: connected, -20..1024 °C, error code 0. SKIP: module not connected.
-function test13(): number {
+function test12(): number {
     if (!fisicabitMAX6675.isConnected(DigitalPin.P13, DigitalPin.P16, DigitalPin.P14)) {
         return skip("no MAX6675, error code " + fisicabitMAX6675.errorCode() + " raw " + fisicabitMAX6675.rawValue())
     }
@@ -313,9 +292,9 @@ function test13(): number {
     return verdict()
 }
 
-// ── TEST 14: fisicabitDHT11, DATA on P16 ─────────────────────────────────────
+// ── TEST 13: fisicabitDHT11, DATA on P16 ─────────────────────────────────────
 // PASS: valid reading, humidity 0..100 %, temperature 0..50 °C. SKIP: no sensor.
-function test14(): number {
+function test13(): number {
     fisicabitDHT11.dht11Read(DigitalPin.P16)
     if (!fisicabitDHT11.dht11Valid()) return skip("no DHT11 reading (checksum/timeout)")
     let h = fisicabitDHT11.dht11LastHumidity()
@@ -326,9 +305,9 @@ function test14(): number {
     return verdict()
 }
 
-// ── TEST 15: fisicabitBME280 on I2C (SCL P19, SDA P20) at 0x76 ───────────────
+// ── TEST 14: fisicabitBME280 on I2C (SCL P19, SDA P20) at 0x76 ───────────────
 // PASS: chip found, -40..85 °C, 300..1100 hPa. SKIP: chip ID not found.
-function test15(): number {
+function test14(): number {
     fisicabitBME280.bme280Init(FbBME280Address.Addr76)
     if (!fisicabitBME280.bme280Connected()) return skip("no BME280 at 0x76")
     let c = fisicabitBME280.bme280Temperature(FbTemperatureUnit.Celsius)
@@ -339,9 +318,9 @@ function test15(): number {
     return verdict()
 }
 
-// ── TEST 16: fisicabitHX711 load cell, DOUT P0, SCK P1 (~2-3 s) ──────────────
+// ── TEST 15: fisicabitHX711 load cell, DOUT P0, SCK P1 (~2-3 s) ──────────────
 // PASS: connected and 24-bit raw value 1..16777215. SKIP: no data on DOUT.
-function test16(): number {
+function test15(): number {
     fisicabitHX711.hx711Init(DigitalPin.P0, DigitalPin.P1)
     if (!fisicabitHX711.hx711Connected()) return skip("no HX711 data (DOUT stays high)")
     let raw = fisicabitHX711.hx711Raw()
@@ -350,11 +329,11 @@ function test16(): number {
     return verdict()
 }
 
-// ── TEST 17: fisicabitColorimeter TCS230 (S0 P13 S1 P14 S2 P15 S3 P9 OUT P1) ─
+// ── TEST 16: fisicabitColorimeter TCS230 (S0 P13 S1 P14 S2 P15 S3 P9 OUT P1) ─
 // PASS: a period 1..50000 µs measured on OUT with a 50 ms timeout.
 // SKIP: in the simulator (the native period shim has no simulator
 // implementation) or when OUT carries no signal (timeout → 0).
-function test17(): number {
+function test16(): number {
     fisicabitColorimeter.tcsInit()
     fisicabitColorimeter.tcsSetScaling(FbTCS230Scaling.Scale20)
     fisicabitColorimeter.tcsSetSamples(1)
@@ -368,10 +347,10 @@ function test17(): number {
     return verdict()
 }
 
-// ── TEST 18: fisicabitSound + fisicabitAudioNative, internal V2 microphone ───
+// ── TEST 17: fisicabitSound + fisicabitAudioNative, internal V2 microphone ───
 // PASS: window captured, RMS 0..512, frequency 0..5000 Hz, non-empty note,
 // 64-sample buffer. Simulator: the frequency shim returns a 440 Hz test tone.
-function test18(): number {
+function test17(): number {
     fisicabitSound.setSource(FbMicrophoneSource.InternalV2)
     fisicabitSound.setWindow(FbAudioSampleRate.F8kHz, FbAudioBufferSize.N64)
     fisicabitSound.setFrequencyRange(60, 4500)
@@ -396,8 +375,8 @@ function test18(): number {
 
 // ── Runner, menu and summary ─────────────────────────────────────────────────
 const TESTS: (() => number)[] = [
-    test1, test2, test3, test4, test5, test6, test7, test8, test9,
-    test10, test11, test12, test13, test14, test15, test16, test17, test18
+    test1, test2, test3, test4, test5, test6, test7, test8,
+    test9, test10, test11, test12, test13, test14, test15, test16, test17
 ]
 
 function statusText(st: number): string {
