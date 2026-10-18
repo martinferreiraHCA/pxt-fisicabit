@@ -640,6 +640,11 @@ namespace FisicaBit {
     }
 
 
+    //% shim=fisicabit_native::barreraNativo
+    function _hwBarrera(pines: number, modo: number, umbrales: number, timeoutUs: number): number {
+        return -1   // simulador: usar la versión TypeScript
+    }
+
     /**
      * Mide el tiempo entre dos barreras usando C++ nativo.
      * VERSIÓN DE ALTA PRECISIÓN — resolución de 1μs.
@@ -669,7 +674,6 @@ namespace FisicaBit {
     //% modo.defl=ModoBarrera.Digital
     //% umbralA.defl=512 umbralB.defl=512
     //% timeoutUs.defl=5000000
-    //% shim=fisicabit_native::medirTiempoBarreraNativo
     export function medirTiempoBarreraNativo(
         pinA: number,
         pinB: number,
@@ -678,8 +682,11 @@ namespace FisicaBit {
         umbralB: number,
         timeoutUs: number
     ): number {
+        // Hardware: C++ de shims.cpp (pines y umbrales empaquetados porque las
+        // funciones nativas admiten 4 parámetros como máximo). Devuelve ≥ 0.
+        const r = _hwBarrera((pinA << 16) | pinB, modo, (umbralA << 16) | umbralB, timeoutUs)
+        if (r >= 0) return r
         // ── Fallback para simulador ──
-        // En hardware real se ejecuta el C++ de shims.cpp
         let t = medirTiempoBarrera(
             pinA as PinAnalogico,
             pinB as PinAnalogico,

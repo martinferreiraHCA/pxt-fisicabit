@@ -38,7 +38,7 @@ namespace FisicaBitHCSR04 {
 
     // ── Shims nativos (cuerpo TS = simulador) ──
     //% shim=fisicabit_native::usIniciar
-    function _hwIniciar(idx: number, trig: number, echo: number, maxMm: number, periodoMs: number, velMmPorS: number): number {
+    function _hwIniciar(idx: number, pines: number, maxMm: number, periodoMs: number): number {
         return 0
     }
     //% shim=fisicabit_native::usDetener
@@ -130,7 +130,9 @@ namespace FisicaBitHCSR04 {
         if (ahora - s.ultIntentoMs < 500) return
         s.ultIntentoMs = ahora
         if (s.idx >= 0) {
-            s.nativo = _hwIniciar(s.idx, s.trig, s.echo, _maxMm, _periodoMs, _velMmPorS()) == 1
+            // Pines empaquetados: las funciones nativas admiten 4 parámetros como máximo
+            s.nativo = _hwIniciar(s.idx, (s.trig << 16) | s.echo, _maxMm, _periodoMs) == 1
+            if (s.nativo) _hwConfigurar(s.idx, _maxMm, _periodoMs, _velMmPorS())
         }
         s.listo = true
         s.ultSeq = 0
