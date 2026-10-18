@@ -54,7 +54,7 @@
         "instantiations": [
             {
                 "kind": "function",
-                "fullyQualifiedName": "FisicaBitHCSR04.medirDistanciaUltrasonido,FisicaBitHCSR04.medirDistanciaUltrasonidoCrudo",
+                "fullyQualifiedName": "FisicaBitHCSR04.medirDistanciaUltrasonido,FisicaBitHCSR04.medirDistanciaUltrasonidoCrudo,FisicaBitHCSR04.enviarDistanciaHCSR04,FisicaBitHCSR04.calibrarUltrasonido,FisicaBitHCSR04.frecuenciaRealUltrasonido,FisicaBitHCSR04.tiempoUltimoEco",
                 "argumentRoles": [
                     {
                         "pinInstantiationIdx": 0,
@@ -63,60 +63,6 @@
                     {
                         "pinInstantiationIdx": 1,
                         "partParameter": "pinEcho"
-                    },
-                    {
-                        "partParameter": "unidad"
-                    }
-                ]
-            },
-            {
-                "kind": "function",
-                "fullyQualifiedName": "FisicaBitHCSR04.enviarDistanciaHCSR04",
-                "argumentRoles": [
-                    {
-                        "pinInstantiationIdx": 0,
-                        "partParameter": "pinTrig"
-                    },
-                    {
-                        "pinInstantiationIdx": 1,
-                        "partParameter": "pinEcho"
-                    },
-                    {
-                        "partParameter": "unidad"
-                    },
-                    {
-                        "partParameter": "medio"
-                    }
-                ]
-            },
-            {
-                "kind": "function",
-                "fullyQualifiedName": "FisicaBitHCSR04.frecuenciaRealUltrasonido,FisicaBitHCSR04.tiempoUltimoEco",
-                "argumentRoles": [
-                    {
-                        "pinInstantiationIdx": 0,
-                        "partParameter": "pinTrig"
-                    },
-                    {
-                        "pinInstantiationIdx": 1,
-                        "partParameter": "pinEcho"
-                    }
-                ]
-            },
-            {
-                "kind": "function",
-                "fullyQualifiedName": "FisicaBitHCSR04.calibrarUltrasonido",
-                "argumentRoles": [
-                    {
-                        "pinInstantiationIdx": 0,
-                        "partParameter": "pinTrig"
-                    },
-                    {
-                        "pinInstantiationIdx": 1,
-                        "partParameter": "pinEcho"
-                    },
-                    {
-                        "partParameter": "distanciaMm"
                     }
                 ]
             }
@@ -192,7 +138,7 @@
         "instantiations": [
             {
                 "kind": "function",
-                "fullyQualifiedName": "FisicaBitHCSR04.medirDistanciaSRF05",
+                "fullyQualifiedName": "FisicaBitHCSR04.medirDistanciaSRF05,FisicaBitHCSR04.enviarDistanciaSRF05",
                 "argumentRoles": [
                     {
                         "pinInstantiationIdx": 0,
@@ -201,29 +147,6 @@
                     {
                         "pinInstantiationIdx": 1,
                         "partParameter": "pinEcho"
-                    },
-                    {
-                        "partParameter": "unidad"
-                    }
-                ]
-            },
-            {
-                "kind": "function",
-                "fullyQualifiedName": "FisicaBitHCSR04.enviarDistanciaSRF05",
-                "argumentRoles": [
-                    {
-                        "pinInstantiationIdx": 0,
-                        "partParameter": "pinTrig"
-                    },
-                    {
-                        "pinInstantiationIdx": 1,
-                        "partParameter": "pinEcho"
-                    },
-                    {
-                        "partParameter": "unidad"
-                    },
-                    {
-                        "partParameter": "medio"
                     }
                 ]
             }
