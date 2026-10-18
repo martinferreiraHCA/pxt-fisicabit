@@ -1,360 +1,366 @@
-# FisicaBit Sensores — Extensión para micro:bit
+# FisicaBit sensors — micro:bit (V2) extension
 
-> 🇬🇧 [English version](README-en.md)
+> 🇪🇸 Versión en español: [README-es.md](https://github.com/martinferreiraHCA/pxt-fisicabit/blob/main/README-es.md)
 
-> Extensión de MakeCode para experimentos de física con micro:bit: sensores, barreras ópticas y envío de datos a [fisicabit.com](https://fisicabit.com) con un solo bloque, por USB o por Bluetooth.
-> Proyecto: [fisicabit.com](https://fisicabit.com)
+MakeCode extension for physics experiments with the micro:bit: sensors, photogates, a precision accelerometer, and one-block data streaming to [fisicabit.com](https://fisicabit.com) over USB or Bluetooth.
 
-## Cómo usar esta extensión
+## ~ hint
 
-En MakeCode, entrá a **Extensiones** y pegá la URL de este repositorio:
+#### micro:bit (V2) only
+
+This extension only works with the micro:bit V2. It uses the V2 CODAL runtime, the built-in microphone and native C++ samplers, and the V1 build is disabled in `pxt.json`. Programs that use it cannot be downloaded to a micro:bit V1.
+
+## ~
+
+## Use this extension
+
+In MakeCode, open **Extensions** and paste this repository URL:
 
 ```
 https://github.com/martinferreiraHCA/pxt-fisicabit
 ```
 
-O buscá **fisicabit-sensores** en el cuadro de Extensiones.
+Or search for **fisicabit-sensores** in the Extensions dialog.
 
-Los bloques aparecen en el idioma del editor: en español si MakeCode está en español, en inglés si está en inglés (también hay traducción parcial a portugués). El idioma se cambia en el menú **⚙ Configuración → Idioma**. Si la extensión ya estaba agregada a un proyecto y los bloques siguen en inglés, quitala y volvé a agregarla (MakeCode guarda en caché la versión anterior). Para probar una versión concreta antes de publicarla, pegá en Extensiones la URL con el commit: `https://github.com/martinferreiraHCA/pxt-fisicabit#<sha>`.
+## Step-by-step tutorials
 
-## Inicio rápido: enviar datos a fisicabit.com
-
-**Por USB (cable):** un solo bloque envía `tiempo,valor` cada 100 ms (10 muestras por segundo).
-
-```blocks
-basic.forever(function () {
-    FisicaBitSerial.enviar1(input.acceleration(Dimension.X), 100)
-})
-```
-
-**Por Bluetooth (sin cable):** el primer bloque deja el micro:bit listo para que fisicabit.com lo encuentre; el segundo envía los datos sólo mientras la página está conectada.
-
-```blocks
-FisicaBitBT.inicioRapido()
-basic.forever(function () {
-    FisicaBitBT.enviar2(input.acceleration(Dimension.X), input.acceleration(Dimension.Y), 100)
-})
-```
-
-En fisicabit.com: elegí **USB** o **Bluetooth**, poné el **número de variables** igual a la cantidad de valores del bloque (sin contar el tiempo) y dejá activada la opción **"Micro:bit envía timestamp"**.
-
-| Pantalla LED (Bluetooth) | Significado |
-|---------------------------|-------------|
-| ◎ diana | Esperando que fisicabit.com se conecte |
-| ♥ corazón | Conectado, enviando datos |
-
-## Tutoriales paso a paso
-
-Abrí estos enlaces en MakeCode. El tutorial aparece en el idioma del editor (español, inglés o portugués) y ya incluye los bloques de FisicaBit:
+Open these links in MakeCode. The tutorial is shown in the editor language (English, Spanish or Portuguese) and already includes the FisicaBit blocks:
 
 * **USB:** https://makecode.microbit.org/#tutorial:https://github.com/martinferreiraHCA/pxt-fisicabit/tutorial-usb
 * **Bluetooth:** https://makecode.microbit.org/#tutorial:https://github.com/martinferreiraHCA/pxt-fisicabit/tutorial-bluetooth
 
-Los tutoriales viven en `tutorial-usb.md` y `tutorial-bluetooth.md` (inglés, idioma base) con sus traducciones en `_locales/es/` y `_locales/pt-BR/`. Para probar cambios recientes abrí el enlace en una ventana de incógnito, porque MakeCode guarda los tutoriales en caché.
+The tutorials live in `tutorial-usb.md` and `tutorial-bluetooth.md` (English, base language) with translations under `_locales/es/` and `_locales/pt-BR/`. To test recent changes open the link in an incognito window, since MakeCode caches tutorials.
 
-## Bloques disponibles
+## Toolbox categories
 
-### Sensores internos
+| Category | Purpose |
+|----------|---------|
+| **FisicaBit USB** | Send time and values to fisicabit.com over the USB cable (Web Serial, 115200 baud) |
+| **FisicaBit Bluetooth** | The same over Bluetooth LE (UART service) |
+| **FisicaBit kinematics** | Precision accelerometer: linear acceleration, velocity, rest detection |
+| **Ultrasonic** | HC-SR04 / HY-SRF05 distance with a background sampler; wiring shown in the simulator |
+| **ToF laser** | VL53L0X / VL53L1X / VL6180X laser distance modules (I2C); wiring shown in the simulator |
+| **BME280**, **DHT11**, **DS18B20**, **MAX6675** | Pressure / humidity / temperature sensors |
+| **HX711** | Load cell amplifier: mass and force |
+| **TCS230** | Colorimeter / spectrophotometry with the TCS230 / TCS3200 |
+| **FisicaBit sound** | Sound level, frequency detection, musical notes, Doppler effect |
+| **FisicaBit sensors** (Advanced) | Internal sensors, analog/digital pins, NTC, photogates, conversions, native C++ helpers |
+
+## Available blocks
+
+### Internal sensors
 
 ```blocks
-let temp = FisicaBit.leerSensorInterno(TipoSensorInterno.Temperatura)
+let temp = fisicabit.readInternalSensor(FbInternalSensor.Temperature)
 basic.showNumber(temp)
 ```
 
-| Bloque | Descripción |
-|--------|-------------|
-| `leer sensor interno [temperatura]` | Lee los sensores integrados del micro:bit (temperatura, acelerómetro, luz, brújula, sonido) |
+| Block | Description |
+|-------|-------------|
+| `read internal sensor [temperature]` | Reads built-in micro:bit sensors (temperature, accelerometer, light, compass, sound) |
 
-### Sensores externos
-
-```blocks
-let lectura = FisicaBit.leerSensorAnalogico(PinAnalogico.P0)
-```
-
-| Bloque | Descripción |
-|--------|-------------|
-| `leer sensor analógico en [P0]` | Lee potenciómetro, LDR, NTC (0-1023) |
-| `leer sensor digital en P[8]` | Lee PIR, infrarrojo, interruptor (0/1) |
-| `HC-SR04 distancia TRIG [P8] ECHO [P12] en [cm]` / `HY-SRF05 distancia ...` | Sensores ultrasónicos con muestreador nativo (eco por interrupción, ≈38–55 Hz) y cableado visible en el simulador. Categoría **Ultrasonido**, con `enviar ... distancia`, `fijar alcance`, `temperatura del aire`, `calibrar` y `frecuencia real` |
-| `DS18B20 temperatura en [P0] en [°C]` | Sonda de temperatura sumergible DS18B20 (OneWire), ±0,5 °C, de −55 a 125 °C. Categoría propia **DS18B20**, con `última temperatura`, `fijar resolución 9–12 bits`, `¿conectado?` y `código de error` |
-| `MAX6675 temperatura SCK [P13] CS [P16] SO [P14] en [°C]` | Termocupla tipo K con módulo MAX6675 (SPI), de 0 a 1023 °C, resolución 0,25 °C, ±2 °C: llamas, ebullición, curvas de enfriamiento. Categoría propia **MAX6675**, con `última temperatura`, `fijar corrección`, `¿conectado?`, `código de error` y `valor crudo` |
-| `distancia ToF [TOF200C] SDA [P20] SCL [P19] en [cm]` | Sensores láser ToF en un solo bloque: TOF050C (VL6180X), TOF200C y GY-VL53L0XV2 (VL53L0X), TOF400C (VL53L1X) o autodetectar. Elegís el módulo y los pines; se inicializa solo. Categoría **ToF — Distancia Láser**, con `pines sugeridos`, `módulo detectado` y `¿hay sensor?` |
-
-### Barrera óptica (experimentos de tiempo)
+### External sensors
 
 ```blocks
-let tiempoMs = FisicaBit.medirTiempoBarrera(PinAnalogico.P1, PinAnalogico.P2, ModoBarrera.Digital, 10000)
-let velocidad = FisicaBit.calcularVelocidad(tiempoMs * 1000, 100)
+let reading = fisicabit.readAnalogSensor(FbAnalogPin.P0)
 ```
 
-| Bloque | Descripción |
-|--------|-------------|
-| `fijar umbral barrera a [512]` | Calibra el nivel de disparo de una barrera analógica |
-| `leer barrera crudo pin [P1] modo [analógico]` | Valor crudo del sensor para calibrar |
-| `barrera activada en [P1] modo [digital]` | Indica si un objeto corta el haz |
-| `medir tiempo barrera A [P1] → B [P2]` | Tiempo de tránsito entre dos barreras (resolución ~1 ms) |
-| `[C++] tiempo barrera A P1 → B P2` | Temporización nativa en C++ (resolución ~1 μs) |
-| `velocidad con tiempo [μs] distancia [mm]` | Calcula la velocidad (devuelve m/s × 100) |
-| `tiempo de bloqueo en [P1]` | Cuánto tiempo un objeto bloquea una barrera |
+| Block | Description |
+|-------|-------------|
+| `read analog sensor on [P0]` | Reads potentiometer, LDR, NTC (0-1023) |
+| `read digital sensor on P[8]` | Reads PIR, infrared, switch (0/1) |
+| `HC-SR04 distance TRIG [P8] ECHO [P12] in [cm]` / `HY-SRF05 distance ...` | Ultrasonic sensors with a native sampler (interrupt-timed echo, ≈38–55 Hz) and wiring shown in the simulator. **Ultrasonic** category, with `send ... distance`, `set max range`, `air temperature`, `calibrate`, `status` and `actual sampling rate` |
+| `DS18B20 temperature on [P0] in [°C]` | DS18B20 waterproof temperature probe (OneWire), ±0.5 °C, −55 to 125 °C. **DS18B20** category with `last temperature`, `set resolution 9–12 bits`, `connected?` and `error code` |
+| `MAX6675 temperature SCK [P13] CS [P16] SO [P14] in [°C]` | Type K thermocouple with a MAX6675 module (SPI), 0 to 1023 °C, 0.25 °C resolution, ±2 °C. **MAX6675** category with `last temperature`, `set correction`, `connected?`, `error code` and `raw value` |
+| `ToF distance [TOF200C] SDA [P20] SCL [P19] in [cm]` | ToF laser sensors in one block: TOF050C (VL6180X), TOF200C and GY-VL53L0XV2 (VL53L0X), TOF400C (VL53L1X) or auto-detect. Pick the module and the pins; it initialises itself. **ToF laser** category, with `suggested pins`, `module detected` and `sensor found?` |
 
-### FisicaBit USB: enviar a fisicabit.com por cable
+### Photogates (timing experiments)
+
+```blocks
+let timeMs = fisicabit.measureGateTime(FbAnalogPin.P1, FbAnalogPin.P2, FbGateMode.Digital, 10000)
+let speed = fisicabit.computeSpeed(timeMs * 1000, 100)
+```
+
+| Block | Description |
+|-------|-------------|
+| `set photogate threshold to [512]` | Calibrate the analog trigger level |
+| `read photogate raw pin [P1] mode [analog]` | Raw sensor value for calibration |
+| `photogate triggered on [P1] mode [digital]` | Check whether an object is blocking the beam |
+| `measure time photogate A [P1] → B [P2]` | Transit time between two photogates (~1 ms resolution) |
+| `[C++] photogate time A P1 → B P2` | Native C++ timing (~1 µs resolution) |
+| `speed with time [µs] distance [mm]` | Speed from time and distance (returns m/s × 100) |
+| `blocking time on [P1]` | How long an object blocks one photogate |
+
+### FisicaBit USB — stream to fisicabit.com over the cable
 
 ```blocks
 basic.forever(function () {
-    FisicaBitSerial.enviar2(input.acceleration(Dimension.X), input.acceleration(Dimension.Y), 100)
+    fisicabitSerial.send2(input.acceleration(Dimension.X), input.acceleration(Dimension.Y), 100)
 })
 ```
 
-Un solo bloque lo configura todo: `enviar a fisicabit.com tiempo y [valor] cada [100] ms`. En cada vuelta toma el tiempo del micro:bit (arranca en 0), escribe una línea CSV (`tiempo,valor`) a 115200 baudios y espera hasta que se cumplan los ms indicados. La espera se calcula sobre el instante previsto, así el período real coincide aunque `para siempre` agregue su retardo oculto de ~20 ms. Los bloques aparecen en el orden en que se usan.
+One block configures everything: `send to fisicabit.com time and [value] every [100] ms`. On each pass it takes the micro:bit time (starting at 0), writes one CSV line (`time,value`) at 115200 baud and waits until the given interval has elapsed. The wait is deadline-based, so the real period matches even with the hidden ~20 ms delay of `forever`.
 
-| Paso | Bloque | Descripción |
-|------|--------|-------------|
-| 1. Enviar | `enviar a fisicabit.com tiempo y [valor] cada [100] ms` | Dentro de `para siempre`. Variantes de 2 y 3 valores (fisicabit.com admite hasta 3 variables). 100 ms = 10 muestras por segundo |
-| Envío de datos sin tiempo | `enviar a fisicabit.com sin tiempo [valor]` | Manda sólo los valores medidos, sin tiempo y sin espera: al apretar un botón, en un evento o en `para siempre` con tu propia pausa (variantes de 2, 3 y 4). En fisicabit.com desactivá "Micro:bit envía timestamp": la página usa el reloj del navegador |
-| 2. Opcional | `bucle rápido para fisicabit.com cada [20] ms` | En lugar de `para siempre`, para 50 / 100 Hz sin el retardo oculto; el bloque de envío va adentro |
-| 2. Opcional | `reiniciar tiempo USB a 0` | Empezar una nueva medición en t = 0 (por ejemplo al apretar A) |
-| 2. Opcional | `tiempo USB (ms)` | El tiempo que viaja en cada línea |
-| Avanzado | `USB enviar tiempo del micro:bit [activado]`, `USB fijar decimales [2]`, `USB enviar línea [texto]`, `configurar frecuencia / intervalo` | Sólo si hace falta |
+| Step | Block | Description |
+|------|-------|-------------|
+| 1. Send | `send to fisicabit.com time and [value] every [100] ms` | Inside `forever`. 2, 3 and 4-value variants. 100 ms = 10 samples per second |
+| Send without time | `send to fisicabit.com without time [value]` | Sends only the measured values, no time and no wait: on a button press, in an event or inside `forever` with your own pause. On fisicabit.com disable "micro:bit sends timestamp": the page uses the browser clock |
+| 2. Optional | `fisicabit.com fast loop every [20] ms` | Instead of `forever`, for 50 / 100 Hz without the hidden delay; put the send block inside |
+| 2. Optional | `reset USB time to 0` | Start a new run at t = 0 (for example on button A) |
+| 2. Optional | `USB time (ms)` | The time sent in each line |
+| Advanced | `USB send micro:bit timestamp [on]`, `USB set decimals [2]`, `USB send line [text]`, `set sampling rate / interval` | Only if needed |
 
-### FisicaBit Cinemática: acelerómetro de precisión
+### FisicaBit kinematics: precision accelerometer
 
 ```blocks
-FisicaBitCinematica.iniciar()
+fisicabitKinematics.start()
 basic.forever(function () {
-    FisicaBitSerial.enviar2(
-        FisicaBitCinematica.leerAceleracionLineal(EjeAceleracion.Vertical),
-        FisicaBitCinematica.velocidadInstantanea(EjeAceleracion.Vertical),
+    fisicabitSerial.send2(
+        fisicabitKinematics.linearAcceleration(FbAccelerationAxis.Vertical),
+        fisicabitKinematics.instantaneousVelocity(FbAccelerationAxis.Vertical),
         50
     )
 })
 ```
 
-Ejemplo MRUV por Bluetooth (placa fija a un carrito en un plano inclinado):
+Uniformly accelerated motion over Bluetooth (board fixed to a cart on an incline):
 
 ```blocks
-FisicaBitBT.inicioRapido()
-FisicaBitCinematica.iniciar()
+fisicabitBluetooth.quickStart()
+fisicabitKinematics.start()
 basic.forever(function () {
-    FisicaBitCinematica.enviarVelocidad(EjeAceleracion.X, MedioEnvio.Bluetooth, 100)
+    fisicabitKinematics.sendVelocity(FbAccelerationAxis.X, FbChannel.Bluetooth, 100)
 })
 ```
 
-Conectar, apoyar y medir: el bloque `iniciar acelerómetro de precisión` deja el sensor listo y calibra solo con la placa quieta. Después, `aceleración (m/s²)` y `velocidad instantánea (m/s)` dan valores calibrados en unidades físicas, sin más configuración.
+Connect, rest, measure: `start precision accelerometer` configures the sensor and self-calibrates while the board is still. Then `acceleration (m/s²)` and `instantaneous velocity (m/s)` return calibrated physical units with no further setup.
 
-| Paso | Bloque | Descripción |
-|------|--------|-------------|
-| 1. Iniciar | `iniciar acelerómetro de precisión` | En `al iniciar`, con la placa quieta 1 s |
-| 2. Medir | `aceleración (m/s²) [vertical / X / Y / Z / magnitud]` | Aceleración lineal respecto al suelo, sin la gravedad; 0 en reposo |
-| 2. Medir | `velocidad instantánea (m/s) [eje]` | Integrada en segundo plano muestra a muestra; vuelve a 0 sola cuando la placa se detiene |
-| 2. Medir | `poner velocidad en 0`, `¿en reposo?`, `aceleración propia`, `¿caída libre?`, `pitch`, `roll` | Complementos |
-| 3. Enviar | `enviar velocidad [X] por [Bluetooth] cada [100] ms` | Un solo bloque para MRUV: tiempo y velocidad a intervalos fijos; en fisicabit.com la gráfica v(t) es una recta y su pendiente es la aceleración. Variantes: `velocidad y aceleración`, `aceleración` |
-| 4. Opcional | `calibrar en reposo (quieto 1 s)`, `fijar muestreo 100/200/400 Hz`, `fijar suavizado`, `fijar rango ±2/±4/±8 g`, `referencia fija`, `velocidad a 0 automática`, `gravedad local`, `gravedad medida`, `estado alta resolución` | Ajustes finos |
-| Avanzado | `calibrar en 6 posiciones`, `fijar calibración`, `enviar calibración por serial`, `modo alta resolución`, `aceleración cruda`, `muestras por segundo` | Calibración de fábrica y diagnóstico |
+| Step | Block | Description |
+|------|-------|-------------|
+| 1. Start | `start precision accelerometer` | In `on start`, board still for 1 s |
+| 2. Measure | `acceleration (m/s²) [vertical / X / Y / Z / magnitude]` | Linear acceleration relative to the ground, gravity removed; 0 at rest |
+| 2. Measure | `instantaneous velocity (m/s) [axis]` | Integrated in the background sample by sample; auto-zeroes when the board stops |
+| 2. Measure | `reset velocity to 0`, `at rest?`, `proper acceleration`, `free fall?`, `pitch`, `roll` | Extras |
+| 3. Send | `send velocity [X] via [Bluetooth] every [100] ms` | One block for uniformly accelerated motion: time and velocity at fixed intervals; on fisicabit.com the v(t) graph is a line whose slope is the acceleration. Variants: `velocity and acceleration`, `acceleration` |
+| 4. Optional | `calibrate at rest (1 s)`, `set sampling 100/200/400 Hz`, `set smoothing`, `set range ±2/±4/±8 g`, `keep reference fixed`, `auto-zero velocity`, `local gravity`, `measured gravity`, `high-resolution status` | Fine tuning |
+| Advanced | `calibrate 6 positions`, `set calibration`, `send calibration via serial`, `high-resolution mode`, `raw acceleration`, `samples per second` | Factory calibration and diagnostics |
 
-Qué hace por dentro (investigado en la hoja de datos del LSM303AGR y en el driver CODAL del micro:bit v2):
+What it does inside (from the LSM303AGR datasheet and the micro:bit V2 CODAL driver):
 
-* El firmware de MakeCode deja el chip en modo normal de 10 bits a 50 Hz. Este módulo lo pasa a **alta resolución de 12 bits** (0,98 mg por cuenta, 4 veces más fino) y a **200 muestras por segundo**, con menor ancho de banda de ruido.
-* `input.acceleration` devuelve 1024 cuentas por g, no 1000. La escala se calibra con la gravedad medida en reposo, lo que corrige ese factor y la tolerancia de sensibilidad del chip.
-* Cada muestra del sensor se procesa en segundo plano con su instante real; la lectura de aceleración promedia 10 muestras (50 ms) y la velocidad integra todas con regla del trapecio.
-* El error de cero del chip (hasta ±80 mg, es decir 0,8 m/s²) se cancela con la referencia de reposo. La quietud se detecta por lecturas constantes con módulo igual a 1 g, sin depender de la referencia: la primera vez que la placa queda quieta se adopta la gravedad medida (nunca la primera muestra), si se cambia la inclinación en reposo la referencia se vuelve a aprender sola tras 3 s quieta, y la deriva lenta se corrige mientras está en reposo. La calibración en 6 posiciones corrige además offset y escala de cada eje.
-* Cuando la placa está quieta más de 0,4 s la velocidad vuelve a 0 (ZUPT), así la deriva no se acumula entre movimientos.
-* Límite físico: el micro:bit no tiene giróscopo, así que no puede separar gravedad de aceleración si la placa **gira mientras se mueve**. Mantener la orientación fija durante el movimiento (carrito en riel, caída libre, ascensor).
+* MakeCode's firmware leaves the chip in normal 10-bit mode at 50 Hz. This module switches it to **12-bit high-resolution mode** (0.98 mg per count, 4x finer) at **200 samples per second**, with a narrower noise bandwidth, through the CODAL accelerometer API.
+* `input.acceleration` returns 1024 counts per g, not 1000. The scale is calibrated from gravity measured at rest, which corrects that factor and the chip's sensitivity tolerance.
+* Every sensor sample is processed in the background with its real timestamp; the acceleration reading averages 10 samples (50 ms) and velocity integrates all of them with the trapezoidal rule.
+* The chip's zero-g offset (up to ±80 mg, i.e. 0.8 m/s²) is cancelled by the rest reference. Stillness is detected from constant readings with magnitude equal to 1 g, independently of the reference: the first time the board is still the measured gravity is adopted (never the first sample), a tilt change at rest is re-learned after 3 s still, and slow drift is corrected while at rest. The 6-position calibration also corrects per-axis offset and scale.
+* When the board is still for more than 0.4 s the velocity returns to 0 (ZUPT), so drift does not accumulate between movements.
+* Physical limit: the micro:bit has no gyroscope, so it cannot separate gravity from acceleration if the board **rotates while moving**. Keep the orientation fixed during motion (cart on a track, free fall, elevator).
 
-### Conversiones
+### Conversions
 
-| Bloque | Descripción |
-|--------|-------------|
-| `convertir [23] de [°C] a [°F]` | Convierte temperatura entre unidades |
-| `mapear [512] de (0—1023) a (0—100)` | Escala valores a otro rango |
+| Block | Description |
+|-------|-------------|
+| `convert [23] from [°C] to [°F]` | Convert temperature between units |
+| `map [512] from (0—1023) to (0—100)` | Scale values to another range |
 
-### Nativo C++ (avanzado)
+### Native C++ (Advanced)
 
-| Bloque | Descripción |
-|--------|-------------|
-| `[C++] leer ADC nativo canal [0]` | Lectura ADC de 12 bits (0-4095) |
-| `[C++] leer ADC promedio canal [0] muestras [16]` | ADC con sobremuestreo para reducir ruido |
-| `[C++] medir pulso pin P[2] nivel [ALTO] timeout [25000] μs` | Temporización precisa de pulsos |
+| Block | Description |
+|-------|-------------|
+| `[C++] read native ADC channel [0]` | 12-bit ADC reading (0-4095) through CODAL |
+| `[C++] read ADC average channel [0] samples [16]` | Oversampled ADC to reduce noise |
+| `[C++] measure pulse pin P[2] level [HIGH] timeout [25000] µs` | Precise pulse timing |
 
-### FisicaBit Bluetooth: enviar a fisicabit.com sin cable
+### FisicaBit Bluetooth — stream to fisicabit.com wirelessly
 
 ```blocks
-FisicaBitBT.inicioRapido()
+fisicabitBluetooth.quickStart()
 basic.forever(function () {
-    FisicaBitBT.enviar1(input.acceleration(Dimension.X), 100)
+    fisicabitBluetooth.send1(input.acceleration(Dimension.X), 100)
 })
 ```
 
-| Paso | Bloque | Descripción |
-|------|--------|-------------|
-| 1. Iniciar | `iniciar Bluetooth para fisicabit.com` | **Primero** en `al iniciar`: servicio UART, potencia máxima, íconos ◎ / ♥ en la pantalla |
-| 2. Enviar | `enviar a fisicabit.com por Bluetooth tiempo y [valor] cada [100] ms` | Dentro de `para siempre`. Variantes de 2 y 3 valores (fisicabit.com admite hasta 3 variables); sólo transmite mientras hay conexión. Por BLE, 50 ms o más |
-| Envío de datos sin tiempo | `enviar a fisicabit.com por Bluetooth sin tiempo [valor]` | Manda sólo los valores medidos, sin tiempo y sin espera (variantes de 2, 3 y 4). En fisicabit.com desactivá "Micro:bit envía timestamp" |
-| 3. Opcional | `¿Bluetooth conectado?`, `al conectar / al desconectar`, `reiniciar tiempo Bluetooth a 0`, `tiempo Bluetooth (ms)`, `bucle rápido ... por Bluetooth cada [50] ms`, `mostrar íconos de conexión` | Estado de la conexión y control del tiempo |
-| Avanzado | `enviar tiempo del micro:bit`, `fijar decimales`, `enviar texto`, `iniciar con todos los servicios BLE`, `configurar frecuencia / intervalo` | Sólo si hace falta |
+| Step | Block | Description |
+|------|-------|-------------|
+| 1. Start | `start Bluetooth for fisicabit.com` | **First** in `on start`: UART service, max TX power, ◎ / ♥ icons on the display |
+| 2. Send | `send to fisicabit.com via Bluetooth time and [value] every [100] ms` | Inside `forever`. 2, 3 and 4-value variants. Over BLE use 50 ms or more |
+| Send without time | `send to fisicabit.com via Bluetooth without time [value]` | Sends only the measured values, no time and no wait. On fisicabit.com disable "micro:bit sends timestamp" |
+| 3. Optional | `Bluetooth connected?`, `on connected / on disconnected`, `reset Bluetooth time to 0`, `Bluetooth time (ms)`, `Bluetooth fast loop every [50] ms`, `show connection icons` | Connection state and time control |
+| Advanced | `send micro:bit timestamp`, `set decimals`, `send text`, `start with all BLE services`, `set sampling rate / interval` | Only if needed |
 
-Por qué estos bloques conectan sin problemas:
+Why these blocks connect reliably:
 
-* Sólo se inicia el servicio UART. Cada servicio BLE extra hace más lento el descubrimiento (sobre todo en Windows) y puede vencer el timeout de supervisión de 4 s del firmware.
-* La potencia de transmisión se fija al máximo (7).
-* Las líneas son cortas (tiempo desde 0, 2 decimales, terminador `\n`), así cada muestra entra en un único paquete BLE de 20 bytes.
-* No se envía nada mientras no hay una página conectada; el muestreo mantiene su ritmo y los datos vuelven solos al reconectar. El tiempo arranca en 0 en cada conexión.
-* Si BLE se atrasa, el muestreador se resincroniza en vez de mandar una ráfaga de muestras viejas.
+* Only the UART service is started by default. Every extra BLE service slows down discovery (especially on Windows) and can trip the firmware's 4 s supervision timeout.
+* Transmit power is set to the maximum (7).
+* Lines are short (time starts at 0, 2 decimals, `\n` terminator), so a sample fits in a single 20-byte BLE packet.
+* Sampling keeps its rhythm while no page is connected and data resumes automatically after a reconnect. Time restarts at 0 on every connection.
+* If BLE falls behind, the sampler resynchronises instead of bursting stale samples.
 
-## Ejemplos de conexión
+## Wiring examples
 
-### Sensores ultrasónicos HC-SR04 y HY-SRF05
+### HC-SR04 and HY-SRF05 ultrasonic sensors
 
-Al usar los bloques, el **simulador de MakeCode muestra el sensor con sus cables** conectados a los pines elegidos, igual que un servo o un parlante, y con "Imprimir instrucciones" se obtiene la guía de cableado paso a paso.
+When these blocks are used, the **MakeCode simulator shows the sensor with its wires** on the chosen pins, like a servo or a speaker, and "Print instructions" gives the step-by-step wiring guide.
 
-![Cableado HC-SR04 → micro:bit](https://raw.githubusercontent.com/martinferreiraHCA/pxt-fisicabit/main/docs/img/hc-sr04-microbit.png)
+![HC-SR04 → micro:bit wiring](https://raw.githubusercontent.com/martinferreiraHCA/pxt-fisicabit/main/docs/img/hc-sr04-microbit.png)
 
-![Cableado HY-SRF05 → micro:bit](https://raw.githubusercontent.com/martinferreiraHCA/pxt-fisicabit/main/docs/img/hy-srf05-microbit.png)
+![HY-SRF05 → micro:bit wiring](https://raw.githubusercontent.com/martinferreiraHCA/pxt-fisicabit/main/docs/img/hy-srf05-microbit.png)
 
 ```
-VCC → 3V · GND → GND · TRIG → P8 · ECHO → P12      (HY-SRF05: OUT sin conectar)
-Kit de expansión: cabezales 8 y 12 (G·V·S). Con 5 V en VCC: divisor 1 kΩ / 2 kΩ en ECHO.
-Segundo sensor: TRIG P1 · ECHO P2. Tercero: TRIG P15 · ECHO P16.
-HY-SRF05 en modo 1 cable: OUT → GND, un solo pin → P8 y el mismo pin en TRIG y ECHO del bloque.
+VCC → 3V · GND → GND · TRIG → P8 · ECHO → P12      (HY-SRF05: OUT unconnected)
+Expansion kit: headers 8 and 12 (G·V·S). With 5 V on VCC: 1 kΩ / 2 kΩ divider on ECHO.
+Second sensor: TRIG P1 · ECHO P2. Third: TRIG P15 · ECHO P16.
+HY-SRF05 single-wire mode: OUT → GND, one pin → P8 and the same pin in TRIG and ECHO of the block.
 ```
 
-**Adquisición optimizada para fenómenos rápidos.** El disparo y la medida del eco los hace un muestreador en C++: el TRIG se dispara a período fijo y los flancos de ECHO se capturan por interrupción con tiempo de microsegundos, sin bloquear el programa. Cada muestra lleva el instante real en que el sonido tocó el objeto. El período se ajusta solo al alcance (`fijar alcance máximo ultrasónico`): 150 cm → ≈55 Hz, 300 cm → ≈38 Hz. La velocidad del sonido se corrige con la temperatura del aire (`fijar temperatura del aire`), el filtro es una mediana deslizante que no baja la frecuencia, hay rechazo de saltos (`fijar salto máximo`) y calibración de offset contra una distancia conocida. `enviar HC-SR04 distancia ... por USB` manda una línea por eco con su tiempo real.
+**Acquisition optimised for fast phenomena.** A C++ sampler triggers the sensor at a fixed period in its own fiber and measures the echo with CODAL's interrupt-timed pulse capture (the same path as `pins.pulseIn`), without blocking the program. Every sample carries the real instant the sound hit the object. The period adapts to the range (`set ultrasonic max range`): 150 cm → ≈55 Hz, 300 cm → ≈38 Hz. The speed of sound is corrected with the air temperature, the filter is a sliding median that does not lower the rate, there is step rejection and offset calibration against a known distance. `send HC-SR04 distance ... via USB` streams one line per echo with its real time.
 
 ```blocks
-FisicaBitHCSR04.fijarAlcanceUltrasonido(150)
+fisicabitUltrasonic.setRange(150)
 basic.forever(function () {
-    FisicaBitHCSR04.enviarDistanciaHCSR04(DigitalPin.P8, DigitalPin.P12, UnidadDistancia.Centimetros, MedioEnvio.USB)
+    fisicabitUltrasonic.sendDistance(DigitalPin.P8, DigitalPin.P12, FbDistanceUnit.Centimeters, FbChannel.USB)
 })
 ```
 
-### Sensores láser ToF (TOF050C, TOF200C, GY-VL53L0XV2, TOF400C)
+### ToF laser sensors (TOF050C, TOF200C, GY-VL53L0XV2, TOF400C)
 ```
-Módulo VCC → micro:bit 3V
-Módulo GND → micro:bit GND
-1er sensor: SDA → P20 (pin "SDA" o "20" del kit)   SCL → P19 ("SCL" o "19")   ← bus I2C por hardware
-2º sensor:  SDA → P14                               SCL → P13                  ← I2C por software
-3er sensor: SDA → P16                               SCL → P15
+Module VCC → micro:bit 3V
+Module GND → micro:bit GND
+1st sensor: SDA → P20 (kit pin "SDA" or "20")   SCL → P19 ("SCL" or "19")   ← hardware I2C bus
+2nd sensor: SDA → P14                            SCL → P13                   ← software I2C
+3rd sensor: SDA → P16                            SCL → P15
 ```
-Pin **INT / GPIO1** del módulo (opcional, para tiempo de precisión): sensor 1 → **P8**, sensor 2 → **P12**, sensor 3 → **P1**. XSHUT queda sin conectar.
+Module **INT / GPIO1** pin (optional, for precision timing): sensor 1 → **P8**, sensor 2 → **P12**, sensor 3 → **P1**. Leave XSHUT unconnected.
 
-El simulador de MakeCode dibuja este cableado: al usar cualquier bloque ToF con pines SDA/SCL, el módulo láser aparece sobre la protoboard con sus cables a 3V, GND y los pines elegidos (como el HC-SR04).
+The MakeCode simulator draws this wiring: whenever a ToF block with SDA/SCL pins is used, the laser module appears on the breadboard with its wires to 3V, GND and the chosen pins (as with the HC-SR04).
 
-Los cuatro módulos usan la misma dirección I2C (0x29): cada sensor extra necesita su propio par de pines. P13–P16 son pines digitales libres en todos los kits de expansión (no tocan la pantalla LED ni los botones) y dejan P0–P2 para sensores analógicos. El bloque `pines sugeridos ToF para el sensor número [n]` devuelve ese texto en el propio programa.
-**Precisión tipo laboratorio.** Después de inicializar, un muestreador escrito en C++ lee el sensor en segundo plano (bus I2C por hardware a 400 kHz, o el bus por software con retardos en ensamblador) y guarda cada muestra con el instante en que el sensor terminó de medir. Con el pin INT conectado (`iniciar ToF de precisión ... INT [P8]`), ese instante lo captura la interrupción de hardware, con precisión de microsegundos. El bloque `enviar distancia ToF ... por [USB]` manda cada muestra con su tiempo real, a la frecuencia del sensor: ≈30 Hz en modo estable, ≈50 Hz en rápida, ≈10 Hz en precisa (`fijar modo ToF`). `calibrar ToF ... con objeto a [100] mm` corrige el offset del chip y del vidrio. `frecuencia real de muestreo ToF` verifica la tasa.
+All four modules share I2C address 0x29, so every extra sensor needs its own pin pair. P13–P16 are free digital pins on every expansion kit (no LED matrix or button conflicts) and leave P0–P2 for analog sensors. The `suggested ToF pins for sensor number [n]` block returns that text from the program itself.
+
+**Lab-grade precision.** After initialisation a C++ sampler reads the sensor in the background (hardware I2C bus at 400 kHz, or the software bus with cycle-counted delays) and stores every sample with the instant the sensor finished measuring. With the INT pin wired (`start precision ToF ... INT [P8]`) that instant is captured by the pin interrupt, with microsecond precision. The `send ToF distance ... via [USB]` block streams every sample with its real time at the sensor's rate: ≈30 Hz stable, ≈50 Hz fast, ≈10 Hz precise (`set ToF mode`). `calibrate ToF ... with target at [100] mm` removes the chip and cover-glass offset. `ToF actual sampling rate` verifies the rate.
 
 ```blocks
-FisicaBitToF.tofIniciarPrecision(ModeloToF.TOF200C, DigitalPin.P20, DigitalPin.P19, DigitalPin.P8)
+fisicabitToF.tofStartPrecision(FbToFModel.TOF200C, DigitalPin.P20, DigitalPin.P19, DigitalPin.P8)
 basic.forever(function () {
-    FisicaBitToF.tofEnviarDistancia(ModeloToF.TOF200C, DigitalPin.P20, DigitalPin.P19, UnidadDistancia.Centimetros, MedioEnvio.USB)
+    fisicabitToF.tofSendDistance(FbToFModel.TOF200C, DigitalPin.P20, DigitalPin.P19, FbDistanceUnit.Centimeters, FbChannel.USB)
 })
 ```
 
 ```blocks
 basic.forever(function () {
-    FisicaBitSerial.enviar2(
-        FisicaBitToF.tofDistancia(ModeloToF.TOF200C, DigitalPin.P20, DigitalPin.P19, UnidadDistancia.Centimetros),
-        FisicaBitToF.tofDistancia(ModeloToF.TOF400C, DigitalPin.P14, DigitalPin.P13, UnidadDistancia.Centimetros),
+    fisicabitSerial.send2(
+        fisicabitToF.tofDistance(FbToFModel.TOF200C, DigitalPin.P20, DigitalPin.P19, FbDistanceUnit.Centimeters),
+        fisicabitToF.tofDistance(FbToFModel.TOF400C, DigitalPin.P14, DigitalPin.P13, FbDistanceUnit.Centimeters),
         50)
 })
 ```
 
-### Sonda de temperatura DS18B20
+### DS18B20 temperature probe
 ```
-DS18B20 rojo (VDD)      → micro:bit 3V
-DS18B20 negro (GND)     → micro:bit GND
-DS18B20 amarillo (DATA) → micro:bit P0
-Resistencia 4,7 kΩ entre DATA y 3V (los módulos con placa ya la traen)
-Varias sondas: una por pin (P0, P1, P2, ...)
+DS18B20 red (VDD)     → micro:bit 3V
+DS18B20 black (GND)   → micro:bit GND
+DS18B20 yellow (DATA) → micro:bit P0
+4.7 kΩ resistor between DATA and 3V (breakout modules already include it)
+Several probes: one per pin (P0, P1, P2, ...)
 ```
-Ejemplo de calorimetría (una lectura por segundo, 12 bits):
+Calorimetry example (one reading per second, 12 bits):
 ```blocks
 basic.forever(function () {
-    FisicaBitSerial.enviar1(FisicaBitDS18B20.temperatura(DigitalPin.P0, UnidadTemperatura.Celsius), 1000)
+    fisicabitSerial.send1(fisicabitDS18B20.temperature(DigitalPin.P0, FbTemperatureUnit.Celsius), 1000)
 })
 ```
 
-### Termocupla tipo K con MAX6675
+### Type K thermocouple with MAX6675
 ```
-MAX6675 VCC → micro:bit 3V      (no usar 5 V: la salida SO va al nivel de VCC)
+MAX6675 VCC → micro:bit 3V      (do not use 5 V: the SO output swings to VCC)
 MAX6675 GND → micro:bit GND
-MAX6675 SCK → micro:bit P13     (reloj)
-MAX6675 CS  → micro:bit P16     (selección)
-MAX6675 SO  → micro:bit P14     (datos; en algunos módulos dice DO o MISO)
-Termocupla: rojo → "−", amarillo → "+" (si la lectura baja al calentar, invertirlos)
-Varios módulos: comparten SCK y SO, cada uno con su propio CS
+MAX6675 SCK → micro:bit P13     (clock)
+MAX6675 CS  → micro:bit P16     (chip select)
+MAX6675 SO  → micro:bit P14     (data; some modules label it DO or MISO)
+Thermocouple: red → "−", yellow → "+" (if the reading drops when heated, swap them)
+Several modules: share SCK and SO, each with its own CS
 ```
-Rango 0 a 1023 °C, paso 0,25 °C, ±2 °C. El chip entrega un valor nuevo cada 220 ms; leer más seguido devuelve el mismo valor sin bloquear. Para afinar, calibrar en agua con hielo con `fijar corrección MAX6675`. Ejemplo de curva de enfriamiento (dos lecturas por segundo):
+Range 0 to 1023 °C, 0.25 °C steps, ±2 °C. The chip delivers a new value every 220 ms; reading more often returns the same value without blocking. For better accuracy, calibrate in ice water with `set MAX6675 correction`. Cooling-curve example (two readings per second):
 ```blocks
 basic.forever(function () {
-    FisicaBitSerial.enviar1(FisicaBitMAX6675.temperatura(DigitalPin.P13, DigitalPin.P16, DigitalPin.P14, UnidadTemperatura.Celsius), 500)
+    fisicabitSerial.send1(fisicabitMAX6675.temperature(DigitalPin.P13, DigitalPin.P16, DigitalPin.P14, FbTemperatureUnit.Celsius), 500)
 })
 ```
 
-### Barrera óptica FC-33 (digital)
+### FC-33 photogate (digital)
 ```
-FC-33 #1 OUT → P1 (barrera A)
-FC-33 #2 OUT → P2 (barrera B)
-Ambos VCC → 3V, GND → GND
+FC-33 #1 OUT → P1 (photogate A)
+FC-33 #2 OUT → P2 (photogate B)
+Both VCC → 3V, GND → GND
 ```
 
-### Barrera IR casera (analógica)
+### IR DIY photogate (analog)
 ```
-Emisor:   3V → R(100Ω) → LED IR → GND
-Receptor: 3V → Fototransistor → Pin (señal)
+Emitter:  3V → R(100Ω) → IR LED → GND
+Receiver: 3V → Phototransistor → Pin (signal)
                                  ├── R(10KΩ) → GND
 ```
 
-## Configuración de Bluetooth
+## Bluetooth setup
 
-1. Esta extensión ya propone "sin vinculación" (**No Pairing Required**) como valor por defecto desde su `pxt.json` (`yotta.config.microbit-dal.bluetooth`: `open: 1, whitelist: 0`), así que en un proyecto nuevo no hace falta tocar nada. Si el proyecto tiene otra opción elegida en **⚙ Configuración → Configuración del proyecto**, esa opción gana: dejala en **No Pairing Required**.
-2. Poné `iniciar Bluetooth para fisicabit.com` como primer bloque de `al iniciar`.
-3. Cargá el programa, esperá el ícono ◎, después tocá **Bluetooth** en fisicabit.com y elegí `BBC micro:bit [xxxxx]`.
-4. Si un micro:bit que estuvo vinculado antes no se conecta, quitalo ("olvidar") de la configuración Bluetooth del sistema operativo y volvé a intentar.
+1. In MakeCode open **⚙ Settings → Project Settings** and select **No Pairing Required**. The extension does not change this setting itself; fisicabit.com connects without bonding, so *JustWorks* or *Passkey* pairing makes the phone connect but never receive data.
+2. Put `start Bluetooth for fisicabit.com` as the first block in `on start`.
+3. Flash the program, wait for the ◎ icon, then click **Bluetooth** on fisicabit.com and pick `BBC micro:bit [xxxxx]`.
+4. If a previously paired micro:bit refuses to connect, remove ("forget") it from the operating system's Bluetooth settings and try again.
 
-Notas:
+Notes:
 
-* Bluetooth y la extensión **Radio** no pueden usarse en el mismo programa. El serial USB sí sigue funcionando junto con Bluetooth.
-* La velocidad práctica por BLE es de hasta ~20 Hz; para 50–100 Hz usá USB.
-* Los bloques viejos `BT muestrear ... cada ... ms` y `Serial muestrear ... cada ... ms` siguen compilando pero están ocultos; usá los nuevos bloques `enviar a fisicabit.com tiempo y ... cada ... ms`.
+* Bluetooth and the **Radio** extension cannot be used in the same program. USB serial keeps working alongside Bluetooth.
+* Practical BLE rate is up to ~20 Hz; for 50–100 Hz use USB.
+* The old `BT sample ... every ... ms` and `serial sample ... every ... ms` blocks still compile but are hidden; use the `send to fisicabit.com time and ... every ... ms` blocks.
 
-### Si conecta pero no llegan datos (celular / Android)
+### Connected but no data arrives (phone / Android)
 
-Síntoma: fisicabit.com muestra el micro:bit como conectado, pero la tabla y la gráfica quedan vacías. Casi siempre la causa está en la configuración del proyecto o en el vínculo guardado por el teléfono, no en la página. Probá en este orden:
+Symptom: fisicabit.com shows the micro:bit as connected, but the table and graph stay empty. The cause is almost always the project settings or a stale bond stored by the phone. Try, in this order:
 
-1. **Vínculo viejo en el teléfono.** En Android: Ajustes → Bluetooth → `BBC micro:bit [xxxxx]` → **Olvidar**. Después reiniciá el micro:bit (botón de atrás) y volvé a conectar desde fisicabit.com. Un vínculo guardado con claves de un programa anterior hace que el teléfono conecte pero nunca active las notificaciones del canal de datos.
-2. **Configuración del proyecto.** En MakeCode: **⚙ → Configuración del proyecto** tiene que estar en **No Pairing Required**. Si el proyecto está en *JustWorks pairing* o *Passkey pairing*, esa elección gana sobre la de la extensión: el `.hex` exige vinculación y el teléfono conecta pero no puede leer datos hasta que se empareja desde Ajustes → Bluetooth. (Con la extensión 0.7.0 y 0.7.1 esta combinación además producía el diálogo **"Errores de extensión"** y la categoría quedaba vacía; desde la 0.7.2 ya no.) Elegí *No Pairing Required*, volvé a **descargar el .hex** y cargalo de nuevo.
-3. **Versión de la extensión.** En el editor, en **Extensiones**, verificá que `fisicabit-sensores` esté en la versión 0.7.2 o posterior. Si no, quitala y agregala de nuevo desde `https://github.com/martinferreiraHCA/pxt-fisicabit`, y descargá el `.hex` otra vez: **el firmware ya cargado en la placa no se actualiza solo**.
-4. **Bloques.** `iniciar Bluetooth para fisicabit.com` va **dentro de `al iniciar`**, y el bloque `enviar a fisicabit.com por Bluetooth ...` **dentro de `para siempre`**. Sin ese bloque de inicio el servicio UART no existe y la página conecta sin canal de datos.
-5. **fisicabit.com.** Elegí **Bluetooth**, poné el **número de variables** igual a la cantidad de valores del bloque (sin contar el tiempo) y dejá **"Micro:bit envía timestamp"** activado (o desactivado si usás los bloques *sin tiempo*). Si no coincide, las líneas llegan pero se descartan.
-6. **Navegador.** En Android sólo **Chrome** (o Edge/Samsung Internet basados en Chromium) tiene Web Bluetooth; Firefox no, y en iPhone/iPad ningún navegador. La pantalla del teléfono tiene que quedar encendida con la pestaña visible: si Android la pone en segundo plano se corta la recepción.
-7. **Intervalo.** Por BLE usá 50 ms o más en el bloque de envío. Si un bloque de la misma pantalla tiene 5–10 ms, se saturan las indicaciones y los datos llegan en ráfagas o no llegan.
+1. **Stale bond on the phone.** On Android: Settings → Bluetooth → `BBC micro:bit [xxxxx]` → **Forget**. Then reset the micro:bit (back button) and reconnect from fisicabit.com.
+2. **Project settings.** **⚙ → Project Settings** must be **No Pairing Required**. Otherwise the `.hex` requires bonding and the phone connects but cannot read data. Select *No Pairing Required*, **download the .hex again** and re-flash.
+3. **Extension version.** In the editor's **Extensions** view make sure `fisicabit-sensores` is up to date. If not, remove it, add it again from `https://github.com/martinferreiraHCA/pxt-fisicabit`, and download the `.hex` again: **firmware already on the board does not update itself**.
+4. **Blocks.** `start Bluetooth for fisicabit.com` goes **inside `on start`**, and the `send to fisicabit.com via Bluetooth ...` block **inside `forever`**. Without the start block the UART service does not exist and the page connects with no data channel.
+5. **fisicabit.com.** Choose **Bluetooth**, set the **number of variables** equal to the number of values in the block (not counting time) and keep **"micro:bit sends timestamp"** enabled (or disabled when you use the *without time* blocks). If they do not match, lines arrive but are discarded.
+6. **Browser.** On Android only **Chrome** (or Chromium-based Edge/Samsung Internet) has Web Bluetooth; Firefox does not, and no browser on iPhone/iPad does. Keep the screen on with the tab visible: if Android backgrounds it, reception stops.
+7. **Interval.** Over BLE use 50 ms or more in the send block. If a block in the same program uses 5–10 ms the indications saturate and data arrives in bursts or not at all.
 
-Cuando la conexión está bien, el micro:bit muestra ♥ y en fisicabit.com aparece una línea nueva por cada intervalo.
+When everything is right the micro:bit shows ♥ and a new line appears on fisicabit.com every interval.
 
-### Compatibilidad de navegadores
+### Browser compatibility
 
-| Plataforma | Navegador | USB (Web Serial) | Bluetooth (Web Bluetooth) |
-|------------|-----------|------------------|---------------------------|
-| Windows / macOS / Linux / ChromeOS | Chrome, Edge | Sí | Sí |
-| Android | Chrome | No | Sí |
-| iOS / iPadOS | Safari | No | No (Apple no soporta Web Serial ni Web Bluetooth) |
+| Platform | Browser | USB (Web Serial) | Bluetooth (Web Bluetooth) |
+|----------|---------|------------------|---------------------------|
+| Windows / macOS / Linux / ChromeOS | Chrome, Edge | Yes | Yes |
+| Android | Chrome | No | Yes |
+| iOS / iPadOS | Safari | No | No (Apple does not support Web Serial or Web Bluetooth) |
 
-Los datos se reciben en [fisicabit.com](https://fisicabit.com) en tiempo real.
+Data is received on [fisicabit.com](https://fisicabit.com) in real time.
 
-## Referencia de pines del micro:bit
+## micro:bit pin reference
 
 ```
-Pines analógicos (ADC):   P0, P1, P2
-Pines digitales libres:   P8, P12, P16
-Bus I2C:                  P19 (SCL), P20 (SDA)
-Bus SPI:                  P13 (SCK), P14 (MISO), P15 (MOSI)
-Compartidos con los LED:  P3, P4, P5, P6, P7, P9, P10, P11
+Analog pins (ADC):     P0, P1, P2
+Free digital pins:     P8, P12, P16
+I2C bus:               P19 (SCL), P20 (SDA)
+SPI bus:               P13 (SCK), P14 (MISO), P15 (MOSI)
+Shared with LEDs:      P3, P4, P5, P6, P7, P9, P10, P11
 ```
 
-## Plataformas soportadas
+## Testing
 
-* PXT/microbit
+`test.ts` is the extension's test program. Open this repository as a project in MakeCode (**Import → Import URL**) and the simulator runs it: button A selects a test case (number on the display), button B runs it, A+B prints a summary. Each case writes `TEST n name: PASS | FAIL | SKIP (reason)` to the serial console. Pure-logic cases (conversions, formatting, note names, suggested pins) must pass in the simulator; hardware cases report SKIP when the sensor is not connected and must never raise an exception. The header of `test.ts` lists every case, the expected value and the wiring it needs on a micro:bit V2. `tests/native-check.ts` is an extra program that exercises every native C++ shim; compiling it with the extension verifies that the shims link.
 
-## Licencia
+## Development notes
+
+* Native code is C++ on CODAL only (micro:bit V2); there is no mbed code path. The few direct register accesses are commented in `shims.cpp`.
+* Block ids (`fisicabit_*`) are stable across versions so saved projects keep their blocks.
+* Translations of block texts live in `_locales/es/` and `_locales/pt-BR/` (block strings and tooltips).
+* Based on public documentation: ST datasheets and application notes for the VL53L0X / VL53L1X / VL6180X, Bosch BME280, Maxim DS18B20 / MAX6675, Avia HX711, TAOS TCS3200, and the CODAL / pxt-microbit sources. The ultrasonic acquisition follows the approach of Microsoft's `pxt-sonar` (MIT).
+
+## Supported targets
+
+* for PXT/microbit (micro:bit V2 only)
+
+## License
 
 MIT
 

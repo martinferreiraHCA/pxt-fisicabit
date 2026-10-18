@@ -3,6 +3,10 @@
 ### @explicitHints true
 ### @diffs true
 
+```package
+fisicabit-sensores=github:martinferreiraHCA/pxt-fisicabit
+```
+
 ## Introduction @showdialog
 
 In this tutorial you will program the micro:bit to stream sensor readings to **fisicabit.com** through the USB cable. A single block sends the time and the sensor value.
@@ -19,11 +23,11 @@ basic.showIcon(IconNames.Yes)
 
 ## Step 2: Send time and a sensor value
 
-Drag ``||FisicaBitSerial:send to fisicabit.com time and ... every ... ms||`` into ``||basic:forever||``. Put ``||input:acceleration (mg) x||`` in its slot and leave **100 ms** (10 samples per second). This one block takes the micro:bit time, sends the line `time,value` and waits until the next sample.
+Drag ``||fisicabitSerial:send to fisicabit.com time and ... every ... ms||`` into ``||basic:forever||``. Put ``||input:acceleration (mg) x||`` in its slot and leave **100 ms** (10 samples per second). This one block takes the micro:bit time, sends the line `time,value` and waits until the next sample.
 
 ```blocks
 basic.forever(function () {
-    FisicaBitSerial.enviar1(input.acceleration(Dimension.X), 100)
+    fisicabitSerial.send1(input.acceleration(Dimension.X), 100)
 })
 ```
 
@@ -42,21 +46,21 @@ Open **fisicabit.com** in Chrome or Edge:
 
 ## Step 5: Send two values
 
-Replace the block in ``||basic:forever||`` with ``||FisicaBitSerial:send to fisicabit.com time, ... and ... every ... ms||`` and send the acceleration on **x** and **y**. On fisicabit.com, set the number of variables to **2**.
+Replace the block in ``||basic:forever||`` with ``||fisicabitSerial:send to fisicabit.com time, ... and ... every ... ms||`` and send the acceleration on **x** and **y**. On fisicabit.com, set the number of variables to **2**.
 
 ```blocks
 basic.forever(function () {
-    FisicaBitSerial.enviar2(input.acceleration(Dimension.X), input.acceleration(Dimension.Y), 100)
+    fisicabitSerial.send2(input.acceleration(Dimension.X), input.acceleration(Dimension.Y), 100)
 })
 ```
 
 ## Step 6: Faster sampling (optional)
 
-For fast experiments such as free fall, use ``||FisicaBitSerial:fisicabit.com fast loop every ... ms||`` instead of ``||basic:forever||`` with **20 ms** (50 samples per second). It keeps a precise rate without the hidden delay of the forever loop. Put the send block inside it.
+For fast experiments such as free fall, use ``||fisicabitSerial:fisicabit.com fast loop every ... ms||`` instead of ``||basic:forever||`` with **20 ms** (50 samples per second). It keeps a precise rate without the hidden delay of the forever loop. Put the send block inside it.
 
 ```blocks
-FisicaBitSerial.bucleMuestreo(20, function () {
-    FisicaBitSerial.enviar1(input.acceleration(Dimension.X), 20)
+fisicabitSerial.sampleLoop(20, function () {
+    fisicabitSerial.send1(input.acceleration(Dimension.X), 20)
 })
 ```
 

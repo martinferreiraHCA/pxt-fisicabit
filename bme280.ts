@@ -1,53 +1,54 @@
 // =============================================================================
-//  bme280_sensores.ts — Sensor de presión/temperatura/humedad GY-BME280
+//  bme280.ts — GY-BME280 pressure/temperature/humidity sensor
 // =============================================================================
-//  Proyecto: FisicaBit.com
-//  Chip: Bosch BME280 (temperatura + humedad + presión barométrica)
-//  Comunicación: I2C (dirección 0x76 con SDO→GND, o 0x77 con SDO→VCC)
-//  Alimentación: 1.8V – 3.6V, típicamente 3.3V
+//  Project: FisicaBit.com
+//  Chip: Bosch BME280 (temperature + humidity + barometric pressure)
+//  Communication: I2C (address 0x76 with SDO→GND, or 0x77 with SDO→VCC)
+//  Power: 1.8V – 3.6V, typically 3.3V
 //
-//  CABLEADO:
+//  WIRING:
 //    ┌──────────────────────────────────┐
 //    │  GY-BME280                       │
 //    │  ┌──────────────────────┐        │
 //    │  │  VCC  │──── 3V       │        │
 //    │  │  GND  │──── GND      │        │
-//    │  │  SDA  │──── P20 (SDA)│        │  Bus I2C
+//    │  │  SDA  │──── P20 (SDA)│        │  I2C bus
 //    │  │  SCL  │──── P19 (SCL)│        │
-//    │  │  SDO  │──── GND      │        │  → dirección 0x76
+//    │  │  SDO  │──── GND      │        │  → address 0x76
 //    │  └──────────────────────┘        │
 //    └──────────────────────────────────┘
 //
-//  PRECISIÓN (según datasheet Bosch):
-//    Temperatura: ±1.0 °C (rango -40 a +85 °C)
-//    Humedad:     ±3 %RH  (rango 0 a 100 %RH)
-//    Presión:     ±1.0 hPa (rango 300 a 1100 hPa)
+//  ACCURACY (per Bosch datasheet):
+//    Temperature: ±1.0 °C (range -40 to +85 °C)
+//    Humidity:    ±3 %RH  (range 0 to 100 %RH)
+//    Pressure:    ±1.0 hPa (range 300 to 1100 hPa)
 //
-//  COMPENSACIÓN:
-//    El BME280 entrega valores crudos ADC de 20 bits que deben compensarse
-//    con coeficientes de calibración grabados en fábrica (registros 0x88-0xA1
-//    y 0xE1-0xE7). Las fórmulas de compensación son del datasheet de Bosch
-//    (capítulo 4.2.3, implementación en punto fijo de 32 bits).
+//  COMPENSATION:
+//    The BME280 delivers 20-bit raw ADC values that must be compensated
+//    with factory-programmed calibration coefficients (registers 0x88-0xA1
+//    and 0xE1-0xE7). The compensation formulas come from the Bosch datasheet
+//    (chapter 4.2.3, 32-bit fixed-point implementation).
 // =============================================================================
 
-// Sensor BME280 como bloque independiente
+// BME280 sensor as a standalone category
+/** Bosch BME280 barometric pressure, temperature and humidity sensor over I2C. */
 //% weight=90
 //% color=#2E8B57
-//% icon="\uf0c2"
-//% block="BME280 — Pressure/Temp/Humidity"
+//% icon=""
+//% block="BME280"
 //% groups='["Configuration", "Measurement", "Diagnostics"]'
-namespace FisicaBitBME280 {
+namespace fisicabitBME280 {
 
-    // ── Dirección I2C ──
+    // ── I2C address ──
     let _bmeAddr = 0x76
-    let _bmeListo = false
+    let _bmeReady = false
 
-    // ── Coeficientes de calibración de temperatura ──
+    // ── Temperature calibration coefficients ──
     let _bmeDigT1 = 0
     let _bmeDigT2 = 0
     let _bmeDigT3 = 0
 
-    // ── Coeficientes de calibración de presión ──
+    // ── Pressure calibration coefficients ──
     let _bmeDigP1 = 0
     let _bmeDigP2 = 0
     let _bmeDigP3 = 0
@@ -58,7 +59,7 @@ namespace FisicaBitBME280 {
     let _bmeDigP8 = 0
     let _bmeDigP9 = 0
 
-    // ── Coeficientes de calibración de humedad ──
+    // ── Humidity calibration coefficients ──
     let _bmeDigH1 = 0
     let _bmeDigH2 = 0
     let _bmeDigH3 = 0
@@ -66,13 +67,13 @@ namespace FisicaBitBME280 {
     let _bmeDigH5 = 0
     let _bmeDigH6 = 0
 
-    // ── Variable t_fine (compartida entre temperatura y presión) ──
+    // ── t_fine variable (shared between temperature and pressure) ──
     let _bmeTFine = 0
 
-    // ── Últimos valores ──
-    let _bmeUltTemp = 0
-    let _bmeUltHum = 0
-    let _bmeUltPres = 0
+    // ── Last values ──
+    let _bmeLastTemp = 0
+    let _bmeLastHum = 0
+    let _bmeLastPres = 0
 
     // =========================================================================
     // I2C helpers (8-bit register address)
@@ -95,13 +96,13 @@ namespace FisicaBitBME280 {
         return pins.i2cReadBuffer(_bmeAddr, len)
     }
 
-    // ── Leer unsigned 16-bit little-endian ──
+    // ── Read unsigned 16-bit little-endian ──
     function _bmeRU16LE(reg: number): number {
         let b = _bmeReadBlock(reg, 2)
         return (b[1] << 8) | b[0]
     }
 
-    // ── Leer signed 16-bit little-endian ──
+    // ── Read signed 16-bit little-endian ──
     function _bmeRS16LE(reg: number): number {
         let v = _bmeRU16LE(reg)
         if (v > 32767) v -= 65536
@@ -109,16 +110,16 @@ namespace FisicaBitBME280 {
     }
 
     // =========================================================================
-    // Lectura de coeficientes de calibración
+    // Calibration coefficient reading
     // =========================================================================
 
     function _bmeReadCalib(): void {
-        // Temperatura (0x88-0x8D)
+        // Temperature (0x88-0x8D)
         _bmeDigT1 = _bmeRU16LE(0x88)
         _bmeDigT2 = _bmeRS16LE(0x8A)
         _bmeDigT3 = _bmeRS16LE(0x8C)
 
-        // Presión (0x8E-0x9F)
+        // Pressure (0x8E-0x9F)
         _bmeDigP1 = _bmeRU16LE(0x8E)
         _bmeDigP2 = _bmeRS16LE(0x90)
         _bmeDigP3 = _bmeRS16LE(0x92)
@@ -129,7 +130,7 @@ namespace FisicaBitBME280 {
         _bmeDigP8 = _bmeRS16LE(0x9C)
         _bmeDigP9 = _bmeRS16LE(0x9E)
 
-        // Humedad (0xA1, 0xE1-0xE7)
+        // Humidity (0xA1, 0xE1-0xE7)
         _bmeDigH1 = _bmeR8(0xA1)
         _bmeDigH2 = _bmeRS16LE(0xE1)
         _bmeDigH3 = _bmeR8(0xE3)
@@ -145,15 +146,15 @@ namespace FisicaBitBME280 {
     }
 
     // =========================================================================
-    // Compensación (algoritmo del datasheet Bosch, punto fijo 32 bits)
+    // Compensation (Bosch datasheet algorithm, 32-bit fixed point)
     // =========================================================================
 
     function _bmeCompTemp(adcT: number): number {
-        // Fórmula del datasheet BME280 - capítulo 4.2.3
+        // BME280 datasheet formula - chapter 4.2.3
         let var1 = (((adcT >> 3) - (_bmeDigT1 << 1)) * _bmeDigT2) >> 11
         let var2 = (((((adcT >> 4) - _bmeDigT1) * ((adcT >> 4) - _bmeDigT1)) >> 12) * _bmeDigT3) >> 14
         _bmeTFine = var1 + var2
-        return (_bmeTFine * 5 + 128) >> 8  // resultado en centésimas de °C
+        return (_bmeTFine * 5 + 128) >> 8  // result in hundredths of °C
     }
 
     function _bmeCompPres(adcP: number): number {
@@ -169,7 +170,7 @@ namespace FisicaBitBME280 {
         var1 = (_bmeDigP9 * Math.idiv(Math.idiv(p, 8) * Math.idiv(p, 8), 8192)) >> 25
         var2 = (_bmeDigP8 * p) >> 19
         p = Math.idiv(p + var1 + var2, 256) + ((_bmeDigP7) << 4)
-        return p  // resultado en Pa × 256
+        return p  // result in Pa × 256
     }
 
     function _bmeCompHum(adcH: number): number {
@@ -185,76 +186,76 @@ namespace FisicaBitBME280 {
         h = h - Math.idiv(Math.idiv(Math.idiv(h, 32768) * Math.idiv(h, 32768), 128) * _bmeDigH1, 16)
         if (h < 0) h = 0
         if (h > 419430400) h = 419430400
-        return h >> 12  // resultado en %RH × 1024
+        return h >> 12  // result in %RH × 1024
     }
 
     // =========================================================================
-    // Lectura forzada (forced mode)
+    // Forced reading (forced mode)
     // =========================================================================
 
-    function _bmeForzarLectura(): void {
+    function _bmeForceReading(): void {
         // Config: standby=0.5ms, filter coeff=16, SPI off
         _bmeW8(0xF5, (0x00 << 5) | (0x04 << 2) | 0x00)
-        // ctrl_hum: oversampling humedad ×1
+        // ctrl_hum: humidity oversampling ×1
         _bmeW8(0xF2, 0x01)
-        // ctrl_meas: oversampling temp ×2, presión ×16, forced mode
+        // ctrl_meas: temperature oversampling ×2, pressure ×16, forced mode
         _bmeW8(0xF4, (0x02 << 5) | (0x05 << 2) | 0x01)
 
-        // Esperar a que termine la medición (bit 3 del status)
+        // Wait for the measurement to finish (status bit 3)
         for (let i = 0; i < 50; i++) {
             if ((_bmeR8(0xF3) & 0x08) == 0) break
             basic.pause(2)
         }
 
-        // Leer 8 bytes de datos: presión[3] + temperatura[3] + humedad[2]
+        // Read 8 data bytes: pressure[3] + temperature[3] + humidity[2]
         let raw = _bmeReadBlock(0xF7, 8)
         let adcP = ((raw[0] << 16) | (raw[1] << 8) | raw[2]) >> 4
         let adcT = ((raw[3] << 16) | (raw[4] << 8) | raw[5]) >> 4
         let adcH = (raw[6] << 8) | raw[7]
 
-        // Compensar (temperatura primero, produce t_fine para presión y humedad)
+        // Compensate (temperature first, it produces t_fine for pressure and humidity)
         let tComp = _bmeCompTemp(adcT)
-        _bmeUltTemp = tComp  // centésimas de °C
+        _bmeLastTemp = tComp  // hundredths of °C
 
         let pComp = _bmeCompPres(adcP)
-        _bmeUltPres = pComp  // Pa × 256
+        _bmeLastPres = pComp  // Pa × 256
 
         let hComp = _bmeCompHum(adcH)
-        _bmeUltHum = hComp  // %RH × 1024
+        _bmeLastHum = hComp  // %RH × 1024
     }
 
 
     // =========================================================================
-    // BLOQUES PÚBLICOS — BME280 Sensor
+    // PUBLIC BLOCKS — BME280 sensor
     // =========================================================================
 
     /**
-     * Inicializa el sensor GY-BME280 por I2C.
-     * Lee los coeficientes de calibración grabados en fábrica.
-     * Muestra ✓ si el sensor responde correctamente, ✗ si no.
+     * Initializes the GY-BME280 sensor over I2C.
+     * Reads the factory-programmed calibration coefficients.
+     * Shows ✓ if the sensor responds correctly, ✗ otherwise.
      *
-     * Conexión física GY-BME280 → micro:bit:
+     * Physical wiring GY-BME280 → micro:bit:
      *   VCC → 3V
      *   GND → GND
      *   SCL → P19 (SCL)
      *   SDA → P20 (SDA)
-     *   CSB → 3V (fija modo I2C)
-     *   SDO → GND (dirección 0x76) o VCC (dirección 0x77)
+     *   CSB → 3V (selects I2C mode)
+     *   SDO → GND (address 0x76) or VCC (address 0x77)
      *
-     * @param direccion Dirección I2C (0x76 si SDO→GND, 0x77 si SDO→VCC)
+     * @param address I2C address (0x76 if SDO→GND, 0x77 if SDO→VCC)
      */
     //% blockId=fisicabit_bme280_inicializar
-    //% block="initialize BME280 (VCC GND SCL→P19 SDA→P20 CSB SDO) at %direccion"
+    //% block="initialize BME280 (VCC GND SCL→P19 SDA→P20 CSB SDO) at %address"
     //% group="Configuration"
     //% weight=100
-    //% direccion.defl=DireccionBME280.Addr76
-    export function bme280Inicializar(direccion: DireccionBME280): void {
-        _bmeAddr = direccion
+    //% address.defl=FbBME280Address.Addr76
+    export function bme280Init(address: FbBME280Address): void {
+        _bmeAddr = address
 
-        // Verificar chip ID (0x60 = BME280)
+        // Verify chip ID (0x60 = BME280)
         let id = _bmeR8(0xD0)
         if (id != 0x60) {
-            _bmeListo = false
+            _bmeReady = false
             basic.showIcon(IconNames.No)
             basic.pause(500)
             basic.clearScreen()
@@ -265,9 +266,9 @@ namespace FisicaBitBME280 {
         _bmeW8(0xE0, 0xB6)
         basic.pause(50)
 
-        // Leer coeficientes de calibración
+        // Read calibration coefficients
         _bmeReadCalib()
-        _bmeListo = true
+        _bmeReady = true
 
         basic.showIcon(IconNames.Yes)
         basic.pause(500)
@@ -275,25 +276,25 @@ namespace FisicaBitBME280 {
     }
 
     /**
-     * Lee la temperatura del BME280 en la unidad seleccionada.
-     * Resolución: 0.01 °C. Precisión: ±1.0 °C.
-     * @param unidad Unidad de temperatura
+     * Reads the BME280 temperature in the selected unit.
+     * Resolution: 0.01 °C. Accuracy: ±1.0 °C.
+     * @param unit Temperature unit
      */
     //% blockId=fisicabit_bme280_temperatura
-    //% block="BME280 temperature in %unidad"
+    //% block="BME280 temperature in %unit"
     //% group="Measurement"
     //% weight=95
-    //% unidad.defl=UnidadTemperatura.Celsius
-    export function bme280Temperatura(unidad: UnidadTemperatura): number {
-        if (!_bmeListo) return 0
-        _bmeForzarLectura()
-        let tempC = _bmeUltTemp / 100.0
-        switch (unidad) {
-            case UnidadTemperatura.Celsius:
+    //% unit.defl=FbTemperatureUnit.Celsius
+    export function bme280Temperature(unit: FbTemperatureUnit): number {
+        if (!_bmeReady) return 0
+        _bmeForceReading()
+        let tempC = _bmeLastTemp / 100.0
+        switch (unit) {
+            case FbTemperatureUnit.Celsius:
                 return Math.round(tempC * 10) / 10
-            case UnidadTemperatura.Fahrenheit:
+            case FbTemperatureUnit.Fahrenheit:
                 return Math.round((tempC * 9 / 5 + 32) * 10) / 10
-            case UnidadTemperatura.Kelvin:
+            case FbTemperatureUnit.Kelvin:
                 return Math.round((tempC + 273.15) * 10) / 10
             default:
                 return Math.round(tempC * 10) / 10
@@ -301,28 +302,28 @@ namespace FisicaBitBME280 {
     }
 
     /**
-     * Lee la presión barométrica del BME280.
-     * Resolución: 0.18 Pa. Rango: 300 – 1100 hPa.
-     * @param unidad Unidad de presión
+     * Reads the BME280 barometric pressure.
+     * Resolution: 0.18 Pa. Range: 300 – 1100 hPa.
+     * @param unit Pressure unit
      */
     //% blockId=fisicabit_bme280_presion
-    //% block="BME280 pressure in %unidad"
+    //% block="BME280 pressure in %unit"
     //% group="Measurement"
     //% weight=94
-    //% unidad.defl=UnidadPresion.hPa
-    export function bme280Presion(unidad: UnidadPresion): number {
-        if (!_bmeListo) return 0
-        _bmeForzarLectura()
-        // _bmeUltPres está en Pa × 256
-        let pa = _bmeUltPres / 256.0
-        switch (unidad) {
-            case UnidadPresion.Pa:
+    //% unit.defl=FbPressureUnit.hPa
+    export function bme280Pressure(unit: FbPressureUnit): number {
+        if (!_bmeReady) return 0
+        _bmeForceReading()
+        // _bmeLastPres is in Pa × 256
+        let pa = _bmeLastPres / 256.0
+        switch (unit) {
+            case FbPressureUnit.Pa:
                 return Math.round(pa)
-            case UnidadPresion.hPa:
+            case FbPressureUnit.hPa:
                 return Math.round(pa / 100 * 10) / 10
-            case UnidadPresion.mmHg:
+            case FbPressureUnit.mmHg:
                 return Math.round(pa * 0.00750062 * 10) / 10
-            case UnidadPresion.Atm:
+            case FbPressureUnit.Atm:
                 return Math.round(pa / 101325 * 10000) / 10000
             default:
                 return Math.round(pa / 100 * 10) / 10
@@ -330,49 +331,49 @@ namespace FisicaBitBME280 {
     }
 
     /**
-     * Lee la humedad relativa del BME280 en %.
-     * Resolución: 0.008 %RH. Precisión: ±3 %RH.
+     * Reads the BME280 relative humidity in %.
+     * Resolution: 0.008 %RH. Accuracy: ±3 %RH.
      */
     //% blockId=fisicabit_bme280_humedad
     //% block="BME280 humidity (percent RH)"
     //% group="Measurement"
     //% weight=93
-    export function bme280Humedad(): number {
-        if (!_bmeListo) return 0
-        _bmeForzarLectura()
-        // _bmeUltHum está en %RH × 1024
-        return Math.round(_bmeUltHum / 1024 * 10) / 10
+    export function bme280Humidity(): number {
+        if (!_bmeReady) return 0
+        _bmeForceReading()
+        // _bmeLastHum is in %RH × 1024
+        return Math.round(_bmeLastHum / 1024 * 10) / 10
     }
 
     /**
-     * Calcula la altitud aproximada usando la presión barométrica.
-     * Fórmula barométrica: altitud = 44330 × (1 - (P/P₀)^0.1903)
-     * donde P₀ = presión a nivel del mar (1013.25 hPa por defecto).
-     * @param presionNivelMar Presión de referencia a nivel del mar en hPa
+     * Computes the approximate altitude from the barometric pressure.
+     * Barometric formula: altitude = 44330 × (1 - (P/P₀)^0.1903)
+     * where P₀ = sea-level pressure (1013.25 hPa by default).
+     * @param seaLevelPressure Reference sea-level pressure in hPa
      */
     //% blockId=fisicabit_bme280_altitud
-    //% block="BME280 altitude (m) sea level %presionNivelMar hPa"
+    //% block="BME280 altitude (m) sea level %seaLevelPressure hPa"
     //% group="Measurement"
     //% weight=92
-    //% presionNivelMar.defl=1013.25
-    export function bme280Altitud(presionNivelMar: number): number {
-        if (!_bmeListo) return 0
-        _bmeForzarLectura()
-        let pHpa = _bmeUltPres / 256.0 / 100.0
-        if (presionNivelMar <= 0) presionNivelMar = 1013.25
-        // Fórmula barométrica internacional
-        let alt = 44330.0 * (1.0 - Math.pow(pHpa / presionNivelMar, 0.1903))
+    //% seaLevelPressure.defl=1013.25
+    export function bme280Altitude(seaLevelPressure: number): number {
+        if (!_bmeReady) return 0
+        _bmeForceReading()
+        let pHpa = _bmeLastPres / 256.0 / 100.0
+        if (seaLevelPressure <= 0) seaLevelPressure = 1013.25
+        // International barometric formula
+        let alt = 44330.0 * (1.0 - Math.pow(pHpa / seaLevelPressure, 0.1903))
         return Math.round(alt * 10) / 10
     }
 
     /**
-     * Indica si el sensor BME280 fue detectado e inicializado correctamente.
+     * Tells whether the BME280 sensor was detected and initialized correctly.
      */
     //% blockId=fisicabit_bme280_conectado
     //% block="BME280 sensor connected"
     //% group="Diagnostics"
     //% weight=85
-    export function bme280Conectado(): boolean {
-        return _bmeListo
+    export function bme280Connected(): boolean {
+        return _bmeReady
     }
 }

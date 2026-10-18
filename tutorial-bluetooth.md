@@ -3,6 +3,10 @@
 ### @explicitHints true
 ### @diffs true
 
+```package
+fisicabit-sensores=github:martinferreiraHCA/pxt-fisicabit
+```
+
 ## Introduction @showdialog
 
 In this tutorial you will program the micro:bit to stream sensor readings to **fisicabit.com** wirelessly, over Bluetooth. No cable is needed while measuring, so the micro:bit can swing, fall or ride on a cart.
@@ -11,19 +15,19 @@ You need: a micro:bit, its USB cable (only to download the program), and Chrome 
 
 ## Step 1: Start Bluetooth
 
-Drag ``||FisicaBitBT:start Bluetooth for fisicabit.com||`` into ``||basic:on start||``. It must be the **first** block. It turns on the Bluetooth service that fisicabit.com looks for and shows a target icon while waiting for a connection.
+Drag ``||fisicabitBluetooth:start Bluetooth for fisicabit.com||`` into ``||basic:on start||``. It must be the **first** block. It turns on the Bluetooth service that fisicabit.com looks for and shows a target icon while waiting for a connection.
 
 ```blocks
-FisicaBitBT.inicioRapido()
+fisicabitBluetooth.quickStart()
 ```
 
 ## Step 2: Send time and a sensor value
 
-Drag ``||FisicaBitBT:send to fisicabit.com via Bluetooth time and ... every ... ms||`` into ``||basic:forever||``, put ``||input:acceleration (mg) x||`` in its slot and leave **100 ms** (10 samples per second). The block sends `time,value` and only transmits while fisicabit.com is connected.
+Drag ``||fisicabitBluetooth:send to fisicabit.com via Bluetooth time and ... every ... ms||`` into ``||basic:forever||``, put ``||input:acceleration (mg) x||`` in its slot and leave **100 ms** (10 samples per second). The block sends `time,value` and only transmits while fisicabit.com is connected.
 
 ```blocks
 basic.forever(function () {
-    FisicaBitBT.enviar1(input.acceleration(Dimension.X), 100)
+    fisicabitBluetooth.send1(input.acceleration(Dimension.X), 100)
 })
 ```
 
@@ -44,20 +48,20 @@ If a micro:bit that was paired before refuses to connect, remove it from the Blu
 
 ## Step 5: Send three values
 
-Replace the block in ``||basic:forever||`` with ``||FisicaBitBT:send to fisicabit.com via Bluetooth time, ... , ... and ... every ... ms||`` and send the acceleration on **x**, **y** and **z**. On fisicabit.com, set the number of variables to **3**.
+Replace the block in ``||basic:forever||`` with ``||fisicabitBluetooth:send to fisicabit.com via Bluetooth time, ... , ... and ... every ... ms||`` and send the acceleration on **x**, **y** and **z**. On fisicabit.com, set the number of variables to **3**.
 
 ```blocks
 basic.forever(function () {
-    FisicaBitBT.enviar3(input.acceleration(Dimension.X), input.acceleration(Dimension.Y), input.acceleration(Dimension.Z), 100)
+    fisicabitBluetooth.send3(input.acceleration(Dimension.X), input.acceleration(Dimension.Y), input.acceleration(Dimension.Z), 100)
 })
 ```
 
 ## Step 6: Know when you are connected (optional)
 
-Add ``||FisicaBitBT:on fisicabit.com Bluetooth connected||`` and play a short sound inside it, so you hear when the page connects.
+Add ``||fisicabitBluetooth:on fisicabit.com Bluetooth connected||`` and play a short sound inside it, so you hear when the page connects.
 
 ```blocks
-FisicaBitBT.alConectar(function () {
+fisicabitBluetooth.onConnected(function () {
     music.playTone(Note.C5, music.beat(BeatFraction.Quarter))
 })
 ```

@@ -1,46 +1,49 @@
-// Enumerations for the FisicaBit extension
+// Enumerations for the FisicaBit extension (global, prefixed "Fb")
 
-declare const enum TipoSensorInterno {
+/** Built-in micro:bit sensors that can be read as a single value. */
+declare const enum FbInternalSensor {
     //% block="temperature"
-    Temperatura = 0,
+    Temperature = 0,
     //% block="accelerometer X"
-    AcelerometroX = 1,
+    AccelerometerX = 1,
     //% block="accelerometer Y"
-    AcelerometroY = 2,
+    AccelerometerY = 2,
     //% block="accelerometer Z"
-    AcelerometroZ = 3,
+    AccelerometerZ = 3,
     //% block="light level"
-    NivelLuz = 4,
+    LightLevel = 4,
     //% block="compass (heading)"
-    Brujula = 5,
+    Compass = 5,
     //% block="sound level (v2)"
-    NivelSonido = 6,
+    SoundLevel = 6,
     //% block="force G"
-    FuerzaG = 7
+    GForce = 7
 }
 
-declare const enum TipoSensorExterno {
+/** External sensors supported by the extension. */
+declare const enum FbExternalSensor {
     //% block="potentiometer (analog)"
-    Potenciometro = 0,
+    Potentiometer = 0,
     //% block="LDR - light (analog)"
     LDR = 1,
     //% block="NTC temp sensor (analog)"
     NTC = 2,
     //% block="ultrasonic HC-SR04"
-    Ultrasonido = 3,
+    Ultrasonic = 3,
     //% block="DHT11 temp+humidity"
     DHT11 = 4,
     //% block="PIR motion sensor"
     PIR = 5,
     //% block="infrared sensor"
-    Infrarrojo = 6,
+    Infrared = 6,
     //% block="DS18B20 temperature"
     DS18B20 = 7,
     //% block="MAX6675 thermocouple K"
     MAX6675 = 8
 }
 
-declare const enum UnidadTemperatura {
+/** Temperature units. */
+declare const enum FbTemperatureUnit {
     //% block="°C (Celsius)"
     Celsius = 0,
     //% block="°F (Fahrenheit)"
@@ -49,7 +52,8 @@ declare const enum UnidadTemperatura {
     Kelvin = 2
 }
 
-declare const enum ResolucionDS18B20 {
+/** DS18B20 conversion resolution (value = number of bits). */
+declare const enum FbDS18B20Resolution {
     //% block="9 bits (0.5 °C, 94 ms)"
     Bits9 = 9,
     //% block="10 bits (0.25 °C, 188 ms)"
@@ -60,27 +64,30 @@ declare const enum ResolucionDS18B20 {
     Bits12 = 12
 }
 
-declare const enum UnidadDistancia {
+/** Distance units. */
+declare const enum FbDistanceUnit {
     //% block="cm"
-    Centimetros = 0,
+    Centimeters = 0,
     //% block="inches"
-    Pulgadas = 1,
+    Inches = 1,
     //% block="mm"
-    Milimetros = 2
+    Millimeters = 2
 }
 
-declare const enum FiltroUltrasonido {
+/** Median filter strength for ultrasonic readings (value = window size). */
+declare const enum FbUltrasonicFilter {
     //% block="none (1 reading)"
-    Ninguno = 1,
+    None = 1,
     //% block="light (median of 3)"
-    Suave = 3,
+    Light = 3,
     //% block="medium (median of 5)"
-    Medio = 5,
+    Medium = 5,
     //% block="strong (median of 7)"
-    Fuerte = 7
+    Strong = 7
 }
 
-declare const enum PinAnalogico {
+/** Analog-capable edge connector pins. */
+declare const enum FbAnalogPin {
     //% block="P0"
     P0 = 0,
     //% block="P1"
@@ -89,16 +96,18 @@ declare const enum PinAnalogico {
     P2 = 2
 }
 
-declare const enum RangoAcelerometro {
+/** Accelerometer full-scale range (value = g). */
+declare const enum FbAccelerometerRange {
     //% block="±2g"
-    Rango2G = 2,
+    Range2G = 2,
     //% block="±4g"
-    Rango4G = 4,
+    Range4G = 4,
     //% block="±8g"
-    Rango8G = 8
+    Range8G = 8
 }
 
-declare const enum TasaAcelerometro {
+/** Accelerometer sample rate (value = period in ms). */
+declare const enum FbAccelerometerRate {
     //% block="100 Hz (10 ms)"
     Hz100 = 10,
     //% block="200 Hz (5 ms, recommended)"
@@ -107,27 +116,30 @@ declare const enum TasaAcelerometro {
     Hz400 = 2
 }
 
-declare const enum SuavizadoAcelerometro {
+/** Moving-average smoothing for the accelerometer (value = number of samples). */
+declare const enum FbAccelerometerSmoothing {
     //% block="none (raw sample)"
-    Ninguno = 1,
+    None = 1,
     //% block="light (5 samples)"
-    Suave = 5,
+    Light = 5,
     //% block="medium (10 samples, recommended)"
-    Medio = 10,
+    Medium = 10,
     //% block="strong (20 samples)"
-    Fuerte = 20,
+    Strong = 20,
     //% block="very strong (40 samples)"
-    MuyFuerte = 40
+    VeryStrong = 40
 }
 
-declare const enum MedioEnvio {
+/** Channel used to send data to fisicabit.com. */
+declare const enum FbChannel {
     //% block="USB"
     USB = 0,
     //% block="Bluetooth"
     Bluetooth = 1
 }
 
-declare const enum EjeAceleracion {
+/** Acceleration axis or derived quantity. */
+declare const enum FbAccelerationAxis {
     //% block="X (left/right)"
     X = 0,
     //% block="Y (front/back)"
@@ -135,42 +147,47 @@ declare const enum EjeAceleracion {
     //% block="Z (up/down)"
     Z = 2,
     //% block="|a| magnitude"
-    Magnitud = 3,
+    Magnitude = 3,
     //% block="vertical (along gravity)"
     Vertical = 4
 }
 
-declare const enum ModoBarrera {
+/** How a photogate (light barrier) output is read. */
+declare const enum FbGateMode {
     //% block="digital"
     Digital = 0,
     //% block="analog"
-    Analogico = 1
+    Analog = 1
 }
 
-declare const enum TipoBarreraOptica {
+/** Photogate hardware type. */
+declare const enum FbPhotogateType {
     //% block="FC-33 (slot module)"
-    FC_33 = 0,
+    FC33 = 0,
     //% block="IR DIY (emitter+receiver LED)"
-    IR_DIY = 1
+    IRDIY = 1
 }
 
-declare const enum FlancoBarrera {
+/** Signal edge that triggers a photogate event. */
+declare const enum FbGateEdge {
     //% block="falling (object enters)"
-    Descendente = 0,
+    Falling = 0,
     //% block="rising (object exits)"
-    Ascendente = 1
+    Rising = 1
 }
 
-declare const enum UnidadTiempo {
+/** Time units. */
+declare const enum FbTimeUnit {
     //% block="μs (microseconds)"
-    Microsegundos = 0,
+    Microseconds = 0,
     //% block="ms (milliseconds)"
-    Milisegundos = 1,
+    Milliseconds = 1,
     //% block="s (seconds)"
-    Segundos = 2
+    Seconds = 2
 }
 
-declare const enum FrecuenciaMuestreo {
+/** Sample rate presets for sending data (value = period in ms). */
+declare const enum FbSampleRate {
     //% block="1 Hz (1 sample per second)"
     Hz1 = 1000,
     //% block="2 Hz"
@@ -187,7 +204,8 @@ declare const enum FrecuenciaMuestreo {
     Hz100 = 10
 }
 
-declare const enum ModeloToF {
+/** Time-of-flight laser distance module models. */
+declare const enum FbToFModel {
     //% block="TOF050C (VL6180X, 2-50 cm)"
     TOF050C = 0,
     //% block="TOF200C (VL53L0X, 3-200 cm)"
@@ -200,27 +218,30 @@ declare const enum ModeloToF {
     Auto = 4
 }
 
-declare const enum FiltroToF {
+/** Median filter strength for ToF readings (value = window size). */
+declare const enum FbToFFilter {
     //% block="none"
-    Ninguno = 1,
+    None = 1,
     //% block="low (median of 3)"
-    Bajo = 3,
+    Low = 3,
     //% block="medium (median of 5)"
-    Medio = 5,
+    Medium = 5,
     //% block="high (median of 7)"
-    Alto = 7
+    High = 7
 }
 
-declare const enum ModoToF {
+/** ToF ranging mode (speed vs. noise trade-off). */
+declare const enum FbToFMode {
     //% block="stable (30 Hz, full range)"
-    Estable = 0,
+    Stable = 0,
     //% block="fast (50 Hz)"
-    Rapida = 1,
+    Fast = 1,
     //% block="precise (10 Hz, lowest noise)"
-    Precisa = 2
+    Precise = 2
 }
 
-declare const enum UnidadPresion {
+/** Pressure units. */
+declare const enum FbPressureUnit {
     //% block="hPa (hectopascal)"
     hPa = 0,
     //% block="Pa (pascal)"
@@ -231,63 +252,70 @@ declare const enum UnidadPresion {
     Atm = 3
 }
 
-declare const enum DireccionBME280 {
+/** BME280 I2C address (selected by the SDO pin). */
+declare const enum FbBME280Address {
     //% block="0x76 (SDO→GND)"
     Addr76 = 0x76,
     //% block="0x77 (SDO→VCC)"
     Addr77 = 0x77
 }
 
-declare const enum DatosDHT11 {
+/** Quantities provided by the DHT11 sensor. */
+declare const enum FbDHT11Data {
     //% block="humidity (%)"
-    Humedad = 0,
+    Humidity = 0,
     //% block="temperature (°C)"
-    Temperatura = 1
+    Temperature = 1
 }
 
-declare const enum CanalTCS230 {
-    //% block="Red"
-    Rojo = 0,
-    //% block="Green"
-    Verde = 1,
-    //% block="Blue"
-    Azul = 2,
-    //% block="Clear"
+/** TCS230/TCS3200 color filter channel. */
+declare const enum FbTCS230Channel {
+    //% block="red"
+    Red = 0,
+    //% block="green"
+    Green = 1,
+    //% block="blue"
+    Blue = 2,
+    //% block="clear"
     Clear = 3
 }
 
-declare const enum EscaladoTCS230 {
+/** TCS230/TCS3200 output frequency scaling (S0/S1 pins). */
+declare const enum FbTCS230Scaling {
     //% block="off (0%)"
-    Apagado = 0,
+    Off = 0,
     //% block="2%"
-    Dos = 1,
+    Scale2 = 1,
     //% block="20%"
-    Veinte = 2,
+    Scale20 = 2,
     //% block="100%"
-    Cien = 3
+    Scale100 = 3
 }
 
-declare const enum FuenteMicrofono {
+/** Microphone input used for sound measurements. */
+declare const enum FbMicrophoneSource {
     //% block="external electret (P0)"
-    ExternoP0 = 0,
+    ExternalP0 = 0,
     //% block="external electret (P1)"
-    ExternoP1 = 1,
+    ExternalP1 = 1,
     //% block="external electret (P2)"
-    ExternoP2 = 2,
+    ExternalP2 = 2,
     //% block="internal microphone (v2, level only)"
-    InternoV2 = 3
+    InternalV2 = 3
 }
 
-declare const enum MetodoFrecuencia {
+/** Frequency estimation algorithm. */
+declare const enum FbFrequencyMethod {
     //% block="zero-crossing (fast)"
-    CrucesCero = 0,
+    ZeroCrossing = 0,
     //% block="autocorrelation (precise, single tone)"
-    Autocorrelacion = 1,
+    Autocorrelation = 1,
     //% block="Goertzel (locked to target Hz)"
     Goertzel = 2
 }
 
-declare const enum TasaMuestreoAudio {
+/** Audio sample rate (value = Hz). */
+declare const enum FbAudioSampleRate {
     //% block="2 kHz (low freq, DC–800 Hz)"
     F2kHz = 2000,
     //% block="4 kHz (40–1600 Hz)"
@@ -300,7 +328,8 @@ declare const enum TasaMuestreoAudio {
     F16kHz = 16000
 }
 
-declare const enum TamanoBufferAudio {
+/** Audio capture buffer size (value = number of samples). */
+declare const enum FbAudioBufferSize {
     //% block="64 samples (fast)"
     N64 = 64,
     //% block="128 samples"
@@ -313,14 +342,16 @@ declare const enum TamanoBufferAudio {
     N1024 = 1024
 }
 
-declare const enum UnidadMasa {
+/** Mass units. */
+declare const enum FbMassUnit {
     //% block="g (grams)"
-    Gramos = 0,
+    Grams = 0,
     //% block="kg (kilograms)"
-    Kilogramos = 1
+    Kilograms = 1
 }
 
-declare const enum GananciaHX711 {
+/** HX711 gain / channel selection (value = number of extra clock pulses + 24). */
+declare const enum FbHX711Gain {
     //% block="128 (channel A, default)"
     G128 = 25,
     //% block="64 (channel A)"
@@ -329,16 +360,18 @@ declare const enum GananciaHX711 {
     G32 = 26
 }
 
-declare const enum VariableDoppler {
+/** Unknown variable to solve for in the Doppler equation. */
+declare const enum FbDopplerVariable {
     //% block="source velocity (+ approaching)"
-    VelocidadFuente = 0,
+    SourceVelocity = 0,
     //% block="observer velocity (+ approaching)"
-    VelocidadObservador = 1
+    ObserverVelocity = 1
 }
 
-declare const enum UnidadVelocidad {
+/** Speed units. */
+declare const enum FbSpeedUnit {
     //% block="m/s"
-    MetrosPorSegundo = 0,
+    MetersPerSecond = 0,
     //% block="km/h"
-    KilometrosPorHora = 1
+    KilometersPerHour = 1
 }
