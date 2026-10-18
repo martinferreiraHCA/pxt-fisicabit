@@ -1,31 +1,31 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="360" height="230" viewBox="0 0 360 230">
-  <rect x="3" y="3" width="354" height="156" rx="10" fill="#1e63c9" stroke="#0a2f66" stroke-width="3"/>
-  <circle cx="16" cy="16" r="5" fill="#0a2f66"/>
-  <circle cx="344" cy="16" r="5" fill="#0a2f66"/>
-  <circle cx="16" cy="146" r="5" fill="#0a2f66"/>
-  <circle cx="344" cy="146" r="5" fill="#0a2f66"/>
-  <circle cx="93.60000000000001" cy="66" r="48" fill="#c9c9c9" stroke="#3d3d3d" stroke-width="5"/>
-  <circle cx="93.60000000000001" cy="66" r="28" fill="#555"/>
-  <circle cx="93.60000000000001" cy="66" r="11" fill="#2e2e2e"/>
-  <circle cx="266.4" cy="66" r="48" fill="#c9c9c9" stroke="#3d3d3d" stroke-width="5"/>
-  <circle cx="266.4" cy="66" r="28" fill="#555"/>
-  <circle cx="266.4" cy="66" r="11" fill="#2e2e2e"/>
-  <rect x="154.0" y="18" width="52" height="22" rx="4" fill="#d9d9d9" stroke="#555" stroke-width="2"/>
-  <text x="180.0" y="146" font-size="22" fill="#ffffff" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="bold">HY-SRF05</text>
-  <rect x="28.0" y="162" width="304" height="30" rx="4" fill="#f4f4f4" stroke="#444" stroke-width="2"/>
-  <text x="60.0" y="183" font-size="15" fill="#d32f2f" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="bold">VCC</text>
-  <rect x="56.0" y="192" width="8" height="38" fill="#d4af37" stroke="#6b5416" stroke-width="1.5"/>
-  <rect x="53.0" y="192" width="14" height="8" fill="#d32f2f"/>
-  <text x="120.0" y="183" font-size="15" fill="#f9a825" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="bold">TRIG</text>
-  <rect x="116.0" y="192" width="8" height="38" fill="#d4af37" stroke="#6b5416" stroke-width="1.5"/>
-  <rect x="113.0" y="192" width="14" height="8" fill="#f9a825"/>
-  <text x="180.0" y="183" font-size="15" fill="#2e7d32" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="bold">ECHO</text>
-  <rect x="176.0" y="192" width="8" height="38" fill="#d4af37" stroke="#6b5416" stroke-width="1.5"/>
-  <rect x="173.0" y="192" width="14" height="8" fill="#2e7d32"/>
-  <text x="240.0" y="183" font-size="15" fill="#9e9e9e" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="bold">OUT</text>
-  <rect x="236.0" y="192" width="8" height="38" fill="#d4af37" stroke="#6b5416" stroke-width="1.5"/>
-  <rect x="233.0" y="192" width="14" height="8" fill="#9e9e9e"/>
-  <text x="300.0" y="183" font-size="15" fill="#212121" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="bold">GND</text>
-  <rect x="296.0" y="192" width="8" height="38" fill="#d4af37" stroke="#6b5416" stroke-width="1.5"/>
-  <rect x="293.0" y="192" width="14" height="8" fill="#212121"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="160" viewBox="0 0 360 160">
+  <rect x="3" y="3" width="354" height="100" rx="8" fill="#1e63c9" stroke="#0a2f66" stroke-width="3"/>
+  <circle cx="14" cy="14" r="4" fill="#0a2f66"/>
+  <circle cx="346" cy="14" r="4" fill="#0a2f66"/>
+  <circle cx="14" cy="92" r="4" fill="#0a2f66"/>
+  <circle cx="346" cy="92" r="4" fill="#0a2f66"/>
+  <circle cx="86.39999999999999" cy="52" r="40" fill="#c9c9c9" stroke="#3d3d3d" stroke-width="4"/>
+  <circle cx="86.39999999999999" cy="52" r="23" fill="#555"/>
+  <circle cx="86.39999999999999" cy="52" r="9" fill="#2e2e2e"/>
+  <circle cx="273.6" cy="52" r="40" fill="#c9c9c9" stroke="#3d3d3d" stroke-width="4"/>
+  <circle cx="273.6" cy="52" r="23" fill="#555"/>
+  <circle cx="273.6" cy="52" r="9" fill="#2e2e2e"/>
+  <rect x="156.0" y="14" width="48" height="18" rx="4" fill="#d9d9d9" stroke="#555" stroke-width="2"/>
+  <text x="180.0" y="72" font-size="21" fill="#ffffff" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="bold">HY-SRF05</text>
+  <rect x="28.0" y="106" width="304" height="28" rx="4" fill="#f4f4f4" stroke="#444" stroke-width="2"/>
+  <text x="60.0" y="126" font-size="15" fill="#d32f2f" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="bold">VCC</text>
+  <rect x="56.0" y="134" width="8" height="26" fill="#d4af37" stroke="#6b5416" stroke-width="1.5"/>
+  <rect x="53.0" y="134" width="14" height="7" fill="#d32f2f"/>
+  <text x="120.0" y="126" font-size="15" fill="#f9a825" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="bold">TRIG</text>
+  <rect x="116.0" y="134" width="8" height="26" fill="#d4af37" stroke="#6b5416" stroke-width="1.5"/>
+  <rect x="113.0" y="134" width="14" height="7" fill="#f9a825"/>
+  <text x="180.0" y="126" font-size="15" fill="#2e7d32" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="bold">ECHO</text>
+  <rect x="176.0" y="134" width="8" height="26" fill="#d4af37" stroke="#6b5416" stroke-width="1.5"/>
+  <rect x="173.0" y="134" width="14" height="7" fill="#2e7d32"/>
+  <text x="240.0" y="126" font-size="15" fill="#9e9e9e" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="bold">OUT</text>
+  <rect x="236.0" y="134" width="8" height="26" fill="#d4af37" stroke="#6b5416" stroke-width="1.5"/>
+  <rect x="233.0" y="134" width="14" height="7" fill="#9e9e9e"/>
+  <text x="300.0" y="126" font-size="15" fill="#212121" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="bold">GND</text>
+  <rect x="296.0" y="134" width="8" height="26" fill="#d4af37" stroke="#6b5416" stroke-width="1.5"/>
+  <rect x="293.0" y="134" width="14" height="7" fill="#212121"/>
 </svg>
