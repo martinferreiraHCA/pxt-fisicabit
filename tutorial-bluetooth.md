@@ -13,6 +13,8 @@ In this tutorial you will program the micro:bit to stream sensor readings to **f
 
 You need: a micro:bit, its USB cable (only to download the program), and Chrome or Edge on a computer or Android device with Bluetooth.
 
+If MakeCode asks **"Extensions cannot be used together"** (radio and bluetooth), click **Remove radio**: this extension includes Bluetooth and a new project includes the radio extension by default.
+
 ## Step 1: Start Bluetooth
 
 Drag ``||fisicabitBluetooth:start Bluetooth for fisicabit.com||`` into ``||basic:on start||``. It must be the **first** block. It turns on the Bluetooth service that fisicabit.com looks for and shows a target icon while waiting for a connection.
