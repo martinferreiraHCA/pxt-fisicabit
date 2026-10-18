@@ -1,138 +1,135 @@
 // =============================================================================
-//  fisicabit.ts — Extensión principal MakeCode para micro:bit
+//  fisicabit.ts — Main MakeCode extension file for micro:bit
 // =============================================================================
-//  Proyecto: FisicaBit.com
-//  Descripción: Plantilla de extensión para lectura de sensores internos
-//               y externos con ejemplos de integración C++ y ASM.
+//  Project: FisicaBit.com
+//  Description: Extension template for reading internal and external sensors,
+//               with examples of C++ integration.
 //
-//  ARQUITECTURA DE UNA EXTENSIÓN MAKECODE:
-//  ────────────────────────────────────────
+//  ARCHITECTURE OF A MAKECODE EXTENSION:
+//  ─────────────────────────────────────
 //  ┌─────────────────────────────────────────────────────────┐
-//  │  MakeCode Editor (Bloques / TypeScript)                 │
-//  │    └─► fisicabit.ts  ← ESTE ARCHIVO                    │
-//  │          Define los bloques visuales y la lógica TS     │
+//  │  MakeCode Editor (Blocks / TypeScript)                  │
+//  │    └─► fisicabit.ts  ← THIS FILE                        │
+//  │          Defines the visual blocks and the TS logic     │
 //  ├─────────────────────────────────────────────────────────┤
-//  │  Capa de Shims (puente TS ↔ C++)                       │
-//  │    └─► shims.d.ts    ← Declaraciones TypeScript        │
-//  │    └─► shims.cpp     ← Implementación nativa C++       │
-//  │          Acceso directo al hardware del nRF52833        │
-//  ├─────────────────────────────────────────────────────────┤
-//  │  Capa de Ensamblador (optimización máxima)              │
-//  │    └─► asm_sensors.S ← Rutinas críticas en ARM ASM     │
-//  │          Lectura ultrarrápida de ADC, timing preciso    │
+//  │  Shim layer (TS ↔ C++ bridge)                           │
+//  │    └─► shims.d.ts    ← TypeScript declarations          │
+//  │    └─► shims.cpp     ← Native C++ implementation        │
+//  │          Direct access to the nRF52833 hardware         │
 //  └─────────────────────────────────────────────────────────┘
 //
-//  CÓMO FUNCIONAN LOS BLOQUES MAKECODE:
-//  ─────────────────────────────────────
-//  Las anotaciones //% controlan cómo se muestran los bloques:
-//    //% block="texto"         → Texto que aparece en el bloque
-//    //% blockId=id            → Identificador único del bloque
-//    //% weight=N              → Orden (mayor = más arriba)
-//    //% color=#RRGGBB         → Color del bloque
-//    //% group="nombre"        → Agrupa bloques en subcategorías
-//    //% advanced=true         → Muestra en sección "avanzado"
-//    //% pin.defl=AnalogPin.P0 → Valor por defecto del parámetro
+//  HOW MAKECODE BLOCKS WORK:
+//  ─────────────────────────
+//  The //% annotations control how blocks are displayed:
+//    //% block="text"          → Text shown on the block
+//    //% blockId=id            → Unique block identifier
+//    //% weight=N              → Order (higher = closer to the top)
+//    //% color=#RRGGBB         → Block color
+//    //% group="name"          → Groups blocks into sub-categories
+//    //% advanced=true         → Shown in the "advanced" section
+//    //% pin.defl=AnalogPin.P0 → Default value of the parameter
 //
-//  CONVENCIÓN DE NOMBRES:
-//  ──────────────────────
-//  - Namespace: nombre que aparece en la toolbox de MakeCode
-//  - Funciones: camelCase, descriptivas y en español para FisicaBit
-//  - Constantes: MAYUSCULAS_CON_GUION
-//  - Enums: PascalCase (definidos en enums.d.ts)
+//  NAMING CONVENTION:
+//  ──────────────────
+//  - Namespace: camelCase; its //% block is the name shown in the toolbox
+//  - Functions: camelCase, descriptive, in English
+//  - Constants: UPPER_SNAKE_CASE
+//  - Enums: PascalCase with the Fb prefix (defined in enums.d.ts)
 // =============================================================================
 
 
 // =============================================================================
-// NAMESPACE PRINCIPAL — "FisicaBit" aparecerá en la toolbox de MakeCode
+// MAIN NAMESPACE — "FisicaBit sensors" appears in the MakeCode toolbox
 // =============================================================================
+/** Internal micro:bit sensors, analog/digital inputs, NTC thermistor and optical gates for physics experiments. */
 //% weight=100
 //% color=#E64322
-//% icon="\uf0e7"
-//% block="FisicaBit Sensors"
+//% icon=""
+//% block="FisicaBit sensors"
 //% groups="['Internal Sensors', 'External Sensors', 'Optical Barrier', 'Conversions', 'Native C++', 'Utilities']"
-namespace FisicaBit {
+namespace fisicabit {
 
     // =========================================================================
-    // GRUPO 1: SENSORES INTERNOS (ya integrados en la placa micro:bit)
+    // GROUP 1: INTERNAL SENSORS (built into the micro:bit board)
     // =========================================================================
-    // El micro:bit tiene estos sensores integrados:
-    //   - Temperatura: termistor en el chip nRF52 (±4°C de precisión)
-    //   - Acelerómetro: LSM303AGR (v2), mide aceleración en 3 ejes
-    //   - Magnetómetro: LSM303AGR (v2), brújula digital
-    //   - Sensor de luz: usa la matriz LED como fotodetector
-    //   - Micrófono: solo micro:bit v2, sensor MEMS
+    // The micro:bit has these built-in sensors:
+    //   - Temperature: thermistor inside the nRF52 chip (±4°C accuracy)
+    //   - Accelerometer: LSM303AGR (v2), measures acceleration on 3 axes
+    //   - Magnetometer: LSM303AGR (v2), digital compass
+    //   - Light sensor: uses the LED matrix as a photodetector
+    //   - Microphone: micro:bit v2 only, MEMS sensor
     // =========================================================================
 
     /**
-     * Lee un sensor interno del micro:bit y devuelve su valor numérico.
+     * Reads an internal micro:bit sensor and returns its numeric value.
      *
-     * EJEMPLO DE USO EN BLOQUES:
-     *   [FisicaBit: leer sensor interno (Temperatura)] → muestra 23
+     * EXAMPLE IN BLOCKS:
+     *   [FisicaBit: read internal sensor (Temperature)] → shows 23
      *
-     * EJEMPLO EN TYPESCRIPT:
-     *   let temp = FisicaBit.leerSensorInterno(TipoSensorInterno.Temperatura)
+     * EXAMPLE IN TYPESCRIPT:
+     *   let temp = fisicabit.readInternalSensor(FbInternalSensor.Temperature)
      *   basic.showNumber(temp)
      *
-     * @param sensor El tipo de sensor interno a leer (ver enum TipoSensorInterno)
-     * @returns Valor numérico del sensor (la unidad depende del sensor)
+     * @param sensor The internal sensor to read (see enum FbInternalSensor)
+     * @returns Numeric sensor value (the unit depends on the sensor)
      */
     //% block="read internal sensor %sensor"
     //% blockId=fisicabit_leer_sensor_interno
     //% group="Internal Sensors"
     //% weight=100
-    //% sensor.defl=TipoSensorInterno.Temperatura
-    export function leerSensorInterno(sensor: TipoSensorInterno): number {
+    //% sensor.defl=FbInternalSensor.Temperature
+    export function readInternalSensor(sensor: FbInternalSensor): number {
         switch (sensor) {
-            // ── Temperatura ──────────────────────────────────────────
-            // Lee el termistor integrado en el chip nRF52833.
-            // Precisión: ±4°C (no es un termómetro de laboratorio)
-            // Rango: -40°C a +105°C
-            // Nota: mide la temperatura del CHIP, no del ambiente.
-            //       Puede estar 2-4°C por encima de la temp. real.
-            case TipoSensorInterno.Temperatura:
+            // ── Temperature ──────────────────────────────────────────
+            // Reads the thermistor built into the nRF52833 chip.
+            // Accuracy: ±4°C (not a laboratory thermometer)
+            // Range: -40°C to +105°C
+            // Note: it measures the CHIP temperature, not the ambient one.
+            //       It can be 2-4°C above the real temperature.
+            case FbInternalSensor.Temperature:
                 return input.temperature()
 
-            // ── Acelerómetro (3 ejes) ────────────────────────────────
-            // Mide la aceleración en mili-g (1g = 1000 mili-g)
-            // Rango: ±2g por defecto (configurable a ±4g, ±8g)
-            // Ejes: X = izquierda/derecha
-            //       Y = adelante/atrás
-            //       Z = arriba/abajo (en reposo ≈ -1024 por gravedad)
-            case TipoSensorInterno.AcelerometroX:
+            // ── Accelerometer (3 axes) ───────────────────────────────
+            // Measures acceleration in milli-g (1g = 1000 milli-g)
+            // Range: ±2g by default (configurable to ±4g, ±8g)
+            // Axes: X = left/right
+            //       Y = forward/backward
+            //       Z = up/down (at rest ≈ -1024 due to gravity)
+            case FbInternalSensor.AccelerometerX:
                 return input.acceleration(Dimension.X)
-            case TipoSensorInterno.AcelerometroY:
+            case FbInternalSensor.AccelerometerY:
                 return input.acceleration(Dimension.Y)
-            case TipoSensorInterno.AcelerometroZ:
+            case FbInternalSensor.AccelerometerZ:
                 return input.acceleration(Dimension.Z)
 
-            // ── Nivel de Luz ─────────────────────────────────────────
-            // Usa los LEDs de la matriz 5x5 como fotodetectores
-            // Rango: 0 (oscuridad total) a 255 (luz intensa)
-            // Truco: los LEDs pueden detectar fotones cuando están
-            //        en modo "reverso". MakeCode lo hace automáticamente.
-            case TipoSensorInterno.NivelLuz:
+            // ── Light level ──────────────────────────────────────────
+            // Uses the LEDs of the 5x5 matrix as photodetectors
+            // Range: 0 (total darkness) to 255 (bright light)
+            // Trick: LEDs can detect photons when driven in "reverse"
+            //        mode. MakeCode does this automatically.
+            case FbInternalSensor.LightLevel:
                 return input.lightLevel()
 
-            // ── Brújula (heading) ────────────────────────────────────
-            // Devuelve la dirección en grados (0-359)
-            // 0° = Norte, 90° = Este, 180° = Sur, 270° = Oeste
-            // IMPORTANTE: requiere calibración la primera vez
-            //             (aparece el juego "TILT TO FILL SCREEN")
-            case TipoSensorInterno.Brujula:
+            // ── Compass (heading) ────────────────────────────────────
+            // Returns the heading in degrees (0-359)
+            // 0° = North, 90° = East, 180° = South, 270° = West
+            // IMPORTANT: requires calibration the first time
+            //            (the "TILT TO FILL SCREEN" game appears)
+            case FbInternalSensor.Compass:
                 return input.compassHeading()
 
-            // ── Nivel de Sonido (solo micro:bit v2) ──────────────────
-            // Micrófono MEMS integrado en micro:bit v2
-            // Rango: 0 (silencio) a 255 (sonido fuerte)
-            // Nota: en micro:bit v1 devuelve 0 siempre
-            case TipoSensorInterno.NivelSonido:
+            // ── Sound level (micro:bit v2 only) ──────────────────────
+            // MEMS microphone built into the micro:bit v2
+            // Range: 0 (silence) to 255 (loud sound)
+            // Note: on micro:bit v1 it always returns 0
+            case FbInternalSensor.SoundLevel:
                 return input.soundLevel()
 
-            // ── Fuerza G (magnitud total) ────────────────────────────
-            // Calcula: √(x² + y² + z²) usando los 3 ejes
-            // En reposo ≈ 1024 (≈1g de gravedad)
-            // Útil para detectar caídas, golpes, vibración
-            case TipoSensorInterno.FuerzaG:
+            // ── G force (total magnitude) ────────────────────────────
+            // Computes: √(x² + y² + z²) using the 3 axes
+            // At rest ≈ 1024 (≈1g of gravity)
+            // Useful to detect falls, impacts, vibration
+            case FbInternalSensor.GForce:
                 return input.acceleration(Dimension.Strength)
 
             default:
@@ -142,188 +139,188 @@ namespace FisicaBit {
 
 
     // NOTE: All acceleration-related code (constants, state, filters and
-    // blocks) lives in the FisicaBitCinematica namespace below — this
-    // keeps the orange "FisicaBit Sensors" category focused on raw
+    // blocks) lives in the fisicabitKinematics namespace (kinematics.ts) —
+    // this keeps the orange "FisicaBit sensors" category focused on raw
     // sensor reads and moves the derived kinematic magnitudes (a⃗, v⃗)
     // to their own blue category.
 
     // =========================================================================
-    // GRUPO 2: SENSORES EXTERNOS (conectados a los pines GPIO)
+    // GROUP 2: EXTERNAL SENSORS (connected to the GPIO pins)
     // =========================================================================
     //
-    // MAPA DE PINES DEL MICRO:BIT (borde inferior):
+    // MICRO:BIT PIN MAP (bottom edge):
     // ┌──────────────────────────────────────────────────┐
-    // │  Pin   │ Tipo       │ Notas                      │
+    // │  Pin   │ Type       │ Notes                      │
     // ├──────────────────────────────────────────────────┤
-    // │  P0    │ Analógico  │ Táctil (v2), DAC           │
-    // │  P1    │ Analógico  │ Táctil                     │
-    // │  P2    │ Analógico  │ Táctil                     │
-    // │  P3-P4 │ Digital    │ Columnas LED (compartido)  │
-    // │  P5-P11│ Digital    │ Filas/Col LED (compartido)  │
-    // │  P8    │ Digital    │ Libre, sin conflicto        │
-    // │  P12   │ Digital    │ Libre, sin conflicto        │
-    // │  P13   │ Digital    │ SPI (SCK)                   │
-    // │  P14   │ Digital    │ SPI (MISO)                  │
-    // │  P15   │ Digital    │ SPI (MOSI)                  │
-    // │  P16   │ Digital    │ Libre, sin conflicto        │
-    // │  P19   │ I2C        │ SCL (compartido)            │
-    // │  P20   │ I2C        │ SDA (compartido)            │
+    // │  P0    │ Analog     │ Touch (v2), DAC            │
+    // │  P1    │ Analog     │ Touch                      │
+    // │  P2    │ Analog     │ Touch                      │
+    // │  P3-P4 │ Digital    │ LED columns (shared)       │
+    // │  P5-P11│ Digital    │ LED rows/cols (shared)     │
+    // │  P8    │ Digital    │ Free, no conflict          │
+    // │  P12   │ Digital    │ Free, no conflict          │
+    // │  P13   │ Digital    │ SPI (SCK)                  │
+    // │  P14   │ Digital    │ SPI (MISO)                 │
+    // │  P15   │ Digital    │ SPI (MOSI)                 │
+    // │  P16   │ Digital    │ Free, no conflict          │
+    // │  P19   │ I2C        │ SCL (shared)               │
+    // │  P20   │ I2C        │ SDA (shared)               │
     // └──────────────────────────────────────────────────┘
     //
-    // PINES RECOMENDADOS PARA SENSORES EXTERNOS:
-    //   - Analógicos: P0, P1, P2 (los únicos con ADC)
-    //   - Digitales libres: P8, P12, P16
-    //   - I2C: P19+P20 (bus compartido con sensores internos)
+    // RECOMMENDED PINS FOR EXTERNAL SENSORS:
+    //   - Analog: P0, P1, P2 (the only ones with ADC)
+    //   - Free digital: P8, P12, P16
+    //   - I2C: P19+P20 (bus shared with the internal sensors)
     // =========================================================================
 
     /**
-     * Lee un sensor analógico conectado a un pin.
+     * Reads an analog sensor connected to a pin.
      *
-     * CABLEADO:
-     *   Sensor → Pin analógico (P0, P1 o P2)
-     *   VCC    → 3V del micro:bit
-     *   GND    → GND del micro:bit
+     * WIRING:
+     *   Sensor → analog pin (P0, P1 or P2)
+     *   VCC    → micro:bit 3V
+     *   GND    → micro:bit GND
      *
-     * EJEMPLO — Potenciómetro en P0:
+     * EXAMPLE — Potentiometer on P0:
      *   ┌─────────────────┐
-     *   │  Potenciómetro   │
+     *   │  Potentiometer   │
      *   │  ┌───┐          │
-     *   │  │   │──── P0   │  (señal analógica)
-     *   │  │   │──── 3V   │  (alimentación)
-     *   │  │   │──── GND  │  (tierra)
+     *   │  │   │──── P0   │  (analog signal)
+     *   │  │   │──── 3V   │  (power)
+     *   │  │   │──── GND  │  (ground)
      *   │  └───┘          │
      *   └─────────────────┘
      *
-     * @param pin Pin analógico donde está conectado el sensor
-     * @returns Valor entre 0 y 1023 (resolución ADC de 10 bits)
+     * @param pin Analog pin the sensor is connected to
+     * @returns Value between 0 and 1023 (10-bit ADC resolution)
      */
     //% block="read analog sensor on %pin"
     //% blockId=fisicabit_leer_analogico
     //% group="External Sensors"
     //% weight=90
-    //% pin.defl=PinAnalogico.P0
-    export function leerSensorAnalogico(pin: PinAnalogico): number {
-        // El ADC del nRF52833 es de 12 bits internamente,
-        // pero MakeCode lo escala a 10 bits (0-1023) por compatibilidad
+    //% pin.defl=FbAnalogPin.P0
+    export function readAnalogSensor(pin: FbAnalogPin): number {
+        // The nRF52833 ADC is 12-bit internally, but MakeCode
+        // scales it to 10 bits (0-1023) for compatibility
         switch (pin) {
-            case PinAnalogico.P0: return pins.analogReadPin(AnalogPin.P0)
-            case PinAnalogico.P1: return pins.analogReadPin(AnalogPin.P1)
-            case PinAnalogico.P2: return pins.analogReadPin(AnalogPin.P2)
+            case FbAnalogPin.P0: return pins.analogReadPin(AnalogPin.P0)
+            case FbAnalogPin.P1: return pins.analogReadPin(AnalogPin.P1)
+            case FbAnalogPin.P2: return pins.analogReadPin(AnalogPin.P2)
             default: return 0
         }
     }
 
 
     /**
-     * Lee un sensor digital (HIGH/LOW) conectado a un pin.
+     * Reads a digital sensor (HIGH/LOW) connected to a pin.
      *
-     * Útil para sensores como:
-     *   - PIR (movimiento): HIGH = movimiento detectado
-     *   - Interruptores/botones: HIGH/LOW según estado
-     *   - Sensor infrarrojo: HIGH = obstáculo detectado
+     * Useful for sensors such as:
+     *   - PIR (motion): HIGH = motion detected
+     *   - Switches/buttons: HIGH/LOW depending on state
+     *   - Infrared sensor: HIGH = obstacle detected
      *
-     * CABLEADO — Sensor PIR en P8:
+     * WIRING — PIR sensor on P8:
      *   ┌─────────────────┐
-     *   │  Sensor PIR      │
+     *   │  PIR sensor      │
      *   │  ┌───────┐      │
-     *   │  │  OUT  │──── P8   (señal digital)
-     *   │  │  VCC  │──── 3V   (alimentación)
-     *   │  │  GND  │──── GND  (tierra)
+     *   │  │  OUT  │──── P8   (digital signal)
+     *   │  │  VCC  │──── 3V   (power)
+     *   │  │  GND  │──── GND  (ground)
      *   │  └───────┘      │
      *   └─────────────────┘
      *
-     * @param pin Número del pin digital (ej: 8 para P8, 12 para P12)
-     * @returns 0 (LOW) o 1 (HIGH)
+     * @param pin Digital pin number (e.g. 8 for P8, 12 for P12)
+     * @returns 0 (LOW) or 1 (HIGH)
      */
     //% block="read digital sensor on P%pin"
     //% blockId=fisicabit_leer_digital
     //% group="External Sensors"
     //% weight=85
     //% pin.defl=8
-    export function leerSensorDigital(pin: number): number {
+    export function readDigitalSensor(pin: number): number {
         return pins.digitalReadPin(pin as any)
     }
 
 
     // =========================================================================
-    // GRUPO 2b: SENSOR DE TEMPERATURA NTC 10K 3950
+    // GROUP 2b: NTC 10K 3950 TEMPERATURE SENSOR
     // =========================================================================
     //
-    // CÓMO FUNCIONA:
-    //   El NTC (Negative Temperature Coefficient) es una resistencia cuyo
-    //   valor DISMINUYE al aumentar la temperatura. A 25°C vale 10kΩ.
+    // HOW IT WORKS:
+    //   The NTC (Negative Temperature Coefficient) is a resistor whose
+    //   value DECREASES as temperature rises. At 25°C it is 10kΩ.
     //
-    //   Se conecta en un divisor de tensión con una resistencia fija de
-    //   10kΩ. El micro:bit lee el voltaje en el punto medio y calcula
-    //   la temperatura usando la ecuación Beta (Steinhart-Hart simplificada):
+    //   It is wired in a voltage divider with a fixed 10kΩ resistor.
+    //   The micro:bit reads the voltage at the midpoint and computes the
+    //   temperature with the Beta equation (simplified Steinhart-Hart):
     //
     //     1/T = 1/T₀ + (1/β) × ln(R_ntc / R₀)
     //
-    //   donde T₀ = 298.15 K (25°C), R₀ = 10000 Ω, β = 3950
+    //   where T₀ = 298.15 K (25°C), R₀ = 10000 Ω, β = 3950
     //
-    // CABLEADO:
+    // WIRING:
     //   ┌─────────────────────────────────────────────┐
     //   │                                             │
-    //   │  3V ─── [10kΩ fijo] ───┬─── Pin analógico   │
-    //   │                        │    (P0, P1 o P2)   │
+    //   │  3V ─── [10kΩ fixed] ──┬─── Analog pin      │
+    //   │                        │    (P0, P1 or P2)  │
     //   │                   [NTC 10kΩ]                │
     //   │                        │                    │
     //   │                       GND                   │
     //   │                                             │
     //   └─────────────────────────────────────────────┘
     //
-    //   ⚠ El NTC tiene 2 cables (sin polaridad), no importa cuál
-    //     va a GND y cuál al punto medio del divisor.
+    //   ⚠ The NTC has 2 leads (no polarity); it does not matter which
+    //     one goes to GND and which to the divider midpoint.
     //
-    // PRECISIÓN:
-    //   El ADC de 10 bits (0-1023) da ~0.15°C de resolución en el
-    //   rango 0-50°C. Suficiente para experimentos de física.
+    // ACCURACY:
+    //   The 10-bit ADC (0-1023) gives ~0.15°C of resolution in the
+    //   0-50°C range. Enough for physics experiments.
     // =========================================================================
 
     /**
-     * Lee la temperatura de un sensor NTC 10K 3950 conectado a un pin
-     * analógico con una resistencia fija de 10kΩ como divisor de tensión.
+     * Reads the temperature of an NTC 10K 3950 sensor connected to an
+     * analog pin with a fixed 10kΩ resistor as a voltage divider.
      *
-     * Devuelve la temperatura con 1 decimal de precisión.
+     * Returns the temperature with 1 decimal place.
      *
-     * @param pin Pin analógico donde está conectado el NTC
-     * @param unidad Unidad de temperatura deseada
-     * @returns Temperatura medida (con 1 decimal)
+     * @param pin Analog pin the NTC is connected to
+     * @param unit Desired temperature unit
+     * @returns Measured temperature (1 decimal place)
      */
-    //% block="NTC 10K temperature on %pin in %unidad"
+    //% block="NTC 10K temperature on %pin in %unit"
     //% blockId=fisicabit_ntc_10k
     //% group="External Sensors"
     //% weight=88
-    //% pin.defl=PinAnalogico.P0
-    //% unidad.defl=UnidadTemperatura.Celsius
-    export function leerTemperaturaNTC(pin: PinAnalogico, unidad: UnidadTemperatura): number {
-        let lectura: number
+    //% pin.defl=FbAnalogPin.P0
+    //% unit.defl=FbTemperatureUnit.Celsius
+    export function readNtcTemperature(pin: FbAnalogPin, unit: FbTemperatureUnit): number {
+        let reading: number
         switch (pin) {
-            case PinAnalogico.P0: lectura = pins.analogReadPin(AnalogPin.P0); break
-            case PinAnalogico.P1: lectura = pins.analogReadPin(AnalogPin.P1); break
-            case PinAnalogico.P2: lectura = pins.analogReadPin(AnalogPin.P2); break
-            default: lectura = 0
+            case FbAnalogPin.P0: reading = pins.analogReadPin(AnalogPin.P0); break
+            case FbAnalogPin.P1: reading = pins.analogReadPin(AnalogPin.P1); break
+            case FbAnalogPin.P2: reading = pins.analogReadPin(AnalogPin.P2); break
+            default: reading = 0
         }
 
-        // Proteger contra lecturas extremas (divisor de tensión saturado)
-        if (lectura <= 0) lectura = 1
-        if (lectura >= 1023) lectura = 1022
+        // Guard against extreme readings (saturated voltage divider)
+        if (reading <= 0) reading = 1
+        if (reading >= 1023) reading = 1022
 
-        // Divisor de tensión: R_ntc = R_fija × lectura / (1023 - lectura)
-        let rNtc = 10000.0 * lectura / (1023 - lectura)
+        // Voltage divider: R_ntc = R_fixed × reading / (1023 - reading)
+        let rNtc = 10000.0 * reading / (1023 - reading)
 
-        // Ecuación Beta: 1/T = 1/T₀ + (1/β) × ln(R_ntc / R₀)
+        // Beta equation: 1/T = 1/T₀ + (1/β) × ln(R_ntc / R₀)
         // T₀ = 298.15 K (25°C), β = 3950, R₀ = 10000 Ω
         let invT = 1.0 / 298.15 + (1.0 / 3950) * Math.log(rNtc / 10000)
         let tempC = 1.0 / invT - 273.15
 
-        // Convertir a la unidad solicitada (1 decimal de precisión)
-        switch (unidad) {
-            case UnidadTemperatura.Celsius:
+        // Convert to the requested unit (1 decimal place)
+        switch (unit) {
+            case FbTemperatureUnit.Celsius:
                 return Math.round(tempC * 10) / 10
-            case UnidadTemperatura.Fahrenheit:
+            case FbTemperatureUnit.Fahrenheit:
                 return Math.round((tempC * 9 / 5 + 32) * 10) / 10
-            case UnidadTemperatura.Kelvin:
+            case FbTemperatureUnit.Kelvin:
                 return Math.round((tempC + 273.15) * 10) / 10
             default:
                 return Math.round(tempC * 10) / 10
@@ -332,181 +329,181 @@ namespace FisicaBit {
 
 
     // =========================================================================
-    // GRUPO 4: BARRERA ÓPTICA — Medición de tiempo entre dos sensores
+    // GROUP 4: OPTICAL GATE — Time measurement between two sensors
     // =========================================================================
     //
-    // ¿QUÉ ES UNA BARRERA ÓPTICA?
-    // ────────────────────────────
-    // Un par emisor-receptor de luz (normalmente infrarroja) que detecta
-    // cuándo un objeto interrumpe el haz de luz. Usamos DOS barreras
-    // separadas una distancia conocida para medir:
+    // WHAT IS AN OPTICAL GATE?
+    // ────────────────────────
+    // A light emitter-receiver pair (usually infrared) that detects when
+    // an object interrupts the light beam. We use TWO gates separated by
+    // a known distance to measure:
     //
-    //   - TIEMPO DE TRÁNSITO: cuánto tarda el objeto en ir de A a B
-    //   - VELOCIDAD: distancia / tiempo (si conocemos la separación)
-    //   - ACELERACIÓN: comparando velocidades en tramos consecutivos
+    //   - TRANSIT TIME: how long the object takes to go from A to B
+    //   - SPEED: distance / time (if the separation is known)
+    //   - ACCELERATION: comparing speeds over consecutive segments
     //
-    // MONTAJE TÍPICO (vista lateral):
+    // TYPICAL SETUP (side view):
     //
-    //   Barrera A                    Barrera B
+    //   Gate A                       Gate B
     //   ┌──┐                        ┌──┐
-    //   │IR│   ───objeto──►         │IR│
+    //   │IR│   ───object──►         │IR│
     //   │TX│        ●               │TX│
     //   └──┘    ┌───┴───┐           └──┘
-    //   ┌──┐    │ rampa  │          ┌──┐
+    //   ┌──┐    │ ramp   │          ┌──┐
     //   │IR│    └────────┘          │IR│
     //   │RX│                        │RX│
     //   └──┘                        └──┘
     //    P1                          P2
-    //   (pin A)     distancia      (pin B)
+    //   (pin A)     distance       (pin B)
     //           ◄──────────────►
-    //              (conocida)
+    //               (known)
     //
     //
-    // SENSOR FC-33 (módulo de ranura):
-    // ─────────────────────────────────
+    // FC-33 SENSOR (slot module):
+    // ──────────────────────────
     //   ┌─────────────────────────┐
     //   │  FC-33                  │
-    //   │  ┌───┐    ┌───┐        │  El LED IR y el fototransistor
-    //   │  │LED│    │FOT│        │  están en una ranura de ~10mm.
-    //   │  │ IR│    │OTR│        │  El objeto pasa por la ranura
-    //   │  │   │    │   │        │  y corta el haz.
+    //   │  ┌───┐    ┌───┐        │  The IR LED and the phototransistor
+    //   │  │LED│    │PHO│        │  sit in a ~10mm slot.
+    //   │  │ IR│    │TOT│        │  The object passes through the slot
+    //   │  │   │    │   │        │  and cuts the beam.
     //   │  └─┬─┘    └─┬─┘        │
     //   │    └──┬──┬──┘          │
-    //   │       │  │  │          │  Pines:
+    //   │       │  │  │          │  Pins:
     //   │      VCC GND OUT       │  - VCC: 3.3V-5V
-    //   └─────────────────────────┘  - GND: tierra
-    //                                - OUT: LOW cuando se corta el haz
-    //   ⚠ El FC-33 tiene un comparador LM393 con potenciómetro
-    //     de ajuste de sensibilidad en la placa. El umbral se
-    //     ajusta con un destornillador, NO por software.
+    //   └─────────────────────────┘  - GND: ground
+    //                                - OUT: LOW when the beam is cut
+    //   ⚠ The FC-33 has an LM393 comparator with a sensitivity
+    //     trimmer potentiometer on the board. The threshold is
+    //     adjusted with a screwdriver, NOT by software.
     //
-    //   Señal del FC-33:
-    //   HIGH ─────┐         ┌─────── HIGH (haz libre)
+    //   FC-33 signal:
+    //   HIGH ─────┐         ┌─────── HIGH (beam free)
     //             │         │
-    //   LOW       └─────────┘         (haz cortado = objeto presente)
+    //   LOW       └─────────┘         (beam cut = object present)
     //             ↑         ↑
-    //          objeto    objeto
-    //          entra     sale
+    //          object    object
+    //          enters    leaves
     //
     //
-    // MONTAJE DIY CON LED IR + FOTOTRANSISTOR:
-    // ──────────────────────────────────────────
+    // DIY SETUP WITH IR LED + PHOTOTRANSISTOR:
+    // ────────────────────────────────────────
     //
-    //   EMISOR (LED IR):
-    //   3V ──── R(100Ω) ──── LED IR ánodo(+) ──── cátodo(-) ──── GND
+    //   EMITTER (IR LED):
+    //   3V ──── R(100Ω) ──── IR LED anode(+) ──── cathode(-) ──── GND
     //
-    //   RECEPTOR (Fototransistor):
-    //   3V ──── Fototransistor(C) ────┬──── P1 (señal analógica)
+    //   RECEIVER (phototransistor):
+    //   3V ──── Phototransistor(C) ───┬──── P1 (analog signal)
     //                                 │
     //                            R(10KΩ)
     //                                 │
     //                                GND
     //
-    //   Sin objeto (haz libre):   P1 ≈ 800-1023 (mucha luz → alta tensión)
-    //   Con objeto (haz cortado): P1 ≈ 0-200   (poca luz → baja tensión)
+    //   No object (beam free):   P1 ≈ 800-1023 (lots of light → high voltage)
+    //   With object (beam cut):  P1 ≈ 0-200   (little light → low voltage)
     //
-    //   Señal analógica del montaje DIY:
-    //   1023 ─────┐         ┌─────── (haz libre, mucha luz)
+    //   Analog signal of the DIY setup:
+    //   1023 ─────┐         ┌─────── (beam free, lots of light)
     //             │         │
     //             │  ~200   │
-    //             └─────────┘         (haz cortado, poca luz)
+    //             └─────────┘         (beam cut, little light)
     //              ↑         ↑
-    //           objeto    objeto
-    //           entra     sale
+    //           object    object
+    //           enters    leaves
     //
-    //   VENTAJA: el umbral se ajusta POR SOFTWARE → ideal para
-    //   experimentar y calibrar desde MakeCode sin tocar el hardware.
+    //   ADVANTAGE: the threshold is adjusted IN SOFTWARE → ideal for
+    //   experimenting and calibrating from MakeCode without touching hardware.
     //
     //
-    // PRECISIÓN DE TIMING:
-    // ────────────────────
-    // La medición de tiempo usa las funciones nativas C++ (shims.cpp)
-    // con el TIMER3 del nRF52833 configurado a 1MHz (1 tick = 1μs).
+    // TIMING ACCURACY:
+    // ────────────────
+    // Time measurement uses the native C++ functions (shims.cpp)
+    // with the nRF52833 TIMER3 configured at 1MHz (1 tick = 1μs).
     //
-    //   TypeScript puro:  ~1ms de resolución (usa scheduler)
-    //   C++ con TIMER:    ~1μs de resolución (acceso directo)
+    //   Pure TypeScript:  ~1ms resolution (uses the scheduler)
+    //   C++ with TIMER:   ~1μs resolution (direct access)
     //
-    // Para un objeto a 1 m/s pasando por barreras a 10cm:
-    //   Tiempo real: 100,000 μs = 100 ms
-    //   Error TS:    ±1ms = ±1% → aceptable
-    //   Error C++:   ±1μs = ±0.001% → excelente
+    // For an object at 1 m/s passing gates 10cm apart:
+    //   Real time:   100,000 μs = 100 ms
+    //   TS error:    ±1ms = ±1% → acceptable
+    //   C++ error:   ±1μs = ±0.001% → excellent
     //
-    // Para un objeto a 5 m/s (caída libre ~1.3m):
-    //   Tiempo real: 20,000 μs = 20 ms
-    //   Error TS:    ±1ms = ±5% → problemático
-    //   Error C++:   ±1μs = ±0.005% → excelente
+    // For an object at 5 m/s (free fall ~1.3m):
+    //   Real time:   20,000 μs = 20 ms
+    //   TS error:    ±1ms = ±5% → problematic
+    //   C++ error:   ±1μs = ±0.005% → excellent
     //
-    // CONCLUSIÓN: Para experimentos de física con objetos rápidos,
-    // usar SIEMPRE las funciones nativas C++ (grupo "Nativo C++").
+    // CONCLUSION: For physics experiments with fast objects,
+    // ALWAYS use the native C++ functions (group "Native C++").
     // =========================================================================
 
-    // ── Variables internas para el estado de la barrera ──
-    let _barreraUmbralA = 512   // Umbral analógico barrera A (0-1023)
-    let _barreraUmbralB = 512   // Umbral analógico barrera B (0-1023)
-    let _barreraTiempoInicio = 0 // Timestamp de activación de barrera A
-    let _barreraTiempoFin = 0    // Timestamp de activación de barrera B
-    let _barreraActiva = false   // ¿Está esperando el paso por barrera B?
+    // ── Internal variables for the gate state ──
+    let _gateThresholdA = 512   // Analog threshold of gate A (0-1023)
+    let _gateThresholdB = 512   // Analog threshold of gate B (0-1023)
+    let _gateStartTime = 0      // Timestamp when gate A was triggered
+    let _gateEndTime = 0        // Timestamp when gate B was triggered
+    let _gateActive = false     // Waiting for the object to pass gate B?
 
 
     /**
-     * Ajusta el umbral de disparo (trigger) para una barrera analógica.
+     * Sets the trigger threshold for an analog gate.
      *
-     * Solo aplica cuando usas modo Analógico (LED IR DIY).
-     * En modo Digital (FC-33), el umbral se ajusta con el potenciómetro
-     * físico que tiene el módulo.
+     * Only applies in Analog mode (DIY IR LED).
+     * In Digital mode (FC-33) the threshold is set with the physical
+     * potentiometer on the module.
      *
-     * CÓMO CALIBRAR:
-     *   1. Sin objeto en la barrera → anotar valor (ej: 850)
-     *   2. Con objeto bloqueando  → anotar valor (ej: 120)
-     *   3. Umbral = punto medio = (850 + 120) / 2 = 485
-     *   4. Usar este bloque para fijar el umbral a 485
+     * HOW TO CALIBRATE:
+     *   1. No object in the gate → note the value (e.g. 850)
+     *   2. Object blocking the gate → note the value (e.g. 120)
+     *   3. Threshold = midpoint = (850 + 120) / 2 = 485
+     *   4. Use this block to set the threshold to 485
      *
-     * CONSEJO: Usa "enviar por serie" para ver los valores crudos
-     *          y encontrar el umbral ideal para tu montaje.
+     * TIP: Send the raw values over serial to find the ideal
+     *      threshold for your setup.
      *
-     * @param barrera Cuál barrera configurar ("A" = primera, "B" = segunda)
-     * @param umbral Valor de 0 a 1023 que separa "haz libre" de "haz cortado"
+     * @param gate Which gate to configure ("A" = first, "B" = second)
+     * @param threshold Value from 0 to 1023 separating "beam free" from "beam cut"
      */
-    //% block="set barrier %barrera threshold to %umbral"
+    //% block="set barrier %gate threshold to %threshold"
     //% blockId=fisicabit_barrera_umbral
     //% group="Optical Barrier"
     //% weight=99
-    //% umbral.min=0 umbral.max=1023 umbral.defl=512
-    //% barrera.defl="A"
-    export function fijarUmbralBarrera(barrera: string, umbral: number): void {
-        if (barrera === "A" || barrera === "a") {
-            _barreraUmbralA = umbral
+    //% threshold.min=0 threshold.max=1023 threshold.defl=512
+    //% gate.defl="A"
+    export function setGateThreshold(gate: string, threshold: number): void {
+        if (gate === "A" || gate === "a") {
+            _gateThresholdA = threshold
         } else {
-            _barreraUmbralB = umbral
+            _gateThresholdB = threshold
         }
     }
 
 
     /**
-     * Lee el valor crudo de una barrera óptica (para calibración).
+     * Reads the raw value of an optical gate (for calibration).
      *
-     * Usa este bloque para ver qué valores produce tu sensor
-     * y así encontrar el umbral correcto.
+     * Use this block to see which values your sensor produces
+     * and find the right threshold.
      *
-     * EJEMPLO DE CALIBRACIÓN:
+     * CALIBRATION EXAMPLE:
      *   basic.forever(() => {
-     *       let valorA = FisicaBit.leerBarreraCrudo(PinAnalogico.P1, ModoBarrera.Analogico)
-     *       FisicaBit.enviarPorSerie("barrera_A_raw", valorA)
-     *       FisicaBit.esperar(100)
+     *       let rawA = fisicabit.readGateRaw(FbAnalogPin.P1, FbGateMode.Analog)
+     *       serial.writeValue("gateARaw", rawA)
+     *       basic.pause(100)
      *   })
      *
-     * @param pin Pin donde está conectada la barrera
-     * @param modo Digital (FC-33) o Analógico (IR DIY)
-     * @returns Valor crudo: Digital → 0 o 1, Analógico → 0 a 1023
+     * @param pin Pin the gate is connected to
+     * @param mode Digital (FC-33) or Analog (DIY IR)
+     * @returns Raw value: Digital → 0 or 1, Analog → 0 to 1023
      */
-    //% block="read barrier raw pin %pin mode %modo"
+    //% block="read barrier raw pin %pin mode %mode"
     //% blockId=fisicabit_barrera_crudo
     //% group="Optical Barrier"
     //% weight=98
-    //% pin.defl=PinAnalogico.P1
-    //% modo.defl=ModoBarrera.Analogico
-    export function leerBarreraCrudo(pin: PinAnalogico, modo: ModoBarrera): number {
-        if (modo === ModoBarrera.Digital) {
+    //% pin.defl=FbAnalogPin.P1
+    //% mode.defl=FbGateMode.Analog
+    export function readGateRaw(pin: FbAnalogPin, mode: FbGateMode): number {
+        if (mode === FbGateMode.Digital) {
             return pins.digitalReadPin(pin as number as DigitalPin)
         } else {
             return pins.analogReadPin(pin as number as AnalogPin)
@@ -515,286 +512,286 @@ namespace FisicaBit {
 
 
     /**
-     * Comprueba si una barrera óptica está activada (objeto presente).
+     * Checks whether an optical gate is triggered (object present).
      *
-     * En modo DIGITAL (FC-33):
-     *   - Devuelve true cuando OUT = LOW (haz cortado)
-     *   - El FC-33 pone su salida a LOW cuando un objeto corta el haz
+     * In DIGITAL mode (FC-33):
+     *   - Returns true when OUT = LOW (beam cut)
+     *   - The FC-33 drives its output LOW when an object cuts the beam
      *
-     * En modo ANALÓGICO (IR DIY):
-     *   - Devuelve true cuando la lectura < umbral configurado
-     *   - Menos luz = menos voltaje = objeto bloqueando
+     * In ANALOG mode (DIY IR):
+     *   - Returns true when the reading < configured threshold
+     *   - Less light = less voltage = object blocking
      *
-     * @param pin Pin de la barrera
-     * @param modo Digital o Analógico
-     * @returns true si hay un objeto cortando el haz
+     * @param pin Gate pin
+     * @param mode Digital or Analog
+     * @returns true if an object is cutting the beam
      */
-    //% block="barrier triggered on %pin mode %modo"
+    //% block="barrier triggered on %pin mode %mode"
     //% blockId=fisicabit_barrera_activada
     //% group="Optical Barrier"
     //% weight=97
-    //% pin.defl=PinAnalogico.P1
-    //% modo.defl=ModoBarrera.Digital
-    export function barreraActivada(pin: PinAnalogico, modo: ModoBarrera): boolean {
-        if (modo === ModoBarrera.Digital) {
-            // FC-33: salida LOW = objeto presente
+    //% pin.defl=FbAnalogPin.P1
+    //% mode.defl=FbGateMode.Digital
+    export function gateActivated(pin: FbAnalogPin, mode: FbGateMode): boolean {
+        if (mode === FbGateMode.Digital) {
+            // FC-33: LOW output = object present
             return pins.digitalReadPin(pin as number as DigitalPin) === 0
         } else {
-            // IR DIY: lectura analógica por debajo del umbral = objeto presente
-            let valor = pins.analogReadPin(pin as number as AnalogPin)
-            let umbral = (pin === PinAnalogico.P1) ? _barreraUmbralA :
-                         (pin === PinAnalogico.P2) ? _barreraUmbralB :
-                         _barreraUmbralA
-            return valor < umbral
+            // DIY IR: analog reading below the threshold = object present
+            let value = pins.analogReadPin(pin as number as AnalogPin)
+            let threshold = (pin === FbAnalogPin.P1) ? _gateThresholdA :
+                            (pin === FbAnalogPin.P2) ? _gateThresholdB :
+                            _gateThresholdA
+            return value < threshold
         }
     }
 
 
     /**
-     * Mide el tiempo que tarda un objeto en pasar de la barrera A a la B.
-     * VERSIÓN TYPESCRIPT — resolución ~1ms (usa control.millis).
+     * Measures the time an object takes to go from gate A to gate B.
+     * TYPESCRIPT VERSION — ~1ms resolution (uses control.millis).
      *
-     * FUNCIONAMIENTO:
-     *   1. Espera a que la barrera A se active (objeto entra)
-     *   2. Captura el timestamp de inicio
-     *   3. Espera a que la barrera B se active (objeto llega)
-     *   4. Captura el timestamp de fin
-     *   5. Devuelve la diferencia: fin - inicio
+     * OPERATION:
+     *   1. Waits for gate A to trigger (object enters)
+     *   2. Captures the start timestamp
+     *   3. Waits for gate B to trigger (object arrives)
+     *   4. Captures the end timestamp
+     *   5. Returns the difference: end - start
      *
-     * LIMITACIONES:
-     *   - Resolución de ~1ms (suficiente para objetos lentos)
-     *   - Para objetos rápidos (>2 m/s), usar medirTiempoBarreraNativo()
-     *   - Se bloquea hasta que ambas barreras se activen (o timeout)
+     * LIMITATIONS:
+     *   - ~1ms resolution (enough for slow objects)
+     *   - For fast objects (>2 m/s) use measureGateTimeNative()
+     *   - Blocks until both gates trigger (or timeout)
      *
-     * CABLEADO FC-33 (dos módulos):
-     *   FC-33 #1 OUT → P1 (barrera A)
-     *   FC-33 #2 OUT → P2 (barrera B)
-     *   Ambos VCC → 3V, GND → GND
+     * FC-33 WIRING (two modules):
+     *   FC-33 #1 OUT → P1 (gate A)
+     *   FC-33 #2 OUT → P2 (gate B)
+     *   Both VCC → 3V, GND → GND
      *
-     * CABLEADO IR DIY (dos pares emisor/receptor):
-     *   Receptor #1 → P1 (barrera A, analógico)
-     *   Receptor #2 → P2 (barrera B, analógico)
+     * DIY IR WIRING (two emitter/receiver pairs):
+     *   Receiver #1 → P1 (gate A, analog)
+     *   Receiver #2 → P2 (gate B, analog)
      *
-     * @param pinA Pin de la barrera A (primera que se activa)
-     * @param pinB Pin de la barrera B (segunda que se activa)
-     * @param modo Digital (FC-33) o Analógico (IR DIY)
-     * @param timeoutMs Timeout máximo en milisegundos (0 = sin timeout)
-     * @returns Tiempo entre barreras en milisegundos, -1 si timeout
+     * @param pinA Pin of gate A (the first one to trigger)
+     * @param pinB Pin of gate B (the second one to trigger)
+     * @param mode Digital (FC-33) or Analog (DIY IR)
+     * @param timeoutMs Maximum timeout in milliseconds (0 = no timeout)
+     * @returns Time between gates in milliseconds, -1 on timeout
      */
-    //% block="measure time barrier A %pinA → B %pinB mode %modo timeout %timeoutMs ms"
+    //% block="measure time barrier A %pinA → B %pinB mode %mode timeout %timeoutMs ms"
     //% blockId=fisicabit_barrera_tiempo
     //% group="Optical Barrier"
     //% weight=95
-    //% pinA.defl=PinAnalogico.P1
-    //% pinB.defl=PinAnalogico.P2
-    //% modo.defl=ModoBarrera.Digital
+    //% pinA.defl=FbAnalogPin.P1
+    //% pinB.defl=FbAnalogPin.P2
+    //% mode.defl=FbGateMode.Digital
     //% timeoutMs.defl=10000
-    export function medirTiempoBarrera(
-        pinA: PinAnalogico,
-        pinB: PinAnalogico,
-        modo: ModoBarrera,
+    export function measureGateTime(
+        pinA: FbAnalogPin,
+        pinB: FbAnalogPin,
+        mode: FbGateMode,
         timeoutMs: number
     ): number {
-        let inicio = control.millis()
+        let start = control.millis()
 
-        // ── Fase 1: Esperar a que barrera A esté LIBRE ──
-        // (asegurarnos de que no hay objeto antes de empezar)
-        while (barreraActivada(pinA, modo)) {
-            if (timeoutMs > 0 && (control.millis() - inicio) > timeoutMs) {
+        // ── Phase 1: Wait for gate A to be FREE ──
+        // (make sure there is no object before starting)
+        while (gateActivated(pinA, mode)) {
+            if (timeoutMs > 0 && (control.millis() - start) > timeoutMs) {
                 return -1
             }
-            // Pequeña pausa para no saturar el bus
+            // Short pause so we do not saturate the bus
             control.waitMicros(50)
         }
 
-        // ── Fase 2: Esperar a que barrera A se ACTIVE ──
-        // (el objeto llega a la primera barrera)
-        while (!barreraActivada(pinA, modo)) {
-            if (timeoutMs > 0 && (control.millis() - inicio) > timeoutMs) {
+        // ── Phase 2: Wait for gate A to TRIGGER ──
+        // (the object reaches the first gate)
+        while (!gateActivated(pinA, mode)) {
+            if (timeoutMs > 0 && (control.millis() - start) > timeoutMs) {
                 return -1
             }
             control.waitMicros(50)
         }
 
-        // ── Capturar tiempo de inicio ──
+        // ── Capture start time ──
         let t0 = control.millis()
 
-        // ── Fase 3: Esperar a que barrera B se ACTIVE ──
-        // (el objeto llega a la segunda barrera)
-        while (!barreraActivada(pinB, modo)) {
+        // ── Phase 3: Wait for gate B to TRIGGER ──
+        // (the object reaches the second gate)
+        while (!gateActivated(pinB, mode)) {
             if (timeoutMs > 0 && (control.millis() - t0) > timeoutMs) {
                 return -1
             }
             control.waitMicros(50)
         }
 
-        // ── Capturar tiempo de fin ──
+        // ── Capture end time ──
         let t1 = control.millis()
 
-        // ── Guardar para consulta posterior ──
-        _barreraTiempoInicio = t0
-        _barreraTiempoFin = t1
-        _barreraActiva = false
+        // ── Store for later queries ──
+        _gateStartTime = t0
+        _gateEndTime = t1
+        _gateActive = false
 
         return t1 - t0
     }
 
 
-    //% shim=fisicabit_native::barreraNativo
-    function _hwBarrera(pines: number, modo: number, umbrales: number, timeoutUs: number): number {
-        return -1   // simulador: usar la versión TypeScript
+    //% shim=fisicabitNative::gateNative
+    function _hwGate(pins: number, mode: number, thresholds: number, timeoutUs: number): number {
+        return -1   // simulator: use the TypeScript version
     }
 
     /**
-     * Mide el tiempo entre dos barreras usando C++ nativo.
-     * VERSIÓN DE ALTA PRECISIÓN — resolución de 1μs.
+     * Measures the time between two gates using native C++.
+     * HIGH PRECISION VERSION — 1μs resolution.
      *
-     * Usa el TIMER3 del nRF52833 a 1MHz para timing preciso.
-     * En el simulador usa la versión TypeScript como fallback.
+     * Uses the nRF52833 TIMER3 at 1MHz for precise timing.
+     * In the simulator it falls back to the TypeScript version.
      *
-     * CUÁNDO USAR ESTA VERSIÓN:
-     *   - Objetos en caída libre (>1 m/s)
-     *   - Medición de aceleración (necesitas alta precisión)
-     *   - Distancias cortas entre barreras (<5cm)
-     *   - Cualquier experimento donde ±1ms sea demasiado error
+     * WHEN TO USE THIS VERSION:
+     *   - Objects in free fall (>1 m/s)
+     *   - Acceleration measurement (you need high precision)
+     *   - Short distances between gates (<5cm)
+     *   - Any experiment where ±1ms is too much error
      *
-     * @param pinA Número del pin de barrera A (ej: 1 para P1)
-     * @param pinB Número del pin de barrera B (ej: 2 para P2)
-     * @param modo Digital (0) o Analógico (1)
-     * @param umbralA Umbral analógico barrera A (ignorado en digital)
-     * @param umbralB Umbral analógico barrera B (ignorado en digital)
-     * @param timeoutUs Timeout en microsegundos
-     * @returns Tiempo en microsegundos, 0 si timeout
+     * @param pinA Pin number of gate A (e.g. 1 for P1)
+     * @param pinB Pin number of gate B (e.g. 2 for P2)
+     * @param mode Digital (0) or Analog (1)
+     * @param thresholdA Analog threshold of gate A (ignored in digital mode)
+     * @param thresholdB Analog threshold of gate B (ignored in digital mode)
+     * @param timeoutUs Timeout in microseconds
+     * @returns Time in microseconds, 0 on timeout
      */
-    //% block="[C++] barrier time A P%pinA → B P%pinB mode %modo threshA %umbralA threshB %umbralB timeout %timeoutUs μs"
+    //% block="[C++] barrier time A P%pinA → B P%pinB mode %mode threshA %thresholdA threshB %thresholdB timeout %timeoutUs μs"
     //% blockId=fisicabit_barrera_nativo
     //% group="Optical Barrier"
     //% weight=93
     //% pinA.defl=1 pinB.defl=2
-    //% modo.defl=ModoBarrera.Digital
-    //% umbralA.defl=512 umbralB.defl=512
+    //% mode.defl=FbGateMode.Digital
+    //% thresholdA.defl=512 thresholdB.defl=512
     //% timeoutUs.defl=5000000
-    export function medirTiempoBarreraNativo(
+    export function measureGateTimeNative(
         pinA: number,
         pinB: number,
-        modo: ModoBarrera,
-        umbralA: number,
-        umbralB: number,
+        mode: FbGateMode,
+        thresholdA: number,
+        thresholdB: number,
         timeoutUs: number
     ): number {
-        // Hardware: C++ de shims.cpp (pines y umbrales empaquetados porque las
-        // funciones nativas admiten 4 parámetros como máximo). Devuelve ≥ 0.
-        const r = _hwBarrera((pinA << 16) | pinB, modo, (umbralA << 16) | umbralB, timeoutUs)
+        // Hardware: C++ in shims.cpp (pins and thresholds are packed because
+        // native functions accept at most 4 parameters). Returns ≥ 0.
+        const r = _hwGate((pinA << 16) | pinB, mode, (thresholdA << 16) | thresholdB, timeoutUs)
         if (r >= 0) return r
-        // ── Fallback para simulador ──
-        let t = medirTiempoBarrera(
-            pinA as PinAnalogico,
-            pinB as PinAnalogico,
-            modo,
+        // ── Simulator fallback ──
+        let t = measureGateTime(
+            pinA as FbAnalogPin,
+            pinB as FbAnalogPin,
+            mode,
             Math.idiv(timeoutUs, 1000)
         )
-        return t >= 0 ? t * 1000 : 0  // Convertir ms→μs
+        return t >= 0 ? t * 1000 : 0  // Convert ms→μs
     }
 
 
     /**
-     * Calcula la velocidad de un objeto a partir del tiempo entre barreras.
+     * Computes the speed of an object from the time between gates.
      *
-     * FÓRMULA: velocidad = distancia / tiempo
+     * FORMULA: speed = distance / time
      *
-     * EJEMPLO — Caída libre:
-     *   Barreras separadas 10cm (0.1m)
-     *   Tiempo medido: 50ms = 0.05s
-     *   Velocidad: 0.1 / 0.05 = 2.0 m/s
+     * EXAMPLE — Free fall:
+     *   Gates 10cm (0.1m) apart
+     *   Measured time: 50ms = 0.05s
+     *   Speed: 0.1 / 0.05 = 2.0 m/s
      *
-     * @param tiempoUs Tiempo entre barreras en microsegundos
-     * @param distanciaMm Distancia entre barreras en milímetros
-     * @returns Velocidad en m/s (multiplicada por 100 para 2 decimales)
+     * @param timeUs Time between gates in microseconds
+     * @param distanceMm Distance between gates in millimeters
+     * @returns Speed in m/s (multiplied by 100 for 2 decimal places)
      */
-    //% block="velocity with time %tiempoUs μs distance %distanciaMm mm (×100 m/s)"
+    //% block="velocity with time %timeUs μs distance %distanceMm mm (×100 m/s)"
     //% blockId=fisicabit_barrera_velocidad
     //% group="Optical Barrier"
     //% weight=91
-    //% tiempoUs.defl=50000 distanciaMm.defl=100
-    export function calcularVelocidad(tiempoUs: number, distanciaMm: number): number {
-        // velocidad (m/s) = distancia(mm) / tiempo(μs) × 1000
-        //                  = distancia(mm) * 1000 / tiempo(μs)
-        // Multiplicamos por 100 para tener 2 decimales como entero
-        // Ejemplo: 2.35 m/s → devuelve 235
-        if (tiempoUs <= 0) return 0
-        return Math.idiv(distanciaMm * 100000, tiempoUs)
+    //% timeUs.defl=50000 distanceMm.defl=100
+    export function computeSpeed(timeUs: number, distanceMm: number): number {
+        // speed (m/s) = distance(mm) / time(μs) × 1000
+        //             = distance(mm) * 1000 / time(μs)
+        // Multiply by 100 to keep 2 decimal places as an integer
+        // Example: 2.35 m/s → returns 235
+        if (timeUs <= 0) return 0
+        return Math.idiv(distanceMm * 100000, timeUs)
     }
 
 
     /**
-     * Convierte un tiempo en microsegundos a la unidad deseada.
+     * Converts a time in microseconds to the desired unit.
      *
-     * @param tiempoUs Tiempo en microsegundos
-     * @param unidad Unidad de salida deseada
-     * @returns Tiempo en la unidad seleccionada (×100 para 2 decimales en ms y s)
+     * @param timeUs Time in microseconds
+     * @param unit Desired output unit
+     * @returns Time in the selected unit (×100 for 2 decimal places in ms and s)
      */
-    //% block="convert %tiempoUs μs to %unidad"
+    //% block="convert %timeUs μs to %unit"
     //% blockId=fisicabit_barrera_convertir_tiempo
     //% group="Optical Barrier"
     //% weight=89
-    //% unidad.defl=UnidadTiempo.Milisegundos
-    export function convertirTiempo(tiempoUs: number, unidad: UnidadTiempo): number {
-        switch (unidad) {
-            case UnidadTiempo.Microsegundos:
-                return tiempoUs
-            case UnidadTiempo.Milisegundos:
-                // Devuelve ms × 100 para 2 decimales → 12345μs = 1234 (12.34ms)
-                return Math.idiv(tiempoUs, 10)
-            case UnidadTiempo.Segundos:
-                // Devuelve s × 100 para 2 decimales → 1234567μs = 123 (1.23s)
-                return Math.idiv(tiempoUs, 10000)
+    //% unit.defl=FbTimeUnit.Milliseconds
+    export function convertTime(timeUs: number, unit: FbTimeUnit): number {
+        switch (unit) {
+            case FbTimeUnit.Microseconds:
+                return timeUs
+            case FbTimeUnit.Milliseconds:
+                // Returns ms × 100 for 2 decimal places → 12345μs = 1234 (12.34ms)
+                return Math.idiv(timeUs, 10)
+            case FbTimeUnit.Seconds:
+                // Returns s × 100 for 2 decimal places → 1234567μs = 123 (1.23s)
+                return Math.idiv(timeUs, 10000)
             default:
-                return tiempoUs
+                return timeUs
         }
     }
 
 
     /**
-     * Mide cuánto tiempo un objeto bloquea UNA sola barrera.
-     * Útil para medir el ancho/longitud de un objeto en movimiento.
+     * Measures how long an object blocks a SINGLE gate.
+     * Useful to measure the width/length of a moving object.
      *
-     * Si conoces la velocidad del objeto:
-     *   longitud = velocidad × tiempo_de_bloqueo
+     * If you know the speed of the object:
+     *   length = speed × blocking_time
      *
-     * @param pin Pin de la barrera
-     * @param modo Digital o Analógico
-     * @param timeoutMs Timeout en milisegundos
-     * @returns Tiempo de bloqueo en milisegundos, -1 si timeout
+     * @param pin Gate pin
+     * @param mode Digital or Analog
+     * @param timeoutMs Timeout in milliseconds
+     * @returns Blocking time in milliseconds, -1 on timeout
      */
-    //% block="blocking time on %pin mode %modo timeout %timeoutMs ms"
+    //% block="blocking time on %pin mode %mode timeout %timeoutMs ms"
     //% blockId=fisicabit_barrera_bloqueo
     //% group="Optical Barrier"
     //% weight=87
-    //% pin.defl=PinAnalogico.P1
-    //% modo.defl=ModoBarrera.Digital
+    //% pin.defl=FbAnalogPin.P1
+    //% mode.defl=FbGateMode.Digital
     //% timeoutMs.defl=10000
-    export function medirTiempoBloqueo(
-        pin: PinAnalogico,
-        modo: ModoBarrera,
+    export function measureBlockTime(
+        pin: FbAnalogPin,
+        mode: FbGateMode,
         timeoutMs: number
     ): number {
-        let inicio = control.millis()
+        let start = control.millis()
 
-        // Esperar a que la barrera esté libre
-        while (barreraActivada(pin, modo)) {
-            if (timeoutMs > 0 && (control.millis() - inicio) > timeoutMs) return -1
+        // Wait for the gate to be free
+        while (gateActivated(pin, mode)) {
+            if (timeoutMs > 0 && (control.millis() - start) > timeoutMs) return -1
             control.waitMicros(50)
         }
 
-        // Esperar a que el objeto entre (bloquee la barrera)
-        while (!barreraActivada(pin, modo)) {
-            if (timeoutMs > 0 && (control.millis() - inicio) > timeoutMs) return -1
+        // Wait for the object to enter (block the gate)
+        while (!gateActivated(pin, mode)) {
+            if (timeoutMs > 0 && (control.millis() - start) > timeoutMs) return -1
             control.waitMicros(50)
         }
         let t0 = control.millis()
 
-        // Esperar a que el objeto salga (deje de bloquear)
-        while (barreraActivada(pin, modo)) {
+        // Wait for the object to leave (stop blocking)
+        while (gateActivated(pin, mode)) {
             if (timeoutMs > 0 && (control.millis() - t0) > timeoutMs) return -1
             control.waitMicros(50)
         }
@@ -805,45 +802,45 @@ namespace FisicaBit {
 
 
     // =========================================================================
-    // GRUPO 5: CONVERSIONES DE UNIDADES
+    // GROUP 5: UNIT CONVERSIONS
     // =========================================================================
 
     /**
-     * Convierte temperatura entre Celsius, Fahrenheit y Kelvin.
+     * Converts a temperature between Celsius, Fahrenheit and Kelvin.
      *
-     * Fórmulas:
+     * Formulas:
      *   °F = °C × 9/5 + 32
      *   K  = °C + 273.15
      *
-     * @param valor Temperatura a convertir
-     * @param de Unidad de origen
-     * @param a Unidad de destino
-     * @returns Temperatura convertida
+     * @param value Temperature to convert
+     * @param unitFrom Source unit
+     * @param unitTo Target unit
+     * @returns Converted temperature
      */
-    //% block="convert %valor from %de to %a"
+    //% block="convert %value from %unitFrom to %unitTo"
     //% blockId=fisicabit_convertir_temp
     //% group="Conversions"
     //% weight=70
-    export function convertirTemperatura(
-        valor: number,
-        de: UnidadTemperatura,
-        a: UnidadTemperatura
+    export function convertTemperature(
+        value: number,
+        unitFrom: FbTemperatureUnit,
+        unitTo: FbTemperatureUnit
     ): number {
-        // Primero convertimos todo a Celsius como base
-        let celsius = valor
-        if (de === UnidadTemperatura.Fahrenheit) {
-            celsius = (valor - 32) * 5 / 9
-        } else if (de === UnidadTemperatura.Kelvin) {
-            celsius = valor - 273
+        // First convert everything to Celsius as the base
+        let celsius = value
+        if (unitFrom === FbTemperatureUnit.Fahrenheit) {
+            celsius = (value - 32) * 5 / 9
+        } else if (unitFrom === FbTemperatureUnit.Kelvin) {
+            celsius = value - 273
         }
 
-        // Luego convertimos de Celsius a la unidad destino
-        switch (a) {
-            case UnidadTemperatura.Celsius:
+        // Then convert from Celsius to the target unit
+        switch (unitTo) {
+            case FbTemperatureUnit.Celsius:
                 return Math.round(celsius)
-            case UnidadTemperatura.Fahrenheit:
+            case FbTemperatureUnit.Fahrenheit:
                 return Math.round(celsius * 9 / 5 + 32)
-            case UnidadTemperatura.Kelvin:
+            case FbTemperatureUnit.Kelvin:
                 return Math.round(celsius + 273)
             default:
                 return Math.round(celsius)
@@ -852,134 +849,134 @@ namespace FisicaBit {
 
 
     /**
-     * Mapea un valor analógico (0-1023) a un rango personalizado.
+     * Maps an analog value (0-1023) to a custom range.
      *
-     * Útil para convertir lecturas crudas del ADC a unidades físicas.
-     * Usa la fórmula: resultado = (valor - entradaMin) × (salidaMax - salidaMin)
-     *                              / (entradaMax - entradaMin) + salidaMin
+     * Useful to convert raw ADC readings into physical units.
+     * Formula: result = (value - fromLow) × (toHigh - toLow)
+     *                   / (fromHigh - fromLow) + toLow
      *
-     * EJEMPLO — Convertir lectura de NTC a temperatura:
-     *   let lectura = FisicaBit.leerSensorAnalogico(PinAnalogico.P0)
-     *   let tempC = FisicaBit.mapearValor(lectura, 0, 1023, -10, 50)
+     * EXAMPLE — Convert an NTC reading to temperature:
+     *   let reading = fisicabit.readAnalogSensor(FbAnalogPin.P0)
+     *   let tempC = fisicabit.mapValue(reading, 0, 1023, -10, 50)
      *
-     * @param valor Valor de entrada a mapear
-     * @param entradaMin Mínimo del rango de entrada
-     * @param entradaMax Máximo del rango de entrada
-     * @param salidaMin Mínimo del rango de salida
-     * @param salidaMax Máximo del rango de salida
-     * @returns Valor mapeado al nuevo rango
+     * @param value Input value to map
+     * @param fromLow Lower bound of the input range
+     * @param fromHigh Upper bound of the input range
+     * @param toLow Lower bound of the output range
+     * @param toHigh Upper bound of the output range
+     * @returns Value mapped to the new range
      */
-    //% block="map %valor from (%entradaMin — %entradaMax) to (%salidaMin — %salidaMax)"
+    //% block="map %value from (%fromLow — %fromHigh) to (%toLow — %toHigh)"
     //% blockId=fisicabit_mapear
     //% group="Conversions"
     //% weight=65
-    export function mapearValor(
-        valor: number,
-        entradaMin: number,
-        entradaMax: number,
-        salidaMin: number,
-        salidaMax: number
+    export function mapValue(
+        value: number,
+        fromLow: number,
+        fromHigh: number,
+        toLow: number,
+        toHigh: number
     ): number {
         return Math.round(
-            (valor - entradaMin) * (salidaMax - salidaMin)
-            / (entradaMax - entradaMin)
-            + salidaMin
+            (value - fromLow) * (toHigh - toLow)
+            / (fromHigh - fromLow)
+            + toLow
         )
     }
 
 
     // =========================================================================
-    // GRUPO 5: FUNCIONES NATIVAS C++ (via shims)
+    // GROUP 6: NATIVE C++ FUNCTIONS (via shims)
     // =========================================================================
-    // Estas funciones llaman a código C++ compilado directamente.
-    // Son más rápidas que TypeScript para operaciones de bajo nivel.
+    // These functions call compiled C++ code directly.
+    // They are faster than TypeScript for low-level operations.
     //
-    // CÓMO FUNCIONA EL PUENTE TS ↔ C++:
-    //   1. Se declara la función en shims.d.ts con //% shim=nombre
-    //   2. Se implementa en shims.cpp con el mismo nombre
-    //   3. MakeCode genera el puente automáticamente al compilar
+    // HOW THE TS ↔ C++ BRIDGE WORKS:
+    //   1. The function is declared in shims.d.ts with //% shim=name
+    //   2. It is implemented in shims.cpp under the same name
+    //   3. MakeCode generates the bridge automatically at compile time
     //
-    // Ver shims.cpp y shims.d.ts para las implementaciones.
+    // See shims.cpp and shims.d.ts for the implementations.
     // =========================================================================
 
     /**
-     * Lee el ADC del nRF52 directamente usando código C++ nativo.
-     * Esto bypasea la capa de abstracción de MakeCode y es más rápido.
+     * Reads the nRF52 ADC directly using native C++ code.
+     * This bypasses the MakeCode abstraction layer and is faster.
      *
-     * Implementación: ver shims.cpp → leerADCNativo()
+     * Implementation: see shims.cpp → readAdcNative()
      *
-     * @param canal Canal ADC (0-7, corresponde a los pines analógicos)
-     * @returns Valor crudo del ADC de 12 bits (0-4095)
+     * @param channel ADC channel (0-7, corresponds to the analog pins)
+     * @returns Raw 12-bit ADC value (0-4095)
      */
-    //% block="[C++] read native ADC channel %canal"
+    //% block="[C++] read native ADC channel %channel"
     //% blockId=fisicabit_adc_nativo
     //% group="Native C++"
     //% weight=50
-    //% shim=fisicabit_native::leerADCNativo
-    export function leerADCNativo(canal: number): number {
-        // Este cuerpo solo se ejecuta en el simulador.
-        // En hardware real, se ejecuta el código C++ de shims.cpp
+    //% shim=fisicabitNative::readAdcNative
+    export function readAdcNative(channel: number): number {
+        // This body only runs in the simulator.
+        // On real hardware the C++ code in shims.cpp runs instead
         return pins.analogReadPin(AnalogPin.P0)
     }
 
     /**
-     * Mide un pulso con precisión de microsegundos usando C++ nativo.
-     * Ideal para sensores que requieren timing preciso (DHT11, OneWire).
+     * Measures a pulse with microsecond precision using native C++.
+     * Ideal for sensors that need precise timing (DHT11, OneWire).
      *
-     * @param pin Número del pin digital
-     * @param nivelAlto true para medir pulso HIGH, false para LOW
-     * @param timeoutUs Timeout en microsegundos
-     * @returns Duración del pulso en microsegundos
+     * @param pin Digital pin number
+     * @param high true to measure a HIGH pulse, false for LOW
+     * @param timeoutUs Timeout in microseconds
+     * @returns Pulse duration in microseconds
      */
-    //% block="[C++] measure pulse pin P%pin level %nivelAlto timeout %timeoutUs μs"
+    //% block="[C++] measure pulse pin P%pin level %high timeout %timeoutUs μs"
     //% blockId=fisicabit_pulso_nativo
     //% group="Native C++"
     //% weight=45
-    //% shim=fisicabit_native::medirPulsoNativo
-    export function medirPulsoNativo(pin: number, nivelAlto: boolean, timeoutUs: number): number {
-        // Fallback para simulador
+    //% shim=fisicabitNative::measurePulseNative
+    export function measurePulseNative(pin: number, high: boolean, timeoutUs: number): number {
+        // Simulator fallback
         return 0
     }
 
     /**
-     * Lee múltiples muestras del ADC rápidamente (burst mode) con C++.
-     * Devuelve el promedio de N lecturas para reducir ruido.
+     * Reads multiple ADC samples quickly (burst mode) with C++.
+     * Returns the average of N readings to reduce noise.
      *
-     * @param canal Canal ADC
-     * @param muestras Número de muestras a promediar (1-64)
-     * @returns Promedio de las lecturas (0-4095)
+     * @param channel ADC channel
+     * @param samples Number of samples to average (1-64)
+     * @returns Average of the readings (0-4095)
      */
-    //% block="[C++] read ADC average channel %canal samples %muestras"
+    //% block="[C++] read ADC average channel %channel samples %samples"
     //% blockId=fisicabit_adc_promedio
     //% group="Native C++"
     //% weight=40
-    //% shim=fisicabit_native::leerADCPromedio
-    export function leerADCPromedio(canal: number, muestras: number): number {
-        // Fallback para simulador: promediar en TS
-        let suma = 0
-        for (let i = 0; i < muestras; i++) {
-            suma += pins.analogReadPin(AnalogPin.P0)
+    //% shim=fisicabitNative::readAdcAveraged
+    export function readAdcAveraged(channel: number, samples: number): number {
+        // Simulator fallback: average in TS
+        let sum = 0
+        for (let i = 0; i < samples; i++) {
+            sum += pins.analogReadPin(AnalogPin.P0)
         }
-        return Math.idiv(suma, muestras)
+        return Math.idiv(sum, samples)
     }
 
 
     // =========================================================================
-    // GRUPO 7: UTILIDADES
+    // GROUP 7: UTILITIES
     // =========================================================================
 
     /**
-     * Muestra el valor de un sensor en la pantalla LED con scroll.
-     * Formato: "ETIQUETA: VALOR"
+     * Shows a sensor value on the LED screen with scrolling.
+     * Format: "LABEL:VALUE"
      *
-     * @param etiqueta Texto descriptivo (ej: "Temp")
-     * @param valor Valor numérico a mostrar
+     * @param label Descriptive text (e.g. "Temp")
+     * @param value Numeric value to show
      */
-    //% block="show on LED %etiqueta : %valor"
+    //% block="show on LED %label : %value"
     //% blockId=fisicabit_mostrar_led
     //% group="Utilities"
     //% weight=30
-    export function mostrarEnLED(etiqueta: string, valor: number): void {
-        basic.showString(etiqueta + ":" + Math.round(valor))
+    export function showOnLeds(label: string, value: number): void {
+        basic.showString(label + ":" + Math.round(value))
     }
 }

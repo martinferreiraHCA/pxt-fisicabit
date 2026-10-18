@@ -19,11 +19,11 @@ basic.showIcon(IconNames.Yes)
 
 ## Paso 2: Enviar el tiempo y el valor de un sensor
 
-Arrastrá ``||FisicaBitSerial:enviar a fisicabit.com tiempo y ... cada ... ms||`` dentro de ``||basic:para siempre||``. Poné ``||input:aceleración (mg) x||`` en su ranura y dejá **100 ms** (10 muestras por segundo). Este único bloque toma el tiempo del micro:bit, envía la línea `tiempo,valor` y espera hasta la próxima muestra.
+Arrastrá ``||fisicabitSerial:enviar a fisicabit.com tiempo y ... cada ... ms||`` dentro de ``||basic:para siempre||``. Poné ``||input:aceleración (mg) x||`` en su ranura y dejá **100 ms** (10 muestras por segundo). Este único bloque toma el tiempo del micro:bit, envía la línea `tiempo,valor` y espera hasta la próxima muestra.
 
 ```blocks
 basic.forever(function () {
-    FisicaBitSerial.enviar1(input.acceleration(Dimension.X), 100)
+    fisicabitSerial.send1(input.acceleration(Dimension.X), 100)
 })
 ```
 
@@ -42,21 +42,21 @@ Abrí **fisicabit.com** en Chrome o Edge:
 
 ## Paso 5: Enviar dos valores
 
-Reemplazá el bloque de ``||basic:para siempre||`` por ``||FisicaBitSerial:enviar a fisicabit.com tiempo, ... y ... cada ... ms||`` y mandá la aceleración en **x** y en **y**. En fisicabit.com, poné el número de variables en **2**.
+Reemplazá el bloque de ``||basic:para siempre||`` por ``||fisicabitSerial:enviar a fisicabit.com tiempo, ... y ... cada ... ms||`` y mandá la aceleración en **x** y en **y**. En fisicabit.com, poné el número de variables en **2**.
 
 ```blocks
 basic.forever(function () {
-    FisicaBitSerial.enviar2(input.acceleration(Dimension.X), input.acceleration(Dimension.Y), 100)
+    fisicabitSerial.send2(input.acceleration(Dimension.X), input.acceleration(Dimension.Y), 100)
 })
 ```
 
 ## Paso 6: Muestreo más rápido (opcional)
 
-Para experimentos rápidos como caída libre, usá ``||FisicaBitSerial:bucle rápido para fisicabit.com cada ... ms||`` en lugar de ``||basic:para siempre||`` con **20 ms** (50 muestras por segundo). Mantiene el ritmo con precisión, sin el retardo oculto del bucle para siempre. Poné el bloque de envío adentro.
+Para experimentos rápidos como caída libre, usá ``||fisicabitSerial:bucle rápido para fisicabit.com cada ... ms||`` en lugar de ``||basic:para siempre||`` con **20 ms** (50 muestras por segundo). Mantiene el ritmo con precisión, sin el retardo oculto del bucle para siempre. Poné el bloque de envío adentro.
 
 ```blocks
-FisicaBitSerial.bucleMuestreo(20, function () {
-    FisicaBitSerial.enviar1(input.acceleration(Dimension.X), 20)
+fisicabitSerial.sampleLoop(20, function () {
+    fisicabitSerial.send1(input.acceleration(Dimension.X), 20)
 })
 ```
 

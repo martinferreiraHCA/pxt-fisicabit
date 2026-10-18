@@ -1,7 +1,7 @@
 {
     "name": "fisicabit-sensores",
-    "version": "0.13.0",
-    "description": "Extensión micro:bit para experimentos de física: sensores, barreras ópticas y envío de datos a fisicabit.com con un solo bloque por USB o Bluetooth",
+    "version": "1.0.0",
+    "description": "micro:bit (V2) only. Physics experiments: sensors, photogates, precision accelerometer, ultrasonic and ToF distance, and one-block data streaming to fisicabit.com over USB or Bluetooth",
     "license": "MIT",
     "authors": [
         "FisicaBit"
@@ -15,27 +15,25 @@
     "files": [
         "README.md",
         "fisicabit.ts",
-        "cinematica.ts",
-        "fisicabit_datos.ts",
-        "serial_sensores.ts",
-        "bluetooth_sensores.ts",
-        "tof_sensores.ts",
+        "kinematics.ts",
+        "data.ts",
+        "serial.ts",
+        "bluetooth.ts",
+        "tof.ts",
         "enums.d.ts",
         "shims.d.ts",
         "shims.cpp",
-        "tcs3200_sensores.ts",
-        "bme280_sensores.ts",
-        "dht11_sensores.ts",
-        "ds18b20_sensores.ts",
-        "max6675_sensores.ts",
-        "hcsr04_sensores.ts",
-        "audio_shims.ts",
-        "sonido_sensores.ts",
-        "hx711_sensores.ts",
+        "tcs3200.ts",
+        "bme280.ts",
+        "dht11.ts",
+        "ds18b20.ts",
+        "max6675.ts",
+        "ultrasonic.ts",
+        "audioShims.ts",
+        "sound.ts",
+        "hx711.ts",
         "_locales/es/fisicabit-sensores-strings.json",
         "_locales/es/fisicabit-sensores-jsdoc-strings.json",
-        "_locales/en/fisicabit-sensores-strings.json",
-        "_locales/en/fisicabit-sensores-jsdoc-strings.json",
         "_locales/pt-BR/fisicabit-sensores-strings.json",
         "_locales/pt-BR/fisicabit-sensores-jsdoc-strings.json",
         "tutorial-usb.md",
@@ -56,18 +54,6 @@
         "microbit"
     ],
     "preferredEditor": "tsprj",
-    "yotta": {
-        "configIsJustDefaults": true,
-        "config": {
-            "microbit-dal": {
-                "bluetooth": {
-                    "open": 1,
-                    "whitelist": 0,
-                    "security_level": null
-                }
-            }
-        }
-    },
     "disablesVariants": [
         "mbdal"
     ]

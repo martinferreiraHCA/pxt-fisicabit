@@ -11,19 +11,19 @@ Necesitás: un micro:bit, su cable USB (solo para descargar el programa) y Chrom
 
 ## Paso 1: Iniciar Bluetooth
 
-Arrastrá ``||FisicaBitBT:iniciar Bluetooth para fisicabit.com||`` dentro de ``||basic:al iniciar||``. Tiene que ser el **primer** bloque. Enciende el servicio Bluetooth que busca fisicabit.com y muestra una diana mientras espera la conexión.
+Arrastrá ``||fisicabitBluetooth:iniciar Bluetooth para fisicabit.com||`` dentro de ``||basic:al iniciar||``. Tiene que ser el **primer** bloque. Enciende el servicio Bluetooth que busca fisicabit.com y muestra una diana mientras espera la conexión.
 
 ```blocks
-FisicaBitBT.inicioRapido()
+fisicabitBluetooth.quickStart()
 ```
 
 ## Paso 2: Enviar el tiempo y el valor de un sensor
 
-Arrastrá ``||FisicaBitBT:enviar a fisicabit.com por Bluetooth tiempo y ... cada ... ms||`` dentro de ``||basic:para siempre||``, poné ``||input:aceleración (mg) x||`` en su ranura y dejá **100 ms** (10 muestras por segundo). El bloque envía `tiempo,valor` y solo transmite mientras fisicabit.com está conectado.
+Arrastrá ``||fisicabitBluetooth:enviar a fisicabit.com por Bluetooth tiempo y ... cada ... ms||`` dentro de ``||basic:para siempre||``, poné ``||input:aceleración (mg) x||`` en su ranura y dejá **100 ms** (10 muestras por segundo). El bloque envía `tiempo,valor` y solo transmite mientras fisicabit.com está conectado.
 
 ```blocks
 basic.forever(function () {
-    FisicaBitBT.enviar1(input.acceleration(Dimension.X), 100)
+    fisicabitBluetooth.send1(input.acceleration(Dimension.X), 100)
 })
 ```
 
@@ -44,20 +44,20 @@ Si un micro:bit que estuvo vinculado antes no se conecta, quitalo de la configur
 
 ## Paso 5: Enviar tres valores
 
-Reemplazá el bloque de ``||basic:para siempre||`` por ``||FisicaBitBT:enviar a fisicabit.com por Bluetooth tiempo, ... , ... y ... cada ... ms||`` y mandá la aceleración en **x**, **y** y **z**. En fisicabit.com, poné el número de variables en **3**.
+Reemplazá el bloque de ``||basic:para siempre||`` por ``||fisicabitBluetooth:enviar a fisicabit.com por Bluetooth tiempo, ... , ... y ... cada ... ms||`` y mandá la aceleración en **x**, **y** y **z**. En fisicabit.com, poné el número de variables en **3**.
 
 ```blocks
 basic.forever(function () {
-    FisicaBitBT.enviar3(input.acceleration(Dimension.X), input.acceleration(Dimension.Y), input.acceleration(Dimension.Z), 100)
+    fisicabitBluetooth.send3(input.acceleration(Dimension.X), input.acceleration(Dimension.Y), input.acceleration(Dimension.Z), 100)
 })
 ```
 
 ## Paso 6: Saber cuándo estás conectado (opcional)
 
-Agregá ``||FisicaBitBT:al conectar fisicabit.com por Bluetooth||`` y poné un sonido corto adentro, así escuchás cuando la página se conecta.
+Agregá ``||fisicabitBluetooth:al conectar fisicabit.com por Bluetooth||`` y poné un sonido corto adentro, así escuchás cuando la página se conecta.
 
 ```blocks
-FisicaBitBT.alConectar(function () {
+fisicabitBluetooth.onConnected(function () {
     music.playTone(Note.C5, music.beat(BeatFraction.Quarter))
 })
 ```
