@@ -1300,12 +1300,14 @@ namespace fisicabit_native {
     // =========================================================================
     // El sensor mide el tiempo de vuelo de un pulso de 40 kHz: TRIG recibe un
     // pulso de 10 µs y ECHO queda en alto el tiempo de ida y vuelta. Acá:
-    //   · Un fiber dispara el TRIG a período fijo (sólo si ECHO está en bajo).
-    //   · Los flancos de ECHO llegan como eventos del pin con el timestamp
-    //     capturado en la interrupción (µs): ancho = bajada − subida, sin
-    //     esperas bloqueantes y sin depender del intérprete de bloques.
-    //   · Instante de la muestra = subida + ancho/2 (cuando el sonido tocó el
-    //     objeto). Velocidad del sonido según la temperatura del aire.
+    //   · Un fiber propio dispara el TRIG a período fijo y mide el ancho del
+    //     eco con MicroBitPin::getPulseUs(), la misma captura por interrupción
+    //     (timestamps en µs) que usan pins.pulseIn y la extensión oficial
+    //     pxt-sonar de MakeCode. Mientras espera el eco sólo se bloquea este
+    //     fiber; el programa de bloques sigue corriendo.
+    //   · Instante de la muestra = disparo + 0,5 ms + ancho/2 (el sensor emite
+    //     la ráfaga ≈0,5 ms después del disparo; el sonido toca el objeto a la
+    //     mitad del eco). Velocidad del sonido según la temperatura del aire.
     //   · Modo de un solo cable (HY-SRF05 con OUT a GND, módulos de 3 pines):
     //     el mismo pin dispara y escucha.
     // =========================================================================
@@ -1321,10 +1323,6 @@ namespace fisicabit_native {
         int periodoMs;
         uint32_t timeoutUs;
         uint32_t velMmPorS;          // velocidad del sonido en mm/s
-        volatile bool esperando;
-        volatile bool subio;
-        uint32_t tTrigUs;
-        uint32_t tRiseUs;
         uint32_t tUltTrigUs;
         volatile uint32_t seq;
         volatile int32_t  distMm;    // -1 = sin eco / fuera de rango
@@ -1345,62 +1343,43 @@ namespace fisicabit_native {
         s.seq++;
     }
 
-    static void fbUsOnEdge(Event e) {
-        for (int i = 0; i < FB_US_MAX; i++) {
-            FbUs &s = fbUs[i];
-            if (!s.activo || s.echoId != (int)e.source) continue;
-            if (e.value == DEVICE_PIN_EVT_RISE) {
-                if (s.esperando) { s.tRiseUs = (uint32_t)e.timestamp; s.subio = true; }
-            } else if (e.value == DEVICE_PIN_EVT_FALL) {
-                if (s.esperando && s.subio) {
-                    uint32_t eco = (uint32_t)e.timestamp - s.tRiseUs;
-                    s.esperando = false;
-                    s.subio = false;
-                    // mm = eco(µs) · v(mm/s) / 1e6 / 2
-                    int dist = (int)(((uint64_t)eco * s.velMmPorS + 1000000ULL) / 2000000ULL);
-                    if (eco < 100 || dist > s.maxMm) fbUsPublicar(s, -1, (int)eco, (uint32_t)e.timestamp);
-                    else fbUsPublicar(s, dist, (int)eco, s.tRiseUs + eco / 2);
-                }
-            }
-        }
-    }
-
-    static void fbUsDisparar(FbUs &s, uint32_t now) {
+    static void fbUsMedir(FbUs &s, uint32_t now) {
+        // Disparo: pulso de 10 µs en TRIG (como pxt-sonar)
         if (s.unCable) s.echo->eventOn(DEVICE_PIN_EVENT_NONE);
         s.trig->setDigitalValue(0);
         fbDelayCycles(64);                 // ≈3 µs en bajo
         s.trig->setDigitalValue(1);
         fbDelayCycles(214);                // ≈10 µs en alto
         s.trig->setDigitalValue(0);
-        if (s.unCable) {
-            s.echo->getDigitalValue();     // vuelve a entrada
-            s.echo->eventOn(DEVICE_PIN_EVENT_ON_EDGE);
-        }
-        s.tTrigUs = now;
+        if (s.unCable) s.echo->getDigitalValue();   // vuelve a entrada
         s.tUltTrigUs = now;
-        s.subio = false;
-        s.esperando = true;
+
+        // Ancho del eco con la captura por interrupción de CODAL (igual que
+        // pins.pulseIn): bloquea sólo este fiber hasta el fin del eco o el
+        // tiempo máximo del alcance elegido.
+        s.echo->setPolarity(1);
+        int w = s.echo->getPulseUs((int)s.timeoutUs);
+        if (w == DEVICE_CANCELLED || w <= 0) {
+            fbUsPublicar(s, -1, 0, (uint32_t)system_timer_current_time_us());
+            return;
+        }
+        uint32_t eco = (uint32_t)w;
+        // mm = eco(µs) · v(mm/s) / 1e6 / 2
+        int dist = (int)(((uint64_t)eco * s.velMmPorS + 1000000ULL) / 2000000ULL);
+        if (eco < 100 || dist > s.maxMm) fbUsPublicar(s, -1, (int)eco, now + 500 + eco / 2);
+        else fbUsPublicar(s, dist, (int)eco, now + 500 + eco / 2);
     }
 
     static void fbUsLoop(void *) {
         while (true) {
-            uint32_t now = (uint32_t)system_timer_current_time_us();
             for (int i = 0; i < FB_US_MAX; i++) {
                 FbUs &s = fbUs[i];
                 if (!s.activo) continue;
-                if (s.esperando && (uint32_t)(now - s.tTrigUs) > s.timeoutUs) {
-                    // Sin eco dentro del alcance: muestra inválida
-                    s.esperando = false;
-                    s.subio = false;
-                    fbUsPublicar(s, -1, 0, now);
-                }
-                if (!s.esperando && (uint32_t)(now - s.tUltTrigUs) >= (uint32_t)s.periodoMs * 1000u) {
-                    // Sólo disparar con ECHO en bajo (algunos clones lo dejan en alto
-                    // ~200 ms). Si sigue en alto más de 300 ms, disparar igual: el
-                    // nuevo pulso de TRIG suele destrabarlo.
-                    bool echoBajo = s.unCable || s.echo->getDigitalValue() == 0;
-                    if (echoBajo || (uint32_t)(now - s.tUltTrigUs) > 300000u) fbUsDisparar(s, now);
-                }
+                uint32_t now = (uint32_t)system_timer_current_time_us();
+                if ((uint32_t)(now - s.tUltTrigUs) < (uint32_t)s.periodoMs * 1000u) continue;
+                // Si un clon dejó ECHO en alto, esperar a que baje (máx. 300 ms)
+                if (!s.unCable && s.echo->getDigitalValue() == 1 && (uint32_t)(now - s.tUltTrigUs) < 300000u) continue;
+                fbUsMedir(s, now);
             }
             fiber_sleep(1);
         }
@@ -1435,12 +1414,7 @@ namespace fisicabit_native {
         if (idx < 0 || idx >= FB_US_MAX) return 0;
         FbUs &s = fbUs[idx];
         s.activo = false;
-        if (s.echoId >= 0) {
-            uBit.messageBus.ignore(s.echoId, DEVICE_PIN_EVT_RISE, fbUsOnEdge);
-            uBit.messageBus.ignore(s.echoId, DEVICE_PIN_EVT_FALL, fbUsOnEdge);
-            s.echo->eventOn(DEVICE_PIN_EVENT_NONE);
-            s.echoId = -1;
-        }
+        s.echoId = -1;
         return 1;
 #else
         return 0;
@@ -1470,16 +1444,11 @@ namespace fisicabit_native {
         s.unCable = (pt == pe);
         s.echoId = pe->id;
         s.seq = 0; s.distMm = -1; s.ecoUs = 0; s.tUs = 0; s.validas = 0; s.invalidas = 0;
-        s.esperando = false; s.subio = false; s.tTrigUs = 0; s.tUltTrigUs = 0;
+        s.tUltTrigUs = 0;
         fbUsAplicarConfig(s, maxMm, periodoMs, velMmPorS);
+        pt->setPull(codal::PullMode::None);
         pt->setDigitalValue(0);
-        if (!s.unCable) {
-            pe->setPull(codal::PullMode::Down);
-            pe->getDigitalValue();
-            pe->eventOn(DEVICE_PIN_EVENT_ON_EDGE);
-        }
-        uBit.messageBus.listen(s.echoId, DEVICE_PIN_EVT_RISE, fbUsOnEdge);
-        uBit.messageBus.listen(s.echoId, DEVICE_PIN_EVT_FALL, fbUsOnEdge);
+        if (!s.unCable) pe->getDigitalValue();      // entrada digital, sin pull (como pxt-sonar)
         s.activo = true;
         if (!fbUsFiber) {
             create_fiber(fbUsLoop, NULL);
