@@ -1385,8 +1385,11 @@ namespace fisicabit_native {
                     fbUsPublicar(s, -1, 0, now);
                 }
                 if (!s.esperando && (uint32_t)(now - s.tUltTrigUs) >= (uint32_t)s.periodoMs * 1000u) {
-                    // Sólo disparar con ECHO en bajo (algunos clones lo dejan en alto ~200 ms)
-                    if (s.unCable || s.echo->getDigitalValue() == 0) fbUsDisparar(s, now);
+                    // Sólo disparar con ECHO en bajo (algunos clones lo dejan en alto
+                    // ~200 ms). Si sigue en alto más de 300 ms, disparar igual: el
+                    // nuevo pulso de TRIG suele destrabarlo.
+                    bool echoBajo = s.unCable || s.echo->getDigitalValue() == 0;
+                    if (echoBajo || (uint32_t)(now - s.tUltTrigUs) > 300000u) fbUsDisparar(s, now);
                 }
             }
             fiber_sleep(1);
@@ -1530,7 +1533,8 @@ namespace fisicabit_native {
 #endif
     }
 
-    // Estadísticas: cual = 0 válidas, 1 inválidas, 2 período real (ms).
+    // Estadísticas: cual = 0 válidas, 1 inválidas, 2 período real (ms),
+    // 3 nivel actual del pin ECHO (1 = alto).
     //%
     int usEstadistica(int idx, int cual) {
 #if MICROBIT_CODAL
@@ -1538,6 +1542,7 @@ namespace fisicabit_native {
         FbUs &s = fbUs[idx];
         if (cual == 0) return (int)s.validas;
         if (cual == 1) return (int)s.invalidas;
+        if (cual == 3) return (s.activo && !s.unCable) ? s.echo->getDigitalValue() : 0;
         return s.periodoMs;
 #else
         return 0;

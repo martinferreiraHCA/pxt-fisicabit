@@ -182,6 +182,9 @@ namespace FisicaBitHCSR04 {
 
     /** Distancia filtrada (mm): mediana deslizante + rechazo de saltos + offset. */
     function _leerFiltrada(s: SensorUS): number {
+        // Primera lectura tras arrancar: esperar el primer eco (≈30 ms) para
+        // que el bloque ya devuelva una distancia real y no 0.
+        if (!s.listo || (!s.ultOk && s.hist.length == 0)) _esperarMuestra(s, 150)
         let d = _leerCruda(s)
         if (d == -2) return s.ultVal
         if (d >= 0) d += s.offsetMm
@@ -513,6 +516,34 @@ namespace FisicaBitHCSR04 {
     // =========================================================================
     // DIAGNÓSTICO
     // =========================================================================
+
+    /**
+     * Estado del sensor en una palabra, para mostrar en pantalla o enviar
+     * por USB y saber al instante si el cableado está bien:
+     * "OK" = mide; "SIN ECO" = el sensor no responde (revisar VCC: muchos
+     * HC-SR04 necesitan 5 V; GND; y que haya un objeto a menos del alcance);
+     * "ECHO ALTO" = el pin ECHO quedó en alto (TRIG y ECHO cruzados o
+     * módulo sin alimentación).
+     * @param pinTrig Pin conectado a TRIG
+     * @param pinEcho Pin conectado a ECHO
+     */
+    //% block="ultrasonic status TRIG %pinTrig ECHO %pinEcho"
+    //% blockId=fisicabit_us_estado
+    //% group="Diagnostics"
+    //% weight=86
+    //% parts="hcsr04" trackArgs=0,1
+    //% pinTrig.defl=DigitalPin.P8
+    //% pinEcho.defl=DigitalPin.P12
+    export function estadoUltrasonido(pinTrig: DigitalPin, pinEcho: DigitalPin): string {
+        const s = _obtener(pinTrig, pinEcho)
+        _asegurar(s)
+        if (!s.nativo) return "SIM"
+        const v0 = _hwEstadistica(s.idx, 0)
+        basic.pause(400)
+        if (_hwEstadistica(s.idx, 0) > v0) return "OK"
+        if (_hwEstadistica(s.idx, 3) == 1) return "ECHO ALTO"
+        return "SIN ECO"
+    }
 
     /**
      * Verdadero si la última muestra tuvo un eco válido (objeto dentro del

@@ -167,6 +167,7 @@
     "FisicaBitHCSR04.ecoValido|block": "¿eco ultrasónico válido?",
     "FisicaBitHCSR04.enviarDistanciaHCSR04|block": "enviar HC-SR04 distancia TRIG %pinTrig ECHO %pinEcho en %unidad por %medio",
     "FisicaBitHCSR04.enviarDistanciaSRF05|block": "enviar HY-SRF05 distancia TRIG %pinTrig ECHO %pinEcho en %unidad por %medio",
+    "FisicaBitHCSR04.estadoUltrasonido|block": "estado del ultrasonido TRIG %pinTrig ECHO %pinEcho",
     "FisicaBitHCSR04.fijarAlcanceUltrasonido|block": "fijar alcance máximo ultrasónico %cm cm",
     "FisicaBitHCSR04.fijarFrecuenciaUltrasonido|block": "fijar frecuencia de muestreo ultrasónica %hz Hz (0 = auto)",
     "FisicaBitHCSR04.fijarTemperaturaAire|block": "fijar temperatura del aire para ultrasonido %gradosC °C",
