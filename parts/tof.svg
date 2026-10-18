@@ -1,36 +1,31 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="360" height="160" viewBox="0 0 360 160">
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="160" viewBox="0 0 200 160">
   <defs><linearGradient id="glass" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#6a6a6a"/><stop offset="50%" stop-color="#1c1c1c"/><stop offset="100%" stop-color="#4a4a4a"/></linearGradient></defs>
-  <rect x="1" y="1" width="358" height="118" rx="6" fill="#5b2d8e" stroke="#2b0f4d" stroke-width="2"/>
+  <rect x="1" y="1" width="198" height="118" rx="6" fill="#5b2d8e" stroke="#2b0f4d" stroke-width="2"/>
   <circle cx="12" cy="12" r="4" fill="#ffffff" stroke="#2b0f4d" stroke-width="1.5"/>
-  <circle cx="348" cy="12" r="4" fill="#ffffff" stroke="#2b0f4d" stroke-width="1.5"/>
-  <circle cx="12" cy="106" r="4" fill="#ffffff" stroke="#2b0f4d" stroke-width="1.5"/>
-  <circle cx="348" cy="106" r="4" fill="#ffffff" stroke="#2b0f4d" stroke-width="1.5"/>
-  <rect x="248" y="28" width="92" height="60" rx="4" fill="#111" stroke="#000" stroke-width="1.5"/>
-  <rect x="258" y="40" width="24" height="36" rx="3" fill="url(#glass)" stroke="#333"/>
-  <rect x="300" y="40" width="30" height="36" rx="3" fill="url(#glass)" stroke="#333"/>
-  <circle cx="270" cy="58" r="6" fill="#d32f2f" opacity="0.9"/>
-  <text x="294" y="100" font-size="8" fill="#ffffff" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">EMISOR · RECEPTOR</text>
-  <rect x="26" y="30" width="34" height="22" rx="2" fill="#222" stroke="#000"/>
-  <text x="43" y="45" font-size="8" fill="#ddd" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">2.8V</text>
-  <rect x="70" y="30" width="12" height="22" rx="2" fill="#b58b3a" stroke="#6b4e14"/>
-  <rect x="88" y="30" width="12" height="22" rx="2" fill="#b58b3a" stroke="#6b4e14"/>
-  <rect x="26" y="62" width="16" height="8" rx="1" fill="#2a2a2a" stroke="#000"/>
-  <rect x="48" y="62" width="16" height="8" rx="1" fill="#2a2a2a" stroke="#000"/>
-  <rect x="70" y="62" width="16" height="8" rx="1" fill="#2a2a2a" stroke="#000"/>
-  <text x="130" y="30" font-size="15" fill="#ffffff" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="bold">ToF LÁSER</text>
-  <text x="130" y="48" font-size="10" fill="#e8d7ff" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">VL53L0X · VL53L1X · VL6180X</text>
-  <text x="130" y="62" font-size="9" fill="#e8d7ff" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">I2C 0x29</text>
-  <rect x="117" y="116" width="126" height="14" rx="2" fill="#111"/>
-  <text x="130" y="110" font-size="10" fill="#ff5252" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-weight="bold" transform="rotate(-90 130 110)" dominant-baseline="middle">VIN</text>
-  <rect x="127" y="128" width="6" height="32" fill="#d9b24c" stroke="#7a5f15" stroke-width="1"/>
-  <text x="150" y="110" font-size="10" fill="#e0e0e0" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-weight="bold" transform="rotate(-90 150 110)" dominant-baseline="middle">GND</text>
-  <rect x="147" y="128" width="6" height="32" fill="#d9b24c" stroke="#7a5f15" stroke-width="1"/>
-  <text x="170" y="110" font-size="10" fill="#ffd740" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-weight="bold" transform="rotate(-90 170 110)" dominant-baseline="middle">SCL</text>
-  <rect x="167" y="128" width="6" height="32" fill="#d9b24c" stroke="#7a5f15" stroke-width="1"/>
-  <text x="190" y="110" font-size="10" fill="#69f0ae" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-weight="bold" transform="rotate(-90 190 110)" dominant-baseline="middle">SDA</text>
-  <rect x="187" y="128" width="6" height="32" fill="#d9b24c" stroke="#7a5f15" stroke-width="1"/>
-  <text x="210" y="110" font-size="10" fill="#b0bec5" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-weight="bold" transform="rotate(-90 210 110)" dominant-baseline="middle">XSHUT</text>
-  <rect x="207" y="128" width="6" height="32" fill="#d9b24c" stroke="#7a5f15" stroke-width="1"/>
-  <text x="230" y="110" font-size="10" fill="#b0bec5" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-weight="bold" transform="rotate(-90 230 110)" dominant-baseline="middle">INT</text>
-  <rect x="227" y="128" width="6" height="32" fill="#d9b24c" stroke="#7a5f15" stroke-width="1"/>
+  <circle cx="188" cy="12" r="4" fill="#ffffff" stroke="#2b0f4d" stroke-width="1.5"/>
+  <rect x="128" y="24" width="62" height="44" rx="4" fill="#111" stroke="#000" stroke-width="1.5"/>
+  <rect x="134" y="32" width="18" height="28" rx="3" fill="url(#glass)" stroke="#333"/>
+  <rect x="160" y="32" width="24" height="28" rx="3" fill="url(#glass)" stroke="#333"/>
+  <circle cx="143" cy="46" r="5" fill="#d32f2f" opacity="0.9"/>
+  <text x="159" y="80" font-size="7" fill="#ffffff" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">LASER · SENSOR</text>
+  <rect x="14" y="26" width="26" height="18" rx="2" fill="#222" stroke="#000"/>
+  <text x="27" y="38" font-size="7" fill="#ddd" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">2.8V</text>
+  <rect x="46" y="26" width="10" height="18" rx="2" fill="#b58b3a" stroke="#6b4e14"/>
+  <rect x="60" y="26" width="10" height="18" rx="2" fill="#b58b3a" stroke="#6b4e14"/>
+  <text x="62" y="66" font-size="13" fill="#ffffff" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="bold">ToF LASER</text>
+  <text x="62" y="80" font-size="7.5" fill="#e8d7ff" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">VL53L0X · VL53L1X · VL6180X</text>
+  <text x="62" y="92" font-size="7.5" fill="#e8d7ff" text-anchor="middle" font-family="Arial, Helvetica, sans-serif">I2C 0x29</text>
+  <rect x="27" y="116" width="126" height="14" rx="2" fill="#111"/>
+  <text x="40" y="110" font-size="9" fill="#ff5252" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-weight="bold" transform="rotate(-90 40 110)" dominant-baseline="middle">VIN</text>
+  <rect x="37" y="128" width="6" height="32" fill="#d9b24c" stroke="#7a5f15" stroke-width="1"/>
+  <text x="60" y="110" font-size="9" fill="#e0e0e0" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-weight="bold" transform="rotate(-90 60 110)" dominant-baseline="middle">GND</text>
+  <rect x="57" y="128" width="6" height="32" fill="#d9b24c" stroke="#7a5f15" stroke-width="1"/>
+  <text x="80" y="110" font-size="9" fill="#ffd740" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-weight="bold" transform="rotate(-90 80 110)" dominant-baseline="middle">SCL</text>
+  <rect x="77" y="128" width="6" height="32" fill="#d9b24c" stroke="#7a5f15" stroke-width="1"/>
+  <text x="100" y="110" font-size="9" fill="#69f0ae" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-weight="bold" transform="rotate(-90 100 110)" dominant-baseline="middle">SDA</text>
+  <rect x="97" y="128" width="6" height="32" fill="#d9b24c" stroke="#7a5f15" stroke-width="1"/>
+  <text x="120" y="110" font-size="9" fill="#b0bec5" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-weight="bold" transform="rotate(-90 120 110)" dominant-baseline="middle">XSHUT</text>
+  <rect x="117" y="128" width="6" height="32" fill="#d9b24c" stroke="#7a5f15" stroke-width="1"/>
+  <text x="140" y="110" font-size="9" fill="#b0bec5" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-weight="bold" transform="rotate(-90 140 110)" dominant-baseline="middle">INT</text>
+  <rect x="137" y="128" width="6" height="32" fill="#d9b24c" stroke="#7a5f15" stroke-width="1"/>
 </svg>
