@@ -13,6 +13,8 @@ En este tutorial vas a programar el micro:bit para que mande las lecturas de sus
 
 Necesitás: un micro:bit, su cable USB (solo para descargar el programa) y Chrome o Edge en una computadora o Android con Bluetooth.
 
+Si MakeCode pregunta **"Las extensiones no se pueden usar juntas"** (radio y bluetooth), elegí **Quitar radio**: esta extensión incluye Bluetooth y un proyecto nuevo trae la extensión radio por defecto.
+
 ## Paso 1: Iniciar Bluetooth
 
 Arrastrá ``||fisicabitBluetooth:iniciar Bluetooth para fisicabit.com||`` dentro de ``||basic:al iniciar||``. Tiene que ser el **primer** bloque. Enciende el servicio Bluetooth que busca fisicabit.com y muestra una diana mientras espera la conexión.
