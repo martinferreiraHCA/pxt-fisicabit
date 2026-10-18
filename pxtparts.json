@@ -54,7 +54,7 @@
         "instantiations": [
             {
                 "kind": "function",
-                "fullyQualifiedName": "FisicaBitHCSR04.medirDistanciaUltrasonido,FisicaBitHCSR04.medirDistanciaUltrasonidoCrudo,FisicaBitHCSR04.enviarDistanciaHCSR04,FisicaBitHCSR04.calibrarUltrasonido,FisicaBitHCSR04.frecuenciaRealUltrasonido,FisicaBitHCSR04.tiempoUltimoEco",
+                "fullyQualifiedName": "FisicaBitHCSR04.medirDistanciaUltrasonido,FisicaBitHCSR04.medirDistanciaUltrasonidoCrudo,FisicaBitHCSR04.enviarDistanciaHCSR04,FisicaBitHCSR04.calibrarUltrasonido,FisicaBitHCSR04.frecuenciaRealUltrasonido,FisicaBitHCSR04.tiempoUltimoEco,FisicaBitHCSR04.estadoUltrasonido",
                 "argumentRoles": [
                     {
                         "pinInstantiationIdx": 0,
