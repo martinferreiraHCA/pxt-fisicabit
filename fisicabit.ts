@@ -13,7 +13,7 @@
 //  │          Defines the visual blocks and the TS logic     │
 //  ├─────────────────────────────────────────────────────────┤
 //  │  Shim layer (TS ↔ C++ bridge)                           │
-//  │    └─► shims.d.ts    ← TypeScript declarations          │
+//  │    └─► nativeShims.ts    ← TypeScript declarations          │
 //  │    └─► shims.cpp     ← Native C++ implementation        │
 //  │          Direct access to the nRF52833 hardware         │
 //  └─────────────────────────────────────────────────────────┘
@@ -892,11 +892,11 @@ namespace fisicabit {
     // They are faster than TypeScript for low-level operations.
     //
     // HOW THE TS ↔ C++ BRIDGE WORKS:
-    //   1. The function is declared in shims.d.ts with //% shim=name
+    //   1. The function is declared in nativeShims.ts with //% shim=name
     //   2. It is implemented in shims.cpp under the same name
     //   3. MakeCode generates the bridge automatically at compile time
     //
-    // See shims.cpp and shims.d.ts for the implementations.
+    // See shims.cpp and nativeShims.ts for the implementations.
     // =========================================================================
 
     /**

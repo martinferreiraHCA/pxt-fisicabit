@@ -77,8 +77,9 @@
 // C++ shim — 24-bit read with interrupts disabled
 // On hardware it uses fisicabitNative::hx711ReadRawNative (shims.cpp).
 // In the simulator it uses the TS body as fallback.
-// Do NOT declare in shims.d.ts (a double declaration confuses pxt).
+// Do NOT declare in nativeShims.ts (a double declaration confuses pxt).
 // ─────────────────────────────────────────────────────────────────────────────
+/** Internal namespace: binding to the native HX711 reader in shims.cpp. */
 namespace fisicabitNative {
     /**
      * Internal helper, not a block. Reads the HX711 24-bit ADC with interrupt

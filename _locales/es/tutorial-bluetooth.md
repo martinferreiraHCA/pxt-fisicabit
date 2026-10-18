@@ -3,6 +3,10 @@
 ### @explicitHints true
 ### @diffs true
 
+```package
+fisicabit-sensores=github:martinferreiraHCA/pxt-fisicabit
+```
+
 ## Introducción @showdialog
 
 En este tutorial vas a programar el micro:bit para que mande las lecturas de sus sensores a **fisicabit.com** sin cable, por Bluetooth. Mientras medís no hace falta ningún cable, así que el micro:bit puede oscilar, caer o ir arriba de un carrito.

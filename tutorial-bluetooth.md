@@ -3,6 +3,10 @@
 ### @explicitHints true
 ### @diffs true
 
+```package
+fisicabit-sensores=github:martinferreiraHCA/pxt-fisicabit
+```
+
 ## Introduction @showdialog
 
 In this tutorial you will program the micro:bit to stream sensor readings to **fisicabit.com** wirelessly, over Bluetooth. No cable is needed while measuring, so the micro:bit can swing, fall or ride on a cart.

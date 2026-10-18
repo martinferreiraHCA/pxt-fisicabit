@@ -21,7 +21,7 @@
         "bluetooth.ts",
         "tof.ts",
         "enums.d.ts",
-        "shims.d.ts",
+        "nativeShims.ts",
         "shims.cpp",
         "tcs3200.ts",
         "bme280.ts",

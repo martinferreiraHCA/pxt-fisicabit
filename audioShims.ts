@@ -45,7 +45,7 @@ namespace fisicabitAudioNative {
     //     centi-Hz = 440 Hz = A4 as a test tone).
     //
     // Key requirement: this function is declared ONLY here.
-    // There is NO second declaration in shims.d.ts with //% shim=.
+    // There is NO second declaration in nativeShims.ts with //% shim=.
     // Duplicating the declaration confuses pxt and breaks resolution.
     // =========================================================================
 

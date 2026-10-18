@@ -1,9 +1,18 @@
 # fisicabit Sensores — Extensión para micro:bit
 
-> 🇬🇧 [English version](README-en.md)
+> 🇬🇧 English version (main documentation): [README.md](https://github.com/martinferreiraHCA/pxt-fisicabit/blob/main/README.md)
 
 > Extensión de MakeCode para experimentos de física con micro:bit: sensores, barreras ópticas y envío de datos a [fisicabit.com](https://fisicabit.com) con un solo bloque, por USB o por Bluetooth.
 > Proyecto: [fisicabit.com](https://fisicabit.com)
+
+
+## ~ hint
+
+#### Solo micro:bit (V2)
+
+Esta extensión funciona únicamente con la micro:bit V2: usa el runtime CODAL de la V2, el micrófono integrado y muestreadores nativos en C++, y la compilación para V1 está desactivada en `pxt.json`. Los programas que la usan no se pueden descargar a una micro:bit V1.
+
+## ~
 
 ## Cómo usar esta extensión
 
@@ -305,7 +314,7 @@ Receptor: 3V → Fototransistor → Pin (señal)
 
 ## Configuración de Bluetooth
 
-1. Esta extensión ya propone "sin vinculación" (**No Pairing Required**) como valor por defecto desde su `pxt.json` (`yotta.config.microbit-dal.bluetooth`: `open: 1, whitelist: 0`), así que en un proyecto nuevo no hace falta tocar nada. Si el proyecto tiene otra opción elegida en **⚙ Configuración → Configuración del proyecto**, esa opción gana: dejala en **No Pairing Required**.
+1. En MakeCode abrí **⚙ Configuración → Configuración del proyecto** y elegí **No se requiere emparejamiento** (*No Pairing Required*). La extensión ya no cambia esta configuración por sí misma; fisicabit.com se conecta sin emparejar, así que *JustWorks* o *Passkey* hacen que el teléfono conecte pero nunca reciba datos.
 2. Poné `iniciar Bluetooth para fisicabit.com` como primer bloque de `al iniciar`.
 3. Cargá el programa, esperá el ícono ◎, después tocá **Bluetooth** en fisicabit.com y elegí `BBC micro:bit [xxxxx]`.
 4. Si un micro:bit que estuvo vinculado antes no se conecta, quitalo ("olvidar") de la configuración Bluetooth del sistema operativo y volvé a intentar.
@@ -321,8 +330,8 @@ Notas:
 Síntoma: fisicabit.com muestra el micro:bit como conectado, pero la tabla y la gráfica quedan vacías. Casi siempre la causa está en la configuración del proyecto o en el vínculo guardado por el teléfono, no en la página. Probá en este orden:
 
 1. **Vínculo viejo en el teléfono.** En Android: Ajustes → Bluetooth → `BBC micro:bit [xxxxx]` → **Olvidar**. Después reiniciá el micro:bit (botón de atrás) y volvé a conectar desde fisicabit.com. Un vínculo guardado con claves de un programa anterior hace que el teléfono conecte pero nunca active las notificaciones del canal de datos.
-2. **Configuración del proyecto.** En MakeCode: **⚙ → Configuración del proyecto** tiene que estar en **No Pairing Required**. Si el proyecto está en *JustWorks pairing* o *Passkey pairing*, esa elección gana sobre la de la extensión: el `.hex` exige vinculación y el teléfono conecta pero no puede leer datos hasta que se empareja desde Ajustes → Bluetooth. (Con la extensión 0.7.0 y 0.7.1 esta combinación además producía el diálogo **"Errores de extensión"** y la categoría quedaba vacía; desde la 0.7.2 ya no.) Elegí *No Pairing Required*, volvé a **descargar el .hex** y cargalo de nuevo.
-3. **Versión de la extensión.** En el editor, en **Extensiones**, verificá que `fisicabit-sensores` esté en la versión 0.7.2 o posterior. Si no, quitala y agregala de nuevo desde `https://github.com/martinferreiraHCA/pxt-fisicabit`, y descargá el `.hex` otra vez: **el firmware ya cargado en la placa no se actualiza solo**.
+2. **Configuración del proyecto.** En MakeCode: **⚙ → Configuración del proyecto** tiene que estar en **No Pairing Required**. Si el proyecto está en *JustWorks pairing* o *Passkey pairing*, el `.hex` exige vinculación y el teléfono conecta pero no puede leer datos hasta que se empareja desde Ajustes → Bluetooth. Elegí *No Pairing Required*, volvé a **descargar el .hex** y cargalo de nuevo.
+3. **Versión de la extensión.** En el editor, en **Extensiones**, verificá que `fisicabit-sensores` esté actualizada. Si no, quitala y agregala de nuevo desde `https://github.com/martinferreiraHCA/pxt-fisicabit`, y descargá el `.hex` otra vez: **el firmware ya cargado en la placa no se actualiza solo**.
 4. **Bloques.** `iniciar Bluetooth para fisicabit.com` va **dentro de `al iniciar`**, y el bloque `enviar a fisicabit.com por Bluetooth ...` **dentro de `para siempre`**. Sin ese bloque de inicio el servicio UART no existe y la página conecta sin canal de datos.
 5. **fisicabit.com.** Elegí **Bluetooth**, poné el **número de variables** igual a la cantidad de valores del bloque (sin contar el tiempo) y dejá **"Micro:bit envía timestamp"** activado (o desactivado si usás los bloques *sin tiempo*). Si no coincide, las líneas llegan pero se descartan.
 6. **Navegador.** En Android sólo **Chrome** (o Edge/Samsung Internet basados en Chromium) tiene Web Bluetooth; Firefox no, y en iPhone/iPad ningún navegador. La pantalla del teléfono tiene que quedar encendida con la pestaña visible: si Android la pone en segundo plano se corta la recepción.

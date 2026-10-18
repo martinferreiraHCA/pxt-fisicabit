@@ -3,6 +3,10 @@
 ### @explicitHints true
 ### @diffs true
 
+```package
+fisicabit-sensores=github:martinferreiraHCA/pxt-fisicabit
+```
+
 ## Introducción @showdialog
 
 En este tutorial vas a programar el micro:bit para que mande las lecturas de sus sensores a **fisicabit.com** por el cable USB. Un solo bloque envía el tiempo y el valor del sensor.
