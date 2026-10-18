@@ -128,8 +128,7 @@ namespace fisicabit_native {
     // Timing: system_timer_current_time_us() (~1-5μs de resolución)
     // =========================================================================
 
-    //%
-    int medirTiempoBarreraNativo(int pinA, int pinB, int modo, int umbralA, int umbralB, int timeoutUs) {
+    static int fbMedirTiempoBarrera(int pinA, int pinB, int modo, int umbralA, int umbralB, int timeoutUs) {
         #if MICROBIT_CODAL
         uint64_t tInicio = system_timer_current_time_us();
         uint64_t maxTime = (uint64_t)timeoutUs;
@@ -208,6 +207,14 @@ namespace fisicabit_native {
         #else
         return 0;
         #endif
+    }
+
+    // Barrera óptica nativa. Pines y umbrales empaquetados ((A << 16) | B)
+    // porque el compilador nativo de MakeCode admite 4 parámetros como máximo.
+    //%
+    int barreraNativo(int pines, int modo, int umbrales, int timeoutUs) {
+        return fbMedirTiempoBarrera((pines >> 16) & 0xFFFF, pines & 0xFFFF, modo,
+                                    (umbrales >> 16) & 0xFFFF, umbrales & 0xFFFF, timeoutUs);
     }
 
     // =========================================================================
@@ -1199,11 +1206,14 @@ namespace fisicabit_native {
     }
 
     // Registra el sensor `idx` (0..2) ya inicializado por TS en el muestreador:
-    // tipo 0/1/2, pines SDA/SCL (ids de DigitalPin) y pin INT (id o -1).
-    // Devuelve 1 si quedó muestreando.
+    // tipo 0/1/2, pines SDA/SCL empaquetados ((sda << 16) | scl, ids de
+    // DigitalPin) y pin INT (id o -1). Devuelve 1 si quedó muestreando.
+    // (El compilador nativo de MakeCode admite como máximo 4 parámetros.)
     //%
-    int tofIniciar(int idx, int tipo, int sda, int scl, int intPin) {
+    int tofIniciar(int idx, int tipo, int pines, int intPin) {
 #if MICROBIT_CODAL
+        int sda = (pines >> 16) & 0xFFFF;
+        int scl = pines & 0xFFFF;
         fbTofAsegurarInit();
         if (idx < 0 || idx >= FB_TOF_MAX || tipo < 0 || tipo > 2) return 0;
         tofDetener(idx);
@@ -1437,12 +1447,17 @@ namespace fisicabit_native {
 #endif
     }
 
-    // Arranca el sensor `idx` (0..2): pines TRIG/ECHO (ids de DigitalPin; el
-    // mismo pin = un solo cable), alcance máximo en mm, período en ms (0 =
-    // automático) y velocidad del sonido en mm/s. Devuelve 1 si quedó midiendo.
+    // Arranca el sensor `idx` (0..2): pines TRIG/ECHO empaquetados
+    // ((trig << 16) | echo, ids de DigitalPin; el mismo pin = un solo cable),
+    // alcance máximo en mm y período en ms (0 = automático). La velocidad del
+    // sonido arranca en 343400 mm/s (20 °C) y se cambia con usConfigurar.
+    // Devuelve 1 si quedó midiendo. (Máximo 4 parámetros por función nativa.)
     //%
-    int usIniciar(int idx, int trigPin, int echoPin, int maxMm, int periodoMs, int velMmPorS) {
+    int usIniciar(int idx, int pines, int maxMm, int periodoMs) {
 #if MICROBIT_CODAL
+        int trigPin = (pines >> 16) & 0xFFFF;
+        int echoPin = pines & 0xFFFF;
+        int velMmPorS = 343400;
         fbUsAsegurarInit();
         if (idx < 0 || idx >= FB_US_MAX) return 0;
         usDetener(idx);

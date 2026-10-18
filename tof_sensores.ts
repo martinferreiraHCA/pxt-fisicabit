@@ -66,7 +66,7 @@ namespace FisicaBitToF {
     // ── Muestreador nativo (shims.cpp): lee el sensor en segundo plano con
     //    marca de tiempo por hardware. En el simulador no existe (devuelve 0).
     //% shim=fisicabit_native::tofIniciar
-    function _hwTofIniciar(idx: number, tipo: number, sda: number, scl: number, intPin: number): number {
+    function _hwTofIniciar(idx: number, tipo: number, pines: number, intPin: number): number {
         return 0
     }
     //% shim=fisicabit_native::tofDetener
@@ -750,7 +750,8 @@ namespace FisicaBitToF {
         ok = ok && s.bus.ok
         if (ok && s.idx >= 0) {
             // Delegar las lecturas al muestreador en C++ (marca de tiempo real)
-            s.nativo = _hwTofIniciar(s.idx, s.driver, s.bus.sda, s.bus.scl, s.intPin) == 1
+            // Pines empaquetados: las funciones nativas admiten 4 parámetros como máximo
+            s.nativo = _hwTofIniciar(s.idx, s.driver, (s.bus.sda << 16) | s.bus.scl, s.intPin) == 1
             s.ultSeq = 0
         }
         return ok
