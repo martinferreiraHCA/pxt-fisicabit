@@ -171,6 +171,8 @@
     "fisicabitUltrasonic.sendDistance|param|unit": "Unidad: cm (1 decimal), mm o pulgadas",
     "fisicabitUltrasonic.setAirTemperature": "Temperatura del aire para calcular la velocidad del sonido (331,3 + 0,606·T m/s). A 20 °C son 343,4 m/s; cada 5 °C cambian ≈1 % las distancias. Podés conectar aquí la lectura de un DS18B20 o DHT11.",
     "fisicabitUltrasonic.setAirTemperature|param|degreesC": "Temperatura del aire en °C",
+    "fisicabitUltrasonic.setBackgroundSampler": "Elige cómo se lee el sensor. Apagado (por defecto): ping clásico, la misma medición que pxt-sonar de Microsoft (pulso de 10 µs, pins.pulseIn), una lectura por bloque. Encendido: un muestreador nativo en C++ dispara el sensor en segundo plano a la frecuencia que permite el alcance y marca cada eco con precisión de microsegundos (≈38-55 Hz); los bloques devuelven la última muestra sin esperar. Si no obtiene eco, vuelve solo al ping clásico.",
+    "fisicabitUltrasonic.setBackgroundSampler|param|enable": "verdadero para usar el muestreador en segundo plano",
     "fisicabitUltrasonic.setFilter": "Suavizado: mediana de las últimas 3, 5 o 7 muestras. No baja la frecuencia de muestreo; agrega un retardo de 1, 2 o 3 muestras. Para MRU/MRUV: suave. Para choques o caída libre: ninguno.",
     "fisicabitUltrasonic.setFilter|param|filter": "Intensidad del filtro",
     "fisicabitUltrasonic.setLimits": "Rango válido: las lecturas fuera se descartan y se mantiene la última válida. El máximo también fija el alcance (tiempo de espera del eco).",

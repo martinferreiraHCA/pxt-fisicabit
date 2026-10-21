@@ -324,6 +324,7 @@
     "fisicabitUltrasonic.sendDistanceSRF05|block": "enviar HY-SRF05 distancia TRIG %trigPin ECHO %echoPin en %unit por %channel",
     "fisicabitUltrasonic.sendDistance|block": "enviar HC-SR04 distancia TRIG %trigPin ECHO %echoPin en %unit por %channel",
     "fisicabitUltrasonic.setAirTemperature|block": "fijar temperatura del aire para ultrasonido %degreesC °C",
+    "fisicabitUltrasonic.setBackgroundSampler|block": "muestreador ultrasónico en segundo plano %enable",
     "fisicabitUltrasonic.setFilter|block": "fijar filtro ultrasónico a %filter",
     "fisicabitUltrasonic.setLimits|block": "fijar rango ultrasónico de %minMm a %maxMm mm",
     "fisicabitUltrasonic.setMaxStep|block": "fijar salto máximo ultrasónico %maxStepMm mm",

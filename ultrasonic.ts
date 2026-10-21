@@ -19,14 +19,17 @@
 //    1 kΩ / 2 kΩ divider on ECHO (the micro:bit only tolerates 3.3 V).
 //    Second sensor: TRIG P1 · ECHO P2. Third: TRIG P15 · ECHO P16.
 //
-//  ACQUISITION (C++ sampler, shims.cpp):
-//    Triggering and echo timing are done by native code: TRIG is fired at a
-//    fixed period and the ECHO edges are captured by interrupt with a
-//    microsecond timestamp. Each sample carries the real instant at which the
-//    sound hit the object. The period adapts itself to the chosen range
-//    (3 m range → ≈38 Hz; 1.5 m → ≈55 Hz) and the "send distance ..." block
-//    sends one line per echo with that time.
-//    Filter: sliding median (does not lower the rate) + step rejection.
+//  ACQUISITION:
+//    Default = classic ping, identical to Microsoft's pxt-sonar: TRIG low 2 µs,
+//    high 10 µs, low; pins.pulseIn on ECHO; distance = echo µs × speed of
+//    sound / 2 (the "echo / 2000000 × 343" formula). One measurement per
+//    block call, proven on real HC-SR04 / HY-SRF05 modules.
+//    Optional (block "ultrasonic background sampler on"): a C++ sampler in
+//    shims.cpp fires TRIG at a fixed period and times the echo with CODAL's
+//    interrupt-driven pulse capture, stamping every sample with the instant
+//    the sound hit the object (3 m range → ≈38 Hz; 1.5 m → ≈55 Hz).
+//    Filter in both modes: sliding median (does not lower the rate) + step
+//    rejection + offset calibration.
 // =============================================================================
 
 /** Ultrasonic distance sensors HC-SR04 and HY-SRF05 for physics experiments. */
@@ -79,6 +82,11 @@ namespace fisicabitUltrasonic {
     let _periodMs = 0           // 0 = automatic from the range
     let _maxStepMm = 0          // step rejection (0 = disabled)
     let _tempC = 20             // air temperature for the speed of sound
+    // false (default) = classic "ping": the same measurement as Microsoft's
+    // pxt-sonar (10 µs pulse on TRIG, pins.pulseIn on ECHO, distance = echo
+    // time × speed of sound / 2), proven on real HC-SR04 / HY-SRF05 modules.
+    // true = native background sampler (C++), opt-in via the advanced block.
+    let _backgroundMode = false
 
     function _speedMmPerS(): number {
         return Math.round((331.3 + 0.606 * _tempC) * 1000)
@@ -94,6 +102,7 @@ namespace fisicabitUltrasonic {
         lastSeq: number
         lastAttemptMs: number
         nativeSinceMs: number   // start of the native sampler (watchdog)
+        lastPingMs: number      // time of the last classic ping (pacing of sendDistance)
         hist: number[]
         lastVal: number         // last valid distance (mm, with offset)
         lastOk: boolean
@@ -104,6 +113,7 @@ namespace fisicabitUltrasonic {
             this.echo = echo
             this.singleWire = (trig == echo)
             this.native = false
+            this.lastPingMs = -100000
             this.ready = false
             this.lastSeq = 0
             this.lastAttemptMs = -100000
@@ -132,7 +142,7 @@ namespace fisicabitUltrasonic {
         const now = control.millis()
         if (now - s.lastAttemptMs < 500) return
         s.lastAttemptMs = now
-        if (s.idx >= 0) {
+        if (_backgroundMode && s.idx >= 0) {
             // Packed pins: native functions accept at most 4 parameters
             s.native = _hwStart(s.idx, (s.trig << 16) | s.echo, _maxMm, _periodMs) == 1
             if (s.native) _hwConfigure(s.idx, _maxMm, _periodMs, _speedMmPerS())
@@ -149,17 +159,35 @@ namespace fisicabitUltrasonic {
         }
     }
 
-    /** Raw reading in TypeScript (simulator or no sampler): one blocking measurement. */
-    function _readTS(s: UltrasonicSensor): number {
+    /**
+     * One classic measurement, exactly like `sonar.ping` of Microsoft's
+     * pxt-sonar: TRIG low 2 µs, high 10 µs, low; then pins.pulseIn on ECHO.
+     * Distance (mm) = echo µs × speed of sound (mm/s) / 2 000 000, i.e. the
+     * "echo / 2000000 × 343" formula in metres. Returns -1 when no echo
+     * arrives within the time of flight of the configured range.
+     */
+    function _ping(s: UltrasonicSensor): number {
+        pins.setPull(s.trig, PinPullMode.PullNone)
         pins.digitalWritePin(s.trig, 0)
         control.waitMicros(2)
         pins.digitalWritePin(s.trig, 1)
         control.waitMicros(10)
         pins.digitalWritePin(s.trig, 0)
+        // pxt-sonar uses maxCm × 58 µs; the same value from the range and temperature
         const timeout = Math.idiv(_maxMm * 2 * 1000000, _speedMmPerS()) + 3000
         const dur = pins.pulseIn(s.echo, PulseValue.High, timeout)
+        s.lastPingMs = control.millis()
         if (dur <= 0) return -1
         return Math.idiv(dur * _speedMmPerS(), 2000000)
+    }
+
+    /** Period between classic pings (ms): the user's rate, or time of flight + 8 ms. */
+    function _classicPeriodMs(): number {
+        if (_periodMs > 0) return _periodMs
+        let p = Math.idiv(_maxMm * 2 * 1000, _speedMmPerS()) + 8
+        if (p < 15) p = 15
+        if (p > 500) p = 500
+        return p
     }
 
     /**
@@ -176,14 +204,14 @@ namespace fisicabitUltrasonic {
                 if (seq == 0 && control.millis() - s.nativeSinceMs > 500) {
                     _hwStop(s.idx)
                     s.native = false
-                    return _readTS(s)
+                    return _ping(s)
                 }
                 return -2
             }
             s.lastSeq = seq
             return _hwDist(s.idx)
         }
-        return _readTS(s)
+        return _ping(s)
     }
 
     function _sort(arr: number[], len: number): void {
@@ -252,6 +280,12 @@ namespace fisicabitUltrasonic {
 
     function _send(s: UltrasonicSensor, unit: FbDistanceUnit, channel: FbChannel): void {
         if (!_waitSample(s, 600)) return
+        if (!s.native) {
+            // Classic mode: keep the ping period (as pxt-sonar recommends ≥ 60 ms
+            // between pings at long range) so one echo never overlaps the next.
+            const wait = _classicPeriodMs() - (control.millis() - s.lastPingMs)
+            if (wait > 0) basic.pause(wait)
+        }
         const mm = _readFiltered(s)
         const baseMs = control.millis() - fisicabitData.channelTime(channel)
         let tMs = s.native ? _hwTimeTenths(s.idx) / 10 - baseMs : control.millis() - baseMs
@@ -534,7 +568,7 @@ namespace fisicabitUltrasonic {
     /**
      * Sensor status in a few words, to show on the display and know at once
      * what is going on: "OK 38Hz" = measuring with the native sampler;
-     * "OK SIMPLE 45cm" = measuring with the classic method (native did not
+     * "OK PING 45cm" = measuring with the classic ping (default, or native did not
      * start); "NO ECHO" = the sensor does not respond (check VCC: many
      * HC-SR04 need 5 V; GND; and that there is an object within range);
      * "ECHO HIGH" = the ECHO pin is stuck high (TRIG and ECHO swapped or
@@ -564,9 +598,38 @@ namespace fisicabitUltrasonic {
             _hwStop(s.idx)
             s.native = false
         }
-        const d = _readTS(s)
-        if (d > 0) return "OK SIMPLE " + Math.idiv(d, 10) + "cm"
+        const d = _ping(s)
+        if (d > 0) return "OK PING " + Math.idiv(d, 10) + "cm"
         return pins.digitalReadPin(echoPin) == 1 ? "ECHO HIGH" : "NO ECHO"
+    }
+
+    /**
+     * Chooses how the sensor is read. Off (default): classic ping, the same
+     * measurement as Microsoft's pxt-sonar (10 µs pulse, pins.pulseIn), one
+     * reading per block call. On: a native C++ sampler fires the sensor in
+     * the background at the rate allowed by the range and time-stamps every
+     * echo with microsecond precision (≈38-55 Hz); the blocks then return
+     * the latest sample without waiting. If the sampler produces no echo it
+     * falls back to the classic ping automatically.
+     * @param enable true to use the background sampler
+     */
+    //% block="ultrasonic background sampler %enable"
+    //% blockId=fisicabit_us_nativo
+    //% group="Configuration"
+    //% weight=70
+    //% enable.shadow=toggleOnOff
+    //% advanced=true
+    export function setBackgroundSampler(enable: boolean): void {
+        if (enable == _backgroundMode) return
+        _backgroundMode = enable
+        for (let i = 0; i < _sensors.length; i++) {
+            const s = _sensors[i]
+            if (s.native) _hwStop(s.idx)
+            s.native = false
+            s.ready = false
+            s.lastAttemptMs = -100000
+            s.lastSeq = 0
+        }
     }
 
     /**

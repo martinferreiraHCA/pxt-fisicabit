@@ -56,5 +56,7 @@
     "fisicabitSerial.setInterval|param|ms": "Intervalo de amostragem em ms (5 a 60000)",
     "fisicabitSerial.setRate|block": "Define o intervalo padrão dos blocos de envio (normalmente não é necessário: o bloco de envio já tem o seu \"a cada ... ms\").",
     "fisicabitSerial.setRate|param|rate": "Taxa de amostragem",
-    "fisicabitSerial.time|block": "Tempo em milissegundos desde o início do envio por USB (começa em 0)."
+    "fisicabitSerial.time|block": "Tempo em milissegundos desde o início do envio por USB (começa em 0).",
+    "fisicabitUltrasonic.setBackgroundSampler": "Escolhe como o sensor é lido. Desligado (padrão): ping clássico, a mesma medição do pxt-sonar da Microsoft (pulso de 10 µs, pins.pulseIn), uma leitura por bloco. Ligado: um amostrador nativo em C++ dispara o sensor em segundo plano na frequência permitida pelo alcance e marca cada eco com precisão de microssegundos (≈38-55 Hz); os blocos devolvem a última amostra sem esperar. Sem eco, volta sozinho ao ping clássico.",
+    "fisicabitUltrasonic.setBackgroundSampler|param|enable": "verdadeiro para usar o amostrador em segundo plano"
 }
