@@ -244,6 +244,7 @@
     "fisicabitUltrasonic.sendDistanceSRF05|block": "enviar HY-SRF05 distância TRIG %trigPin ECHO %echoPin em %unit por %channel",
     "fisicabitUltrasonic.sendDistance|block": "enviar HC-SR04 distância TRIG %trigPin ECHO %echoPin em %unit por %channel",
     "fisicabitUltrasonic.setAirTemperature|block": "definir temperatura do ar para ultrassom %degreesC °C",
+    "fisicabitUltrasonic.setBackgroundSampler|block": "amostrador ultrassônico em segundo plano %enable",
     "fisicabitUltrasonic.setFilter|block": "definir filtro ultrassônico %filter",
     "fisicabitUltrasonic.setLimits|block": "definir faixa ultrassônica de %minMm a %maxMm mm",
     "fisicabitUltrasonic.setMaxStep|block": "definir salto máximo ultrassônico %maxStepMm mm",
