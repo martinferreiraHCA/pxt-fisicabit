@@ -71,7 +71,9 @@ declare const enum FbDistanceUnit {
     //% block="inches"
     Inches = 1,
     //% block="mm"
-    Millimeters = 2
+    Millimeters = 2,
+    //% block="m"
+    Meters = 3
 }
 
 /** Median filter strength for ultrasonic readings (value = window size). */
