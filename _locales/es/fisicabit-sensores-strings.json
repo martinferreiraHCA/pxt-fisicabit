@@ -40,6 +40,7 @@
     "FbDS18B20Resolution.Bits9|block": "9 bits (0,5 °C, 94 ms)",
     "FbDistanceUnit.Centimeters|block": "cm",
     "FbDistanceUnit.Inches|block": "pulgadas",
+    "FbDistanceUnit.Meters|block": "m",
     "FbDistanceUnit.Millimeters|block": "mm",
     "FbDopplerVariable.ObserverVelocity|block": "velocidad del observador (+ acercándose)",
     "FbDopplerVariable.SourceVelocity|block": "velocidad de la fuente (+ acercándose)",

@@ -825,6 +825,7 @@ namespace fisicabitToF {
         switch (unit) {
             case FbDistanceUnit.Millimeters: return mm
             case FbDistanceUnit.Inches: return Math.round(mm / 25.4 * 100) / 100
+            case FbDistanceUnit.Meters: return Math.round(mm) / 1000      // m with 3 decimals
             default: return Math.round(mm) / 10          // cm with 1 decimal
         }
     }
@@ -902,6 +903,7 @@ namespace fisicabitToF {
     function _decimalsOf(unit: FbDistanceUnit): number {
         if (unit == FbDistanceUnit.Millimeters) return 0
         if (unit == FbDistanceUnit.Inches) return 2
+        if (unit == FbDistanceUnit.Meters) return 3
         return 1
     }
 

@@ -102,7 +102,9 @@ namespace fisicabitUltrasonic {
         lastSeq: number
         lastAttemptMs: number
         nativeSinceMs: number   // start of the native sampler (watchdog)
-        lastPingMs: number      // time of the last classic ping (pacing of sendDistance)
+        lastPingMs: number      // time of the last classic ping (pacing)
+        lastSampleMs: number    // physical instant of the last valid echo (ms, 1 decimal)
+        lastRawMm: number       // last raw (unfiltered) distance, -1 = no echo
         hist: number[]
         lastVal: number         // last valid distance (mm, with offset)
         lastOk: boolean
@@ -114,6 +116,8 @@ namespace fisicabitUltrasonic {
             this.singleWire = (trig == echo)
             this.native = false
             this.lastPingMs = -100000
+            this.lastSampleMs = 0
+            this.lastRawMm = -1
             this.ready = false
             this.lastSeq = 0
             this.lastAttemptMs = -100000
@@ -168,6 +172,7 @@ namespace fisicabitUltrasonic {
      */
     function _ping(s: UltrasonicSensor): number {
         pins.setPull(s.trig, PinPullMode.PullNone)
+        const t0 = input.runningTimeMicros()
         pins.digitalWritePin(s.trig, 0)
         control.waitMicros(2)
         pins.digitalWritePin(s.trig, 1)
@@ -177,15 +182,27 @@ namespace fisicabitUltrasonic {
         const timeout = Math.idiv(_maxMm * 2 * 1000000, _speedMmPerS()) + 3000
         const dur = pins.pulseIn(s.echo, PulseValue.High, timeout)
         s.lastPingMs = control.millis()
-        if (dur <= 0) return -1
-        return Math.idiv(dur * _speedMmPerS(), 2000000)
+        if (dur <= 0) { s.lastRawMm = -1; return -1 }
+        // Physical instant of the measurement: the module emits the burst
+        // ≈0.45 ms after the trigger and the sound reaches the object half-way
+        // through the echo (0.1 ms resolution: at 10 m/s an object moves 1 mm
+        // in 0.1 ms).
+        s.lastSampleMs = Math.round((t0 + 12 + 450 + dur / 2) / 100) / 10
+        s.lastRawMm = Math.idiv(dur * _speedMmPerS(), 2000000)
+        return s.lastRawMm
     }
 
-    /** Period between classic pings (ms): the user's rate, or time of flight + 8 ms. */
+    // Minimum spacing between classic pings. The HC-SR04 ignores a trigger
+    // while its internal cycle (≈25-30 ms) is running: a faster trigger
+    // produces no echo, pulseIn waits for the whole timeout and the block
+    // would only repeat the previous value (measured: 10 ms requested → 36 ms
+    // real with 80 % repeated samples; 30 ms requested → 30 ms real, all new).
+    const CLASSIC_MIN_PERIOD_MS = 30
+
+    /** Period between classic pings (ms): the user's rate, or time of flight + 8 ms, never below the module cycle. */
     function _classicPeriodMs(): number {
-        if (_periodMs > 0) return _periodMs
-        let p = Math.idiv(_maxMm * 2 * 1000, _speedMmPerS()) + 8
-        if (p < 15) p = 15
+        let p = _periodMs > 0 ? _periodMs : Math.idiv(_maxMm * 2 * 1000, _speedMmPerS()) + 8
+        if (p < CLASSIC_MIN_PERIOD_MS) p = CLASSIC_MIN_PERIOD_MS
         if (p > 500) p = 500
         return p
     }
@@ -211,6 +228,9 @@ namespace fisicabitUltrasonic {
             s.lastSeq = seq
             return _hwDist(s.idx)
         }
+        // Classic mode: never trigger faster than the module cycle. Called
+        // sooner, the block returns the previous value without blocking.
+        if (control.millis() - s.lastPingMs < _classicPeriodMs()) return -2
         return _ping(s)
     }
 
@@ -255,6 +275,7 @@ namespace fisicabitUltrasonic {
         switch (unit) {
             case FbDistanceUnit.Millimeters: return mm
             case FbDistanceUnit.Inches: return Math.round(mm / 25.4 * 100) / 100
+            case FbDistanceUnit.Meters: return Math.round(mm) / 1000      // m with 3 decimals
             default: return Math.round(mm) / 10          // cm with 1 decimal
         }
     }
@@ -262,6 +283,7 @@ namespace fisicabitUltrasonic {
     function _decimalsFor(unit: FbDistanceUnit): number {
         if (unit == FbDistanceUnit.Millimeters) return 0
         if (unit == FbDistanceUnit.Inches) return 2
+        if (unit == FbDistanceUnit.Meters) return 3
         return 1
     }
 
@@ -287,8 +309,12 @@ namespace fisicabitUltrasonic {
             if (wait > 0) basic.pause(wait)
         }
         const mm = _readFiltered(s)
+        // No echo in this ping: send nothing rather than repeating a stale value
+        if (!s.lastOk) return
         const baseMs = control.millis() - fisicabitData.channelTime(channel)
-        let tMs = s.native ? _hwTimeTenths(s.idx) / 10 - baseMs : control.millis() - baseMs
+        // Time of the sample = the instant the sound hit the object, in the
+        // fisicabit.com time base (not the instant the line is written)
+        let tMs = (s.native ? _hwTimeTenths(s.idx) / 10 : s.lastSampleMs) - baseMs
         if (tMs < 0) tMs = 0
         const line = fisicabitData.format(tMs, 1) + "," + fisicabitData.format(_convert(mm, unit), _decimalsFor(unit))
         fisicabitData.channelSendText(channel, line)
@@ -413,7 +439,8 @@ namespace fisicabitUltrasonic {
     //% unit.defl=FbDistanceUnit.Millimeters
     export function rawDistance(trigPin: DigitalPin, echoPin: DigitalPin, unit: FbDistanceUnit): number {
         const s = _get(trigPin, echoPin)
-        const d = _readRaw(s)
+        let d = _readRaw(s)
+        if (d == -2) d = s.lastRawMm
         if (d < 0) return 0
         return _convert(d, unit)
     }
@@ -482,6 +509,8 @@ namespace fisicabitUltrasonic {
     //% weight=84
     //% hz.min=0 hz.max=60 hz.defl=0
     export function setSampleRate(hz: number): void {
+        // Classic ping: the HC-SR04 cycle limits the rate to ≈33 Hz (30 ms);
+        // the background sampler accepts up to ≈66 Hz at short range.
         _periodMs = hz <= 0 ? 0 : Math.max(15, Math.round(1000 / hz))
         _reconfigureAll()
     }
@@ -683,7 +712,7 @@ namespace fisicabitUltrasonic {
     export function lastEchoTime(trigPin: DigitalPin, echoPin: DigitalPin): number {
         const s = _get(trigPin, echoPin)
         _ensure(s)
-        if (!s.native) return control.millis()
+        if (!s.native) return s.lastSampleMs
         return _hwTimeTenths(s.idx) / 10
     }
 }

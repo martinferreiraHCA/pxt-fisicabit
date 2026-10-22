@@ -19,6 +19,7 @@
     "FbDS18B20Resolution.Bits9|block": "9 bits (0,5 °C, 94 ms)",
     "FbDistanceUnit.Centimeters|block": "cm",
     "FbDistanceUnit.Inches|block": "polegadas",
+    "FbDistanceUnit.Meters|block": "m",
     "FbDistanceUnit.Millimeters|block": "mm",
     "FbExternalSensor.DHT11|block": "DHT11 Temp+Umidade",
     "FbExternalSensor.DS18B20|block": "DS18B20 Temperatura",
