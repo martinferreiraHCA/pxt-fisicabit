@@ -66,6 +66,13 @@ def build(name, with_bluetooth):
     if with_bluetooth:
         copy('bluetooth/bluetooth.ts', out, 'bluetooth.ts')
         files.insert(files.index('serial.ts') + 1, 'bluetooth.ts')
+    # Legacy Spanish API used by fisicabit.com and by projects saved there
+    copy('tools/site-compat/compat-enums.d.ts', out, 'compat-enums.d.ts')
+    copy('tools/site-compat/compat.ts', out, 'compat.ts')
+    files += ['compat-enums.d.ts', 'compat.ts']
+    if with_bluetooth:
+        copy('tools/site-compat/compat-bt.ts', out, 'compat-bt.ts')
+        files.append('compat-bt.ts')
     for f in EXTRA:
         if os.path.exists(os.path.join(ROOT, f)):
             copy(f, out)
