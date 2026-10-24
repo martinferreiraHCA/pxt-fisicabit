@@ -9,7 +9,7 @@
 // the English API only) and add nothing at run time but one call.
 // =============================================================================
 
-/** Legacy names of the FisicaBit USB package; forwards to fisicabitSerial, fisicabit and fisicabitUltrasonic. */
+/** Legacy names of the FisicaBit USB package; forwards to fisicabitSerial and fisicabitUltrasonic. */
 namespace FisicaBitSerial {
     // ── Sending over USB ─────────────────────────────────────────────────────
     /** Legacy alias of fisicabitSerial.send1. */
@@ -41,15 +41,44 @@ namespace FisicaBitSerial {
     /** Legacy alias of fisicabitSerial.sampleLoop. */
     export function bucleMuestreo(ms: number, cuerpo: () => void): void { fisicabitSerial.sampleLoop(ms, cuerpo) }
 
-    // ── Sensors (old package kept them in this namespace) ────────────────────
-    /** Legacy alias of fisicabit.readInternalSensor. */
-    export function leerSensorInterno(sensor: number): number { return fisicabit.readInternalSensor(sensor as FbInternalSensor) }
-    /** Legacy alias of fisicabit.readAnalogSensor. */
-    export function leerSensorAnalogico(pin: number): number { return fisicabit.readAnalogSensor(pin as FbAnalogPin) }
-    /** Legacy alias of fisicabit.readDigitalSensor. */
-    export function leerSensorDigital(pin: number): number { return fisicabit.readDigitalSensor(pin) }
-    /** Legacy alias of fisicabit.readNtcTemperature. */
-    export function leerTemperaturaNTC(pin: number, unidad: number): number { return fisicabit.readNtcTemperature(pin as FbAnalogPin, unidad as FbTemperatureUnit) }
+    // ── Sensors (the old package kept them in this namespace; the site
+    //    package does not ship the "FisicaBit sensors" category, so they are
+    //    implemented here with the micro:bit API) ───────────────────────────
+    /** Internal micro:bit sensor: 0 temperature, 1-3 acceleration X/Y/Z (mg), 4 light, 5 compass heading, 6 sound level, 7 |a| (mg). */
+    export function leerSensorInterno(sensor: number): number {
+        switch (sensor) {
+            case 0: return input.temperature()
+            case 1: return input.acceleration(Dimension.X)
+            case 2: return input.acceleration(Dimension.Y)
+            case 3: return input.acceleration(Dimension.Z)
+            case 4: return input.lightLevel()
+            case 5: return input.compassHeading()
+            case 6: return input.soundLevel()
+            case 7: return input.acceleration(Dimension.Strength)
+            default: return 0
+        }
+    }
+    function _analog(pin: number): number {
+        if (pin == 1) return pins.analogReadPin(AnalogPin.P1)
+        if (pin == 2) return pins.analogReadPin(AnalogPin.P2)
+        return pins.analogReadPin(AnalogPin.P0)
+    }
+    /** Analog reading 0-1023 of P0, P1 or P2 (0, 1, 2). */
+    export function leerSensorAnalogico(pin: number): number { return _analog(pin) }
+    /** Digital reading 0/1 of pin number 0-20. */
+    export function leerSensorDigital(pin: number): number { return pins.digitalReadPin(pin as DigitalPin) }
+    /** 10 kΩ NTC (β = 3950) in a divider with 10 kΩ to 3V: temperature in °C (0), °F (1) or K (2). */
+    export function leerTemperaturaNTC(pin: number, unidad: number): number {
+        let reading = _analog(pin)
+        if (reading <= 0) reading = 1
+        if (reading >= 1023) reading = 1022
+        const rNtc = 10000.0 * reading / (1023 - reading)
+        const invT = 1.0 / 298.15 + (1.0 / 3950) * Math.log(rNtc / 10000)
+        const tempC = 1.0 / invT - 273.15
+        if (unidad == 1) return Math.round((tempC * 9 / 5 + 32) * 10) / 10
+        if (unidad == 2) return Math.round((tempC + 273.15) * 10) / 10
+        return Math.round(tempC * 10) / 10
+    }
 
     // ── Ultrasonic ───────────────────────────────────────────────────────────
     /** Legacy alias of fisicabitUltrasonic.distance. */
