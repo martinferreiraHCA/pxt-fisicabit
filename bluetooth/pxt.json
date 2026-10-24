@@ -10,7 +10,7 @@
     "dependencies": {
         "core": "*",
         "bluetooth": "*",
-        "fisicabit-sensores": "github:martinferreiraHCA/pxt-fisicabit#e5e6643e6f6b979dd4f11083299ce8e08d33323c"
+        "fisicabit-sensores": "github:martinferreiraHCA/pxt-fisicabit"
     },
     "files": [
         "README.md",
