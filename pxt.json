@@ -1,6 +1,6 @@
 {
     "name": "fisicabit-sensores",
-    "version": "1.2.0",
+    "version": "1.2.1",
     "description": "micro:bit (V2) only. Physics experiments: sensors, photogates, precision accelerometer, ultrasonic and ToF distance, and one-block data streaming to fisicabit.com over USB (add fisicabit-bluetooth for Bluetooth)",
     "license": "MIT",
     "authors": [
@@ -35,8 +35,11 @@
         "_locales/pt-BR/fisicabit-sensores-strings.json",
         "_locales/pt-BR/fisicabit-sensores-jsdoc-strings.json",
         "tutorial-usb.md",
+        "_locales/es/tutorial-bluetooth.md",
+        "tutorial-bluetooth.md",
         "_locales/es/tutorial-usb.md",
         "_locales/pt-BR/tutorial-usb.md",
+        "_locales/pt-BR/tutorial-bluetooth.md",
         "pxtparts.json",
         "parts/hcsr04.svg",
         "parts/hysrf05.svg",

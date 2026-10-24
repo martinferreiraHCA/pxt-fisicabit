@@ -57,7 +57,7 @@ En fisicabit.com: elegí **USB** o **Bluetooth**, poné el **número de variable
 Abrí estos enlaces en MakeCode. El tutorial aparece en el idioma del editor (español, inglés o portugués) y ya incluye los bloques de fisicabit:
 
 * **USB:** https://makecode.microbit.org/#tutorial:https://github.com/martinferreiraHCA/pxt-fisicabit/tutorial-usb
-* **Bluetooth:** https://makecode.microbit.org/#tutorial:https://github.com/martinferreiraHCA/pxt-fisicabit-bluetooth/tutorial-bluetooth (extensión complementaria)
+* **Bluetooth:** https://makecode.microbit.org/#tutorial:https://github.com/martinferreiraHCA/pxt-fisicabit/tutorial-bluetooth (extensión complementaria)
 
 Los tutoriales viven en `tutorial-usb.md` y `tutorial-bluetooth.md` (inglés, idioma base) con sus traducciones en `_locales/es/` y `_locales/pt-BR/`. Para probar cambios recientes abrí el enlace en una ventana de incógnito, porque MakeCode guarda los tutoriales en caché.
 
@@ -291,7 +291,7 @@ Receptor: 3V → Fototransistor → Pin (señal)
 
 ## Bluetooth
 
-El envío inalámbrico está en la extensión complementaria **fisicabit-bluetooth** (`github:martinferreiraHCA/pxt-fisicabit-bluetooth`). Depende de esta, así que al agregarla se instalan las dos. La opción `enviar ... vía [Bluetooth]` de los bloques de cinemática, ToF y ultrasonido manda los datos por esa extensión cuando está instalada y, si no, por USB. La separación mantiene a `fisicabit-sensores` compatible con la extensión `radio`.
+El envío inalámbrico está en la extensión complementaria **fisicabit-bluetooth** (`github:martinferreiraHCA/pxt-fisicabit/bluetooth`). Depende de esta, así que al agregarla se instalan las dos. La opción `enviar ... vía [Bluetooth]` de los bloques de cinemática, ToF y ultrasonido manda los datos por esa extensión cuando está instalada y, si no, por USB. La separación mantiene a `fisicabit-sensores` compatible con la extensión `radio`.
 
 ### Compatibilidad de navegadores
 

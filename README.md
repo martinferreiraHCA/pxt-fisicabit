@@ -2,7 +2,7 @@
 
 > 🇪🇸 Versión en español: [README-es.md](https://github.com/martinferreiraHCA/pxt-fisicabit/blob/main/README-es.md)
 
-MakeCode extension for physics experiments with the micro:bit: sensors, photogates, a precision accelerometer, and one-block data streaming to [fisicabit.com](https://fisicabit.com) over USB. Bluetooth streaming is provided by the companion extension [fisicabit-bluetooth](https://github.com/martinferreiraHCA/pxt-fisicabit-bluetooth), kept separate so that this extension stays compatible with the `radio` extension.
+MakeCode extension for physics experiments with the micro:bit: sensors, photogates, a precision accelerometer, and one-block data streaming to [fisicabit.com](https://fisicabit.com) over USB. Bluetooth streaming is provided by the companion extension [fisicabit-bluetooth](https://github.com/martinferreiraHCA/pxt-fisicabit/tree/main/bluetooth), kept separate so that this extension stays compatible with the `radio` extension.
 
 ## ~ hint
 
@@ -27,16 +27,16 @@ Or search for **fisicabit-sensores** in the Extensions dialog.
 Open these links in MakeCode. The tutorial is shown in the editor language (English, Spanish or Portuguese) and already includes the FisicaBit blocks:
 
 * **USB:** https://makecode.microbit.org/#tutorial:https://github.com/martinferreiraHCA/pxt-fisicabit/tutorial-usb
-* **Bluetooth:** https://makecode.microbit.org/#tutorial:https://github.com/martinferreiraHCA/pxt-fisicabit-bluetooth/tutorial-bluetooth (companion extension)
+* **Bluetooth:** https://makecode.microbit.org/#tutorial:https://github.com/martinferreiraHCA/pxt-fisicabit/tutorial-bluetooth (companion extension)
 
-The USB tutorial lives in `tutorial-usb.md` (English, base language; the Bluetooth one in the fisicabit-bluetooth repository) with translations under `_locales/es/` and `_locales/pt-BR/`. To test recent changes open the link in an incognito window, since MakeCode caches tutorials.
+The USB tutorial lives in `tutorial-usb.md` (English, base language; the Bluetooth one in `tutorial-bluetooth.md`, used by the companion extension in the `bluetooth/` folder) with translations under `_locales/es/` and `_locales/pt-BR/`. To test recent changes open the link in an incognito window, since MakeCode caches tutorials.
 
 ## Toolbox categories
 
 | Category | Purpose |
 |----------|---------|
 | **FisicaBit USB** | Send time and values to fisicabit.com over the USB cable (Web Serial, 115200 baud) |
-| **FisicaBit Bluetooth** | The same over Bluetooth LE, in the separate extension [fisicabit-bluetooth](https://github.com/martinferreiraHCA/pxt-fisicabit-bluetooth) |
+| **FisicaBit Bluetooth** | The same over Bluetooth LE, in the separate extension [fisicabit-bluetooth](https://github.com/martinferreiraHCA/pxt-fisicabit/tree/main/bluetooth) |
 | **FisicaBit kinematics** | Precision accelerometer: linear acceleration, velocity, rest detection |
 | **Ultrasonic** | HC-SR04 / HY-SRF05 distance with a background sampler; wiring shown in the simulator |
 | **ToF laser** | VL53L0X / VL53L1X / VL6180X laser distance modules (I2C); wiring shown in the simulator |
@@ -277,7 +277,7 @@ Receiver: 3V → Phototransistor → Pin (signal)
 
 ## Bluetooth
 
-Wireless streaming lives in the companion extension **fisicabit-bluetooth** (`github:martinferreiraHCA/pxt-fisicabit-bluetooth`). It depends on this one, so adding it brings both. The `send ... via [Bluetooth]` choice in the kinematics, ToF and ultrasonic blocks routes the data through that extension when it is installed and falls back to USB when it is not. The split keeps `fisicabit-sensores` usable together with the `radio` extension.
+Wireless streaming lives in the companion extension **fisicabit-bluetooth** (`github:martinferreiraHCA/pxt-fisicabit/bluetooth`). It depends on this one, so adding it brings both. The `send ... via [Bluetooth]` choice in the kinematics, ToF and ultrasonic blocks routes the data through that extension when it is installed and falls back to USB when it is not. The split keeps `fisicabit-sensores` usable together with the `radio` extension.
 
 ### Browser compatibility
 
