@@ -1,0 +1,33 @@
+{
+    "name": "fisicabit-bluetooth",
+    "version": "1.0.0",
+    "description": "micro:bit (V2) only. Sends sensor data to fisicabit.com over Bluetooth LE; companion of fisicabit-sensores",
+    "license": "MIT",
+    "authors": [
+        "FisicaBit"
+    ],
+    "public": true,
+    "dependencies": {
+        "core": "*",
+        "bluetooth": "*",
+        "fisicabit-sensores": "github:martinferreiraHCA/pxt-fisicabit#e5e6643e6f6b979dd4f11083299ce8e08d33323c"
+    },
+    "files": [
+        "README.md",
+        "bluetooth.ts",
+        "_locales/es/fisicabit-bluetooth-strings.json",
+        "_locales/es/fisicabit-bluetooth-jsdoc-strings.json",
+        "_locales/pt-BR/fisicabit-bluetooth-strings.json",
+        "_locales/pt-BR/fisicabit-bluetooth-jsdoc-strings.json"
+    ],
+    "testFiles": [
+        "test.ts"
+    ],
+    "supportedTargets": [
+        "microbit"
+    ],
+    "preferredEditor": "tsprj",
+    "disablesVariants": [
+        "mbdal"
+    ]
+}
