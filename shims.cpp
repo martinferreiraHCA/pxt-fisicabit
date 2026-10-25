@@ -1230,10 +1230,13 @@ namespace fisicabitNative {
         int echoId;
         bool singleWire;
         int maxMm;
-        int periodMs;
+        int periodMs;                // nominal period (ms) as reported to TypeScript
+        uint32_t periodUs;           // trigger period actually used
+        uint32_t minGapUs;           // settling time after the end of an echo before the next trigger
         uint32_t timeoutUs;
         uint32_t speedMmPerS;        // speed of sound in mm/s
         uint32_t tLastTrigUs;
+        uint32_t tLastEchoEndUs;     // instant the last ECHO pulse ended (or timed out)
         volatile uint32_t seq;
         volatile int32_t  distMm;    // -1 = no echo / out of range
         volatile int32_t  echoUs;
@@ -1269,8 +1272,9 @@ namespace fisicabitNative {
         // the maximum time for the selected range.
         s.echo->setPolarity(1);
         int w = s.echo->getPulseUs((int)s.timeoutUs);
+        s.tLastEchoEndUs = (uint32_t)system_timer_current_time_us();
         if (w == DEVICE_CANCELLED || w <= 0) {
-            fbUsPublish(s, -1, 0, (uint32_t)system_timer_current_time_us());
+            fbUsPublish(s, -1, 0, s.tLastEchoEndUs);
             return;
         }
         uint32_t echo = (uint32_t)w;
@@ -1280,18 +1284,41 @@ namespace fisicabitNative {
         else fbUsPublish(s, dist, (int)echo, now + 500 + echo / 2);
     }
 
+    // Next trigger instant of a sensor: the nominal period counted from the
+    // previous trigger, but never before the previous echo has ended plus the
+    // settling gap the module needs. With a short range the period can go
+    // down to a few ms (time of flight + gap): the sensor is driven as fast as
+    // the physics of the echo allows, whatever the module's own cycle.
+    static uint32_t fbUsDueUs(const FbUs &s) {
+        uint32_t a = s.tLastTrigUs + s.periodUs;
+        uint32_t b = s.tLastEchoEndUs + s.minGapUs;
+        return ((int32_t)(a - b) > 0) ? a : b;
+    }
+
     static void fbUsLoop(void *) {
         while (true) {
+            // Earliest due sensor
+            int best = -1; uint32_t bestDue = 0;
+            uint32_t now = (uint32_t)system_timer_current_time_us();
             for (int i = 0; i < FB_US_MAX; i++) {
                 FbUs &s = fbUs[i];
                 if (!s.active) continue;
-                uint32_t now = (uint32_t)system_timer_current_time_us();
-                if ((uint32_t)(now - s.tLastTrigUs) < (uint32_t)s.periodMs * 1000u) continue;
-                // If a clone module left ECHO high, wait for it to drop (max 300 ms)
-                if (!s.singleWire && s.echo->getDigitalValue() == 1 && (uint32_t)(now - s.tLastTrigUs) < 300000u) continue;
-                fbUsMeasure(s, now);
+                uint32_t due = fbUsDueUs(s);
+                if (best < 0 || (int32_t)(due - bestDue) < 0) { best = i; bestDue = due; }
             }
-            fiber_sleep(1);
+            if (best < 0) { fiber_sleep(5); continue; }
+            FbUs &s = fbUs[best];
+            int32_t wait = (int32_t)(bestDue - now);
+            if (wait > 2000) {
+                // Sleep the bulk of the wait (scheduler granularity), then spin the rest
+                fiber_sleep((wait - 1500) / 1000);
+                continue;
+            }
+            while ((int32_t)(bestDue - (uint32_t)system_timer_current_time_us()) > 0) { /* spin: <= 2 ms, microsecond-exact trigger */ }
+            now = (uint32_t)system_timer_current_time_us();
+            // If a clone module left ECHO high, wait for it to drop (max 300 ms)
+            if (!s.singleWire && s.echo->getDigitalValue() == 1 && (uint32_t)(now - s.tLastTrigUs) < 300000u) { fiber_sleep(1); continue; }
+            fbUsMeasure(s, now);
         }
     }
 
@@ -1309,10 +1336,17 @@ namespace fisicabitNative {
         // maximum time of flight + margin
         uint32_t flightUs = (uint32_t)(((uint64_t)maxMm * 2ull * 1000000ull) / s.speedMmPerS);
         s.timeoutUs = flightUs + 3000;
-        if (periodMs <= 0) periodMs = (int)(flightUs / 1000) + 8;    // auto: flight + echo settling
-        if (periodMs < 15) periodMs = 15;
-        if (periodMs > 500) periodMs = 500;
-        s.periodMs = periodMs;
+        s.minGapUs = 1000;                                         // module settling after an echo
+        // Physical floor: the echo of the farthest object must have returned
+        // (time of flight of the range) plus the settling gap. 50 cm -> 4 ms,
+        // 100 cm -> 7 ms, 300 cm -> 19 ms. Auto = that floor + 2 ms of margin.
+        uint32_t floorUs = flightUs + s.minGapUs;
+        uint32_t periodUs = periodMs <= 0 ? floorUs + 2000 : (uint32_t)periodMs * 1000u;
+        if (periodUs < floorUs) periodUs = floorUs;
+        if (periodUs < 2000) periodUs = 2000;
+        if (periodUs > 1000000) periodUs = 1000000;
+        s.periodUs = periodUs;
+        s.periodMs = (int)((periodUs + 500) / 1000);
     }
 
     // Stops sensor `idx`.
@@ -1348,7 +1382,7 @@ namespace fisicabitNative {
         s.singleWire = (pt == pe);
         s.echoId = pe->id;
         s.seq = 0; s.distMm = -1; s.echoUs = 0; s.tUs = 0; s.valid = 0; s.invalid = 0;
-        s.tLastTrigUs = 0;
+        s.tLastTrigUs = 0; s.tLastEchoEndUs = 0;
         fbUsApplyConfig(s, maxMm, periodMs, speedMmPerS);
         pt->setPull(codal::PullMode::None);
         pt->setDigitalValue(0);

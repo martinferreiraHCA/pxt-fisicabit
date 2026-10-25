@@ -250,6 +250,7 @@
     "fisicabitUltrasonic.setLimits|block": "definir faixa ultrassônica de %minMm a %maxMm mm",
     "fisicabitUltrasonic.setMaxStep|block": "definir salto máximo ultrassônico %maxStepMm mm",
     "fisicabitUltrasonic.setRange|block": "definir alcance máximo ultrassônico %cm cm",
+    "fisicabitUltrasonic.setSamplePeriod|block": "período de amostragem ultrassônico %ms ms",
     "fisicabitUltrasonic.setSampleRate|block": "definir frequência de amostragem ultrassônica %hz Hz (0 = auto)",
     "fisicabitUltrasonic.status|block": "estado do ultrassom TRIG %trigPin ECHO %echoPin",
     "fisicabitUltrasonic|block": "Ultrassom",
