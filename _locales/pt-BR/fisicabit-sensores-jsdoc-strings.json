@@ -58,5 +58,7 @@
     "fisicabitSerial.setRate|param|rate": "Taxa de amostragem",
     "fisicabitSerial.time|block": "Tempo em milissegundos desde o início do envio por USB (começa em 0).",
     "fisicabitUltrasonic.setBackgroundSampler": "Escolhe como o sensor é lido. Desligado (padrão): ping clássico, a mesma medição do pxt-sonar da Microsoft (pulso de 10 µs, pins.pulseIn), uma leitura por bloco. Ligado: um amostrador nativo em C++ dispara o sensor em segundo plano na frequência permitida pelo alcance e marca cada eco com precisão de microssegundos (≈38-55 Hz); os blocos devolvem a última amostra sem esperar. Sem eco, volta sozinho ao ping clássico.",
-    "fisicabitUltrasonic.setBackgroundSampler|param|enable": "verdadeiro para usar o amostrador em segundo plano"
+    "fisicabitUltrasonic.setBackgroundSampler|param|enable": "verdadeiro para usar o amostrador em segundo plano",
+    "fisicabitUltrasonic.setSamplePeriod": "Período de amostragem em milissegundos (0 = automático). Abaixo de 30 ms o amostrador em segundo plano é ativado sozinho: um fio em C++ dispara o sensor com tempos de microssegundos, assim que o eco anterior volta, e marca cada eco. O piso físico é o tempo de voo do alcance máximo mais 1 ms: 50 cm → 4 ms (250 Hz), 100 cm → 7 ms (140 Hz), 300 cm → 19 ms (50 Hz); reduza o alcance máximo para amostrar rápido.",
+    "fisicabitUltrasonic.setSamplePeriod|param|ms": "período entre disparos em ms, de 2 a 1000 (0 = automático)"
 }

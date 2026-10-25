@@ -509,9 +509,32 @@ namespace fisicabitUltrasonic {
     //% weight=84
     //% hz.min=0 hz.max=60 hz.defl=0
     export function setSampleRate(hz: number): void {
-        // Classic ping: the HC-SR04 cycle limits the rate to ≈33 Hz (30 ms);
-        // the background sampler accepts up to ≈66 Hz at short range.
-        _periodMs = hz <= 0 ? 0 : Math.max(15, Math.round(1000 / hz))
+        setSamplePeriod(hz <= 0 ? 0 : 1000 / hz)
+    }
+
+    /**
+     * Sampling period in milliseconds (0 = automatic). Below 30 ms the
+     * background sampler is switched on by itself: a C++ fiber fires the
+     * sensor with microsecond timing, as soon as the previous echo has
+     * returned, and time-stamps every echo. The physical floor is the time of
+     * flight of the maximum range plus 1 ms: 50 cm → 4 ms (250 Hz), 100 cm →
+     * 7 ms (140 Hz), 300 cm → 19 ms (50 Hz); set `ultrasonic max range` low
+     * for fast sampling. `ultrasonic actual sampling rate` reports what the
+     * module really delivers.
+     * @param ms period between pings in ms, 2 to 1000 (0 = automatic)
+     */
+    //% block="ultrasonic sampling period %ms ms"
+    //% blockId=fisicabit_us_periodo
+    //% group="Configuration"
+    //% weight=81
+    //% ms.min=0 ms.max=1000 ms.defl=30
+    export function setSamplePeriod(ms: number): void {
+        if (ms !== ms || ms < 0) ms = 0
+        if (ms > 1000) ms = 1000
+        if (ms > 0 && ms < 2) ms = 2
+        _periodMs = Math.round(ms)
+        // Faster than the classic ping allows: use the background sampler
+        if (_periodMs > 0 && _periodMs < CLASSIC_MIN_PERIOD_MS && !_backgroundMode) setBackgroundSampler(true)
         _reconfigureAll()
     }
 
