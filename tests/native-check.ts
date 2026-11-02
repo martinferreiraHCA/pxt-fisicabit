@@ -39,7 +39,7 @@ basic.forever(function () {
         fisicabitToF.tofDistance(FbToFModel.TOF400C, DigitalPin.P14, DigitalPin.P13, FbDistanceUnit.Centimeters), // swi2c*/tof*
         fisicabitDS18B20.temperature(DigitalPin.P0, FbTemperatureUnit.Celsius),                     // ds18b20Read
         100)
-    fisicabitUltrasonic.sendDistanceSRF05(DigitalPin.P1, DigitalPin.P2, FbDistanceUnit.Centimeters, FbChannel.USB)
+    fisicabitUltrasonic.sendDistanceSRF05(DigitalPin.P1, DigitalPin.P2, FbDistanceUnit.Centimeters, FbChannel.USB, 30)
     fisicabitToF.tofSendDistance(FbToFModel.Auto, DigitalPin.P20, DigitalPin.P19, FbDistanceUnit.Millimeters, FbChannel.Bluetooth)
     fisicabitKinematics.sendVelocityAcceleration(FbAccelerationAxis.Magnitude, FbChannel.USB, 100)
     basic.showString(fisicabitUltrasonic.status(DigitalPin.P8, DigitalPin.P12))                    // usStats/usEcho

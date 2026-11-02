@@ -88,9 +88,9 @@ namespace FisicaBitSerial {
     /** Legacy alias of fisicabitUltrasonic.rawDistance. */
     export function medirDistanciaUltrasonidoCruda(pinTrig: DigitalPin, pinEcho: DigitalPin, unidad: number): number { return fisicabitUltrasonic.rawDistance(pinTrig, pinEcho, unidad as FbDistanceUnit) }
     /** Legacy alias of fisicabitUltrasonic.sendDistance over USB. */
-    export function enviarDistanciaUltrasonido(pinTrig: DigitalPin, pinEcho: DigitalPin, unidad: number): void { fisicabitUltrasonic.sendDistance(pinTrig, pinEcho, unidad as FbDistanceUnit, FbChannel.USB) }
+    export function enviarDistanciaUltrasonido(pinTrig: DigitalPin, pinEcho: DigitalPin, unidad: number): void { fisicabitUltrasonic.sendDistance(pinTrig, pinEcho, unidad as FbDistanceUnit, FbChannel.USB, 0) }
     /** Legacy alias of fisicabitUltrasonic.sendDistanceSRF05 over USB. */
-    export function enviarDistanciaSRF05(pinTrig: DigitalPin, pinEcho: DigitalPin, unidad: number): void { fisicabitUltrasonic.sendDistanceSRF05(pinTrig, pinEcho, unidad as FbDistanceUnit, FbChannel.USB) }
+    export function enviarDistanciaSRF05(pinTrig: DigitalPin, pinEcho: DigitalPin, unidad: number): void { fisicabitUltrasonic.sendDistanceSRF05(pinTrig, pinEcho, unidad as FbDistanceUnit, FbChannel.USB, 0) }
     /** Legacy alias of fisicabitUltrasonic.calibrate. */
     export function calibrarUltrasonido(pinTrig: DigitalPin, pinEcho: DigitalPin, distanciaMm: number): void { fisicabitUltrasonic.calibrate(pinTrig, pinEcho, distanciaMm) }
     /** Legacy alias of fisicabitUltrasonic.echoValid. */
