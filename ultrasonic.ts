@@ -374,18 +374,22 @@ namespace fisicabitUltrasonic {
 
     /**
      * Sends to fisicabit.com every HC-SR04 echo with the real instant at which
-     * the sound hit the object: one "time,distance" line per sample, at the
-     * sensor rate (≈38 Hz with a 3 m range, ≈55 Hz with 1.5 m).
-     * Put it inside "forever"; no "every ... ms" is needed.
+     * the sound hit the object: one "time,distance" line per sample, one
+     * sample every `ms` milliseconds (30 ms = 33 Hz; 0 = as fast as the
+     * sensor allows). Below 30 ms the background sampler takes over, with
+     * microsecond timing in C++; its floor is the time of flight of the
+     * maximum range plus 1 ms (50 cm → 4 ms, 100 cm → 7 ms, 300 cm → 19 ms).
+     * Put it inside "forever"; the block paces itself.
      *
      * Example (cart on a track): [forever] → [send HC-SR04 distance
-     * TRIG P8 ECHO P12 in cm via USB]
+     * TRIG P8 ECHO P12 in cm via USB every 30 ms]
      * @param trigPin Pin connected to TRIG
      * @param echoPin Pin connected to ECHO
-     * @param unit Unit: cm (1 decimal), mm or inches
+     * @param unit Unit: cm (1 decimal), mm, inches or metres
      * @param channel USB or Bluetooth
+     * @param ms sampling period in ms, 2 to 1000 (0 = automatic)
      */
-    //% block="send HC-SR04 distance TRIG %trigPin ECHO %echoPin in %unit via %channel"
+    //% block="send HC-SR04 distance TRIG %trigPin ECHO %echoPin in %unit via %channel every %ms ms"
     //% blockId=fisicabit_us_enviar_hcsr04
     //% group="Measurement"
     //% weight=98
@@ -395,20 +399,25 @@ namespace fisicabitUltrasonic {
     //% echoPin.defl=DigitalPin.P12
     //% unit.defl=FbDistanceUnit.Centimeters
     //% channel.defl=FbChannel.USB
-    export function sendDistance(trigPin: DigitalPin, echoPin: DigitalPin, unit: FbDistanceUnit, channel: FbChannel): void {
+    //% ms.min=0 ms.max=1000 ms.defl=30
+    export function sendDistance(trigPin: DigitalPin, echoPin: DigitalPin, unit: FbDistanceUnit, channel: FbChannel, ms: number): void {
+        _applyPeriod(ms)
         _send(_get(trigPin, echoPin), unit, channel)
     }
 
     /**
      * Sends to fisicabit.com every HY-SRF05 echo with the real instant at
-     * which the sound hit the object (one line per sample, at the sensor
-     * rate). Single-wire mode: the same pin for TRIG and ECHO.
+     * which the sound hit the object: one line per sample, one sample every
+     * `ms` milliseconds (0 = as fast as the sensor allows; below 30 ms the
+     * background sampler takes over). Single-wire mode: the same pin for
+     * TRIG and ECHO.
      * @param trigPin Pin connected to TRIG
      * @param echoPin Pin connected to ECHO
-     * @param unit Unit: cm (1 decimal), mm or inches
+     * @param unit Unit: cm (1 decimal), mm, inches or metres
      * @param channel USB or Bluetooth
+     * @param ms sampling period in ms, 2 to 1000 (0 = automatic)
      */
-    //% block="send HY-SRF05 distance TRIG %trigPin ECHO %echoPin in %unit via %channel"
+    //% block="send HY-SRF05 distance TRIG %trigPin ECHO %echoPin in %unit via %channel every %ms ms"
     //% blockId=fisicabit_us_enviar_srf05
     //% group="Measurement"
     //% weight=97
@@ -418,8 +427,18 @@ namespace fisicabitUltrasonic {
     //% echoPin.defl=DigitalPin.P12
     //% unit.defl=FbDistanceUnit.Centimeters
     //% channel.defl=FbChannel.USB
-    export function sendDistanceSRF05(trigPin: DigitalPin, echoPin: DigitalPin, unit: FbDistanceUnit, channel: FbChannel): void {
+    //% ms.min=0 ms.max=1000 ms.defl=30
+    export function sendDistanceSRF05(trigPin: DigitalPin, echoPin: DigitalPin, unit: FbDistanceUnit, channel: FbChannel, ms: number): void {
+        _applyPeriod(ms)
         _send(_get(trigPin, echoPin), unit, channel)
+    }
+
+    /** Normalises a period the way setSamplePeriod does; applies it only when it changes (called every loop). */
+    function _applyPeriod(ms: number): void {
+        if (ms !== ms || ms < 0) ms = 0
+        if (ms > 1000) ms = 1000
+        if (ms > 0 && ms < 2) ms = 2
+        if (Math.round(ms) !== _periodMs) setSamplePeriod(ms)
     }
 
     /**
