@@ -236,7 +236,8 @@ basic.forever(function () {
 DS18B20 red (VDD)     → micro:bit 3V
 DS18B20 black (GND)   → micro:bit GND
 DS18B20 yellow (DATA) → micro:bit P0
-4.7 kΩ resistor between DATA and 3V (breakout modules already include it)
+4.7 kΩ resistor between DATA and 3V (breakout modules already include it;
+  short leads also work with the internal pull-up the block switches on)
 Several probes: one per pin (P0, P1, P2, ...)
 ```
 Calorimetry example (one reading per second, 12 bits):
@@ -310,7 +311,7 @@ Shared with LEDs:      P3, P4, P5, P6, P7, P9, P10, P11
 * Native code is C++ on CODAL only (micro:bit V2); there is no mbed code path. The few direct register accesses are commented in `shims.cpp`.
 * Block ids (`fisicabit_*`) are stable across versions so saved projects keep their blocks.
 * Translations of block texts live in `_locales/es/` and `_locales/pt-BR/` (block strings and tooltips).
-* Based on public documentation: ST datasheets and application notes for the VL53L0X / VL53L1X / VL6180X, Bosch BME280, Maxim DS18B20 / MAX6675, Avia HX711, TAOS TCS3200, and the CODAL / pxt-microbit sources. The ultrasonic acquisition follows the approach of Microsoft's `pxt-sonar` (MIT).
+* Based on public documentation: ST datasheets and application notes for the VL53L0X / VL53L1X / VL6180X, Bosch BME280, Maxim DS18B20 / MAX6675, Avia HX711, TAOS TCS3200, and the CODAL / pxt-microbit sources. The ultrasonic acquisition follows the approach of Microsoft's `pxt-sonar` (MIT). The DS18B20 driver is a port of Bill Siever's [`microbit-dstemp`](https://github.com/bsiever/microbit-dstemp) (MIT), the DS18B20 extension approved for MakeCode: same bus sequence, slot timings, CRC check and retries, plus the wait for the end of the conversion, the internal pull-up and interrupt-safe bit timing.
 
 ## Supported targets
 

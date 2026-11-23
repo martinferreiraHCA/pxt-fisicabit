@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="120" height="160" viewBox="0 0 120 160">
+  <defs><linearGradient id="steel" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#8a8a8a"/><stop offset="45%" stop-color="#f4f4f4"/><stop offset="100%" stop-color="#8a8a8a"/></linearGradient></defs>
+  <rect x="1" y="34" width="118" height="86" rx="6" fill="#1b1b1b" stroke="#000000" stroke-width="2"/>
+  <circle cx="11" cy="44" r="4" fill="#ffffff" stroke="#000000" stroke-width="1.5"/>
+  <circle cx="109" cy="44" r="4" fill="#ffffff" stroke="#000000" stroke-width="1.5"/>
+  <rect x="53" y="1" width="14" height="24" rx="6" fill="url(#steel)" stroke="#555" stroke-width="1.5"/>
+  <rect x="55" y="24" width="10" height="6" fill="#333"/>
+  <path d="M60 30 L60 44" stroke="#111" stroke-width="7" stroke-linecap="round"/>
+  <path d="M60 44 L50 52 M60 44 L60 52 M60 44 L70 52" stroke-width="3" fill="none" stroke-linecap="round" stroke="#555"/>
+  <path d="M50 52 L48 62" stroke="#6a6a6a" stroke-width="4" stroke-linecap="round"/>
+  <path d="M50 52 L48 62" stroke="#000" stroke-width="2.4" stroke-linecap="round"/>
+  <path d="M60 52 L60 62" stroke="#ffd740" stroke-width="3" stroke-linecap="round"/>
+  <path d="M70 52 L72 62" stroke="#ff5252" stroke-width="3" stroke-linecap="round"/>
+  <rect x="84" y="56" width="26" height="8" rx="2" fill="#d8c9a3" stroke="#6b5a2e" stroke-width="1"/>
+  <rect x="89" y="56" width="2.5" height="8" fill="#f2c200"/><rect x="94" y="56" width="2.5" height="8" fill="#7b3fb5"/><rect x="99" y="56" width="2.5" height="8" fill="#d32f2f"/>
+  <text x="97" y="73" font-size="7" fill="#bdbdbd" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="bold">4.7 k&#937;</text>
+  <text x="22" y="64" font-size="7" fill="#bdbdbd" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="bold">1-Wire</text>
+  <text x="60" y="86" font-size="12" fill="#ffffff" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="bold">DS18B20</text>
+  <rect x="27" y="116" width="66" height="14" rx="2" fill="#111"/>
+  <text x="40" y="113" font-size="10" fill="#e0e0e0" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-weight="bold" transform="rotate(-90 40 113)" dominant-baseline="middle">GND</text>
+  <rect x="37" y="128" width="6" height="32" fill="#d9b24c" stroke="#7a5f15" stroke-width="1"/>
+  <text x="60" y="113" font-size="10" fill="#ffd740" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-weight="bold" transform="rotate(-90 60 113)" dominant-baseline="middle">DAT</text>
+  <rect x="57" y="128" width="6" height="32" fill="#d9b24c" stroke="#7a5f15" stroke-width="1"/>
+  <text x="80" y="113" font-size="10" fill="#ff5252" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-weight="bold" transform="rotate(-90 80 113)" dominant-baseline="middle">VCC</text>
+  <rect x="77" y="128" width="6" height="32" fill="#d9b24c" stroke="#7a5f15" stroke-width="1"/>
+</svg>

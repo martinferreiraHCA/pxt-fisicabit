@@ -13,6 +13,7 @@
 //   system_timer_current_time_us() -> microsecond timestamp
 //   target_wait_us()               -> short busy-wait delays (CODAL HAL)
 //   target_disable_irq()/enable    -> nesting-safe critical sections (CODAL HAL)
+//   pin->getDigitalValue(PullMode) -> digital input with a pull resistor
 //
 // The only direct register access left is to the GPIO port of the pin being
 // driven (NRF_P0/NRF_P1 PIN_CNF, OUTSET, OUTCLR, IN) inside the DS18B20
@@ -645,18 +646,32 @@ namespace fisicabitNative {
     // =========================================================================
     // DS18B20 — Dallas/Maxim temperature probe on a one-wire bus
     // =========================================================================
-    // Adapted from "microbit-dstemp" by Bill Siever (2018-2021), MIT license,
-    // itself based on the SparkFun weather:bit. The protocol timings
-    // (calibrated with an oscilloscope) are kept.
-    // Changes: configurable resolution (9-12 bits), real wait for the end of
-    // conversion (the sensor answers 0 while converting and 1 when done), no
-    // error callback (the error code is queried from TS) and the result is
-    // returned as a raw integer (1/16 degC) without using float.
+    // Port of the micro:bit V2 (CODAL) code path of "microbit-dstemp" by
+    // Bill Siever (2018-2021, MIT license,
+    // https://github.com/bsiever/microbit-dstemp), the DS18B20 extension
+    // approved for MakeCode, itself based on the SparkFun weather:bit.
+    // Kept from it: the bus sequence (reset, Skip ROM, Write Scratchpad with
+    // the alarm bytes used as a signature, Convert T, Read Scratchpad), the
+    // slot timings, the CRC-8 check and the three tries.
     //
-    // Timing relies on CODAL only: target_wait_us() for the protocol delays
-    // and system_timer_current_time_us() for the sampling windows. No timer
-    // or clock peripheral is configured here; CODAL already runs the HF clock
-    // and its system timer with 32-bit timers on the micro:bit V2.
+    // Differences, all towards the DS18B20 datasheet:
+    //   * No timer or clock register is configured. Delays use
+    //     target_wait_us() and the sampling windows use
+    //     system_timer_current_time_us(), so nothing depends on calibrated
+    //     loop counts.
+    //   * The two pulses with a hard upper limit (the low pulse of a "write 1"
+    //     and the start of a read slot, 1 to 15 us) run with interrupts masked
+    //     for about 25 us, so an interrupt cannot turn a 1 into a 0.
+    //   * The presence window lasts the whole reset-high time (480 us).
+    //   * The end of the conversion is awaited: the probe answers 0 while it
+    //     converts and 1 when it is done. A probe that cannot signal it
+    //     (parasite power) gets the bus driven high for the full conversion
+    //     time instead.
+    //   * The pin is first set up through CODAL as a digital input with the
+    //     internal pull-up (about 13 kOhm). It works in parallel with the
+    //     external 4.7 kOhm resistor and keeps short leads working without it.
+    //   * Configurable resolution (9 to 12 bits) and an integer result
+    //     (1/16 degC), with the error code queried from TypeScript.
     // =========================================================================
 
     typedef int fbDsGpio;   // nRF GPIO number (MicroBitPin::name)
@@ -665,39 +680,47 @@ namespace fisicabitNative {
     static inline void fbDsWrite(fbDsGpio pin, int val) { if (val) FB_GPIO_PORT(pin)->OUTSET = 1 << FB_GPIO_BIT(pin); else FB_GPIO_PORT(pin)->OUTCLR = 1 << FB_GPIO_BIT(pin); }
     static inline bool fbDsRead(fbDsGpio pin)           { return (FB_GPIO_PORT(pin)->IN & (1 << FB_GPIO_BIT(pin))) ? 1 : 0; }
 
-    // Microsecond busy-wait for the one-wire slots. target_wait_us() is the
-    // CODAL HAL spin wait (accurate to about a microsecond). A zero-length
-    // wait keeps the minimal gap of the original code (one spin iteration).
-    static inline void fbDsWaitUs(uint32_t us) {
-        if (us == 0) { fbDelayCycles(1); return; }
-        target_wait_us(us);
-    }
-
-    // One-wire protocol timings (us), calibrated by Siever
-    static const int FB_DS_TIME_SLOT = 90;
-    static const int FB_DS_TIME_RECOV = 15;
-    static const int FB_DS_TIME_ZERO_LOW = FB_DS_TIME_SLOT;
-    static const int FB_DS_TIME_ONE_LOW = 0;
-    static const int FB_DS_TIME_RESET_LOW = 500;
-    static const int FB_DS_TIME_POWER_UP = 1000;
-    static const int FB_DS_TIME_POST_RESET = 10;
-    static const int FB_DS_TIME_PRESENCE = 300;
-    static const int FB_DS_HIGH_ALARM = 0xFF;
+    // One-wire timings in microseconds (values of microbit-dstemp; the
+    // datasheet limits are in brackets)
+    static const int FB_DS_TIME_SLOT = 90;          // time slot [60-120]
+    static const int FB_DS_TIME_RECOV = 15;         // recovery between slots [>= 1], long enough for the pull-up
+    static const int FB_DS_TIME_ZERO_LOW = FB_DS_TIME_SLOT;   // low time of a "write 0" [60-120]
+    static const int FB_DS_TIME_RESET_LOW = 500;    // reset pulse [>= 480]
+    static const int FB_DS_TIME_RESET_HIGH = 480;   // presence window after the reset [>= 480]
+    static const int FB_DS_TIME_POWER_UP = 1000;    // bus high before a reset
+    static const int FB_DS_TIME_POST_RESET = 10;    // from releasing the reset to looking for the presence pulse
+    static const int FB_DS_TIME_LOCKED_READ = 20;   // part of a read slot sampled with interrupts masked (data is valid for 15)
+    // Low pulse of a "write 1" and of the start of a read slot [1-15 us]:
+    // 2 to 4 us, timed by instruction count with interrupts masked.
+    static const uint32_t FB_DS_PULSE_LOOPS = 40;
+    static const int FB_DS_CONV_MAX_MS = 1000;      // longest wait for the busy flag (12 bits take up to 750 ms)
+    static const int FB_DS_HIGH_ALARM = 0xFF;       // alarm bytes, written and read back as a signature
     static const int FB_DS_LOW_ALARM = 0x80;
     static const int FB_DS_MAX_TRIES = 3;
-    static const int FB_DS_ERROR = -100000;   // error sentinel (raw)
+    static const int FB_DS_ERROR = -100000;         // error sentinel (raw)
 
-    static int fbDsLastError = 0;   // 0 ok, 1 not connected, 2 did not start, 3 CRC/read, 4 timed out
+    static int fbDsLastError = 0;    // 0 ok, 1 not connected, 2 did not start, 3 CRC/read, 4 timed out
+    static bool fbDsLocked = false;  // one reading at a time (fibers are cooperative)
 
+    // The bus is left driven high after a write slot: sharp rising edges with
+    // any pull-up, and power for a parasite-powered probe.
     static void fbDsWriteBit(fbDsGpio ioPin, bool one) {
+        // Recovery time
         fbDsWrite(ioPin, 1);
         fbDsOutput(ioPin);
-        fbDsWaitUs(FB_DS_TIME_RECOV);
-        fbDsWrite(ioPin, 0);
-        fbDsWaitUs(one ? FB_DS_TIME_ONE_LOW : FB_DS_TIME_ZERO_LOW);
-        fbDsInput(ioPin);
-        fbDsWrite(ioPin, 1);
-        fbDsWaitUs(one ? FB_DS_TIME_SLOT : 1);
+        target_wait_us(FB_DS_TIME_RECOV);
+        if (one) {
+            target_disable_irq();
+            fbDsWrite(ioPin, 0);
+            fbDelayCycles(FB_DS_PULSE_LOOPS);
+            fbDsWrite(ioPin, 1);
+            target_enable_irq();
+            target_wait_us(FB_DS_TIME_SLOT);
+        } else {
+            fbDsWrite(ioPin, 0);
+            target_wait_us(FB_DS_TIME_ZERO_LOW);
+            fbDsWrite(ioPin, 1);
+        }
     }
 
     static void fbDsWriteByte(fbDsGpio ioPin, uint8_t b) {
@@ -705,49 +728,53 @@ namespace fisicabitNative {
     }
 
     static bool fbDsReadBit(fbDsGpio ioPin) {
-        fbDsOutput(ioPin);
+        // Recovery time
         fbDsWrite(ioPin, 1);
-        fbDsWaitUs(FB_DS_TIME_RECOV);
+        fbDsOutput(ioPin);
+        target_wait_us(FB_DS_TIME_RECOV);
+        // Start the slot and release the bus. The probe holds it low for a 0
+        // and leaves it high for a 1; the answer is only guaranteed for 15 us,
+        // so the first part of the window is sampled with interrupts masked.
+        bool b = true;
+        target_disable_irq();
         fbDsWrite(ioPin, 0);
-        fbDsWaitUs(1);
+        fbDelayCycles(FB_DS_PULSE_LOOPS);
         fbDsWrite(ioPin, 1);
         fbDsInput(ioPin);
-        // Sample the line continuously for the whole slot: the sensor holds it
-        // low for a 0 and leaves it high for a 1. The window is timed with the
-        // system timer (us) instead of a calibrated iteration count.
-        bool b = true;
         uint64_t t0 = system_timer_current_time_us();
         do {
             b = b && fbDsRead(ioPin);
+        } while (system_timer_current_time_us() - t0 < (uint64_t)FB_DS_TIME_LOCKED_READ);
+        target_enable_irq();
+        // Keep sampling until the end of the slot
+        do {
+            b = b && fbDsRead(ioPin);
         } while (system_timer_current_time_us() - t0 < (uint64_t)FB_DS_TIME_SLOT);
-        fbDsWrite(ioPin, 1);
         return b;
     }
 
     static bool fbDsReset(fbDsGpio ioPin) {
-        fbDsOutput(ioPin);
         fbDsWrite(ioPin, 1);
-        fbDsWaitUs(FB_DS_TIME_POWER_UP);
+        fbDsOutput(ioPin);
+        target_wait_us(FB_DS_TIME_POWER_UP);
         fbDsWrite(ioPin, 0);
-        fbDsWaitUs(FB_DS_TIME_RESET_LOW);
+        target_wait_us(FB_DS_TIME_RESET_LOW);
         fbDsWrite(ioPin, 1);
         fbDsInput(ioPin);
-        fbDsWaitUs(FB_DS_TIME_POST_RESET);
-        // Presence pulse: the sensor pulls the line low at some point within
-        // the presence window and must have released it by the end.
+        target_wait_us(FB_DS_TIME_POST_RESET);
+        // Presence pulse: the probe pulls the bus low at some point of the
+        // window and must have released it by the end.
         bool presence = false;
         uint64_t t0 = system_timer_current_time_us();
         do {
             presence = presence || (fbDsRead(ioPin) == 0);
-        } while (system_timer_current_time_us() - t0 < (uint64_t)FB_DS_TIME_PRESENCE);
+        } while (system_timer_current_time_us() - t0 < (uint64_t)FB_DS_TIME_RESET_HIGH);
         bool release = fbDsRead(ioPin) == 1;
         return presence && release;
     }
 
     // Configuration byte for the resolution: 9->0x1F, 10->0x3F, 11->0x5F, 12->0x7F
     static uint8_t fbDsConfigByte(int bits) {
-        if (bits < 9) bits = 9;
-        if (bits > 12) bits = 12;
         return (uint8_t)(0x1F | ((bits - 9) << 5));
     }
 
@@ -768,7 +795,9 @@ namespace fisicabitNative {
         return true;
     }
 
-    static bool fbDsReadScratchpad(fbDsGpio ioPin, int bits, int16_t &raw) {
+    // Reads the nine scratchpad bytes; true if the CRC and the alarm-byte
+    // signature are right.
+    static bool fbDsReadScratchpad(fbDsGpio ioPin, int16_t &raw) {
         uint8_t data[9];
         uint8_t crc = 0;
         for (int j = 0; j < 9; j++) {
@@ -783,67 +812,89 @@ namespace fisicabitNative {
             data[j] = b;
         }
         raw = (int16_t)(((uint16_t)data[1] << 8) | data[0]);
-        // Bits unused at the selected resolution are undefined: clear them
-        int mask = ~((1 << (12 - bits)) - 1);
-        raw = (int16_t)(raw & mask);
-        return crc == 0 && data[2] == FB_DS_HIGH_ALARM && data[3] == FB_DS_LOW_ALARM
-            && (data[4] & 0x60) == (fbDsConfigByte(bits) & 0x60);
+        // The bits below the resolution the probe reports (byte 4) are
+        // undefined: clear them. Read from the probe, not from what was asked,
+        // because some DS18B20 clones only work at 12 bits.
+        int bits = 9 + ((data[4] >> 5) & 0x03);
+        raw = (int16_t)(raw & ~((1 << (12 - bits)) - 1));
+        return crc == 0 && data[2] == FB_DS_HIGH_ALARM && data[3] == FB_DS_LOW_ALARM;
     }
 
-    // nRF GPIO number of a DigitalPin id, or -1 if the id is not a valid pin.
-    static fbDsGpio fbDsGpioOf(int pin) {
+    // Sets the pin up through CODAL as a digital input with the internal
+    // pull-up and returns its nRF GPIO number, or -1 for an invalid pin id.
+    static fbDsGpio fbDsSetup(int pin) {
         MicroBitPin *mbp = pxt::getPin(pin);
         if (!mbp) return -1;
+        mbp->getDigitalValue(codal::PullMode::Up);
         return mbp->name;
+    }
+
+    static int fbDsMeasure(fbDsGpio gpio, int bits) {
+        // 1) Configure the probe and start the conversion. A probe on its own
+        //    supply answers 0 (busy) to the read slot that follows.
+        int err = 1;
+        bool started = false, busy = false;
+        for (int tries = 0; tries < FB_DS_MAX_TRIES && !busy; tries++) {
+            started = false;
+            if (!fbDsConfigure(gpio, bits)) { err = 1; continue; }
+            if (!fbDsStartConversion(gpio)) { err = 2; continue; }
+            started = true;
+            busy = !fbDsReadBit(gpio);
+        }
+        if (!started) { fbDsLastError = err; return FB_DS_ERROR; }
+
+        // 2) Wait for the end of the conversion
+        bool ready = false;
+        if (busy) {
+            // 94 / 188 / 375 / 750 ms for 9 to 12 bits; the probe says when
+            uint64_t tEnd = system_timer_current_time() + FB_DS_CONV_MAX_MS;
+            while (!ready && system_timer_current_time() < tEnd) {
+                uBit.sleep(4);
+                ready = fbDsReadBit(gpio);
+            }
+        } else {
+            // No busy flag: parasite power. Hold the bus high for the whole
+            // conversion time of the resolution asked for.
+            fbDsWrite(gpio, 1);
+            fbDsOutput(gpio);
+            uBit.sleep((94 << (bits - 9)) + 60);
+            ready = true;
+        }
+
+        // 3) Read the scratchpad (CRC and signature checked)
+        for (int tries = 0; tries < FB_DS_MAX_TRIES; tries++) {
+            if (fbDsReset(gpio)) {
+                fbDsWriteByte(gpio, 0xCC);     // Skip ROM
+                fbDsWriteByte(gpio, 0xBE);     // Read scratchpad
+                int16_t raw = 0;
+                if (fbDsReadScratchpad(gpio, raw)) {
+                    fbDsLastError = 0;
+                    return raw;
+                }
+            }
+        }
+        fbDsLastError = ready ? 3 : 4;
+        return FB_DS_ERROR;
     }
 
     // Reads the DS18B20 temperature on `pin` (DigitalPin id) with `bits` of
     // resolution. Returns the raw value (1/16 degC) or FB_DS_ERROR.
     //%
     int ds18b20Read(int pin, int bits) {
-        fbDsGpio gpio = fbDsGpioOf(pin);
-        if (gpio < 0) { fbDsLastError = 1; return FB_DS_ERROR; }
         if (bits < 9) bits = 9;
         if (bits > 12) bits = 12;
-
-        // 1) Configure and start the conversion
-        bool ok = false;
-        for (int tries = 0; tries < FB_DS_MAX_TRIES && !ok; tries++) {
-            if (!fbDsConfigure(gpio, bits)) { fbDsLastError = 1; fbDsInput(gpio); return FB_DS_ERROR; }
-            ok = fbDsStartConversion(gpio);
+        while (fbDsLocked) uBit.sleep(4);
+        fbDsLocked = true;
+        int raw = FB_DS_ERROR;
+        fbDsGpio gpio = fbDsSetup(pin);
+        if (gpio < 0) {
+            fbDsLastError = 1;
+        } else {
+            raw = fbDsMeasure(gpio, bits);
+            fbDsInput(gpio);   // release the bus (the pull-ups keep it high)
         }
-        if (!ok) { fbDsLastError = 2; fbDsInput(gpio); return FB_DS_ERROR; }
-
-        // 2) Wait for the end of conversion: the sensor answers 0 while
-        //    converting and 1 when done. Maximum time depends on the
-        //    resolution (94 / 188 / 375 / 750 ms) plus margin. With parasitic
-        //    power the polling does not work: wait the full time and try.
-        int maxMs = (94 << (bits - 9)) + 60;
-        int waited = 0;
-        bool ready = false;
-        while (waited < maxMs) {
-            uBit.sleep(4);
-            waited += 4;
-            if (fbDsReadBit(gpio)) { ready = true; break; }
-        }
-        if (!ready) uBit.sleep(10);
-
-        // 3) Read the scratchpad (with CRC)
-        for (int tries = 0; tries < FB_DS_MAX_TRIES; tries++) {
-            if (fbDsReset(gpio)) {
-                fbDsWriteByte(gpio, 0xCC);     // Skip ROM
-                fbDsWriteByte(gpio, 0xBE);     // Read scratchpad
-                int16_t raw = 0;
-                if (fbDsReadScratchpad(gpio, bits, raw)) {
-                    fbDsLastError = 0;
-                    fbDsInput(gpio);
-                    return raw;
-                }
-            }
-        }
-        fbDsLastError = ready ? 3 : 4;
-        fbDsInput(gpio);
-        return FB_DS_ERROR;
+        fbDsLocked = false;
+        return raw;
     }
 
     // Code of the last DS18B20 error (0 = no error).
@@ -855,10 +906,15 @@ namespace fisicabitNative {
     // 1 if a DS18B20 answers on the pin, 0 otherwise.
     //%
     int ds18b20Present(int pin) {
-        fbDsGpio gpio = fbDsGpioOf(pin);
-        if (gpio < 0) return 0;
-        bool p = fbDsReset(gpio);
-        fbDsInput(gpio);
+        while (fbDsLocked) uBit.sleep(4);
+        fbDsLocked = true;
+        bool p = false;
+        fbDsGpio gpio = fbDsSetup(pin);
+        if (gpio >= 0) {
+            for (int tries = 0; tries < FB_DS_MAX_TRIES && !p; tries++) p = fbDsReset(gpio);
+            fbDsInput(gpio);
+        }
+        fbDsLocked = false;
         return p ? 1 : 0;
     }
 
