@@ -250,7 +250,8 @@ basic.forever(function () {
 DS18B20 rojo (VDD)      → micro:bit 3V
 DS18B20 negro (GND)     → micro:bit GND
 DS18B20 amarillo (DATA) → micro:bit P0
-Resistencia 4,7 kΩ entre DATA y 3V (los módulos con placa ya la traen)
+Resistencia 4,7 kΩ entre DATA y 3V (los módulos con placa ya la traen;
+  con cables cortos también funciona con el pull-up interno que activa el bloque)
 Varias sondas: una por pin (P0, P1, P2, ...)
 ```
 Ejemplo de calorimetría (una lectura por segundo, 12 bits):

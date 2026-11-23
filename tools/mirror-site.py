@@ -2,7 +2,7 @@
 """Build the two small packages that fisicabit.com loads into its embedded MakeCode editor.
 
 fisicabit.com pins its projects to the repository martinferreiraHCA/pxt-fisicabit-usb:
-  * branch "main"      -> package "fisicabit-usb"  : categories FisicaBit USB + Ultrasonic
+  * branch "main"      -> package "fisicabit-usb"  : categories FisicaBit USB + Ultrasonic + DS18B20
   * branch "bluetooth" -> package "fisicabit-bt"   : the same plus FisicaBit Bluetooth, one package
 The site resolves the branch commit through the GitHub API, so pushing to those branches
 updates the site's editor within minutes. Block ids are the same as here, so saved projects
@@ -19,15 +19,17 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = sys.argv[1] if len(sys.argv) > 1 else os.path.join(ROOT, 'built', 'site-mirror')
 
 # Source files of the slim package, in pxt.json order
-CORE_FILES = ['data.ts', 'serial.ts', 'ultrasonic.ts', 'enums.d.ts', 'shims.cpp',
-              'pxtparts.json', 'parts/hcsr04.svg', 'parts/hysrf05.svg']
+CORE_FILES = ['data.ts', 'serial.ts', 'ultrasonic.ts', 'ds18b20.ts', 'enums.d.ts', 'shims.cpp',
+              'pxtparts.json', 'parts/hcsr04.svg', 'parts/hysrf05.svg', 'parts/ds18b20.svg']
+# Simulator parts of the shipped sensors
+PARTS = ('hcsr04', 'hysrf05', 'ds18b20')
 TUTORIALS = ['tutorial-usb.md', '_locales/es/tutorial-usb.md', '_locales/pt-BR/tutorial-usb.md']
 BT_TUTORIALS = ['tutorial-bluetooth.md', '_locales/es/tutorial-bluetooth.md', '_locales/pt-BR/tutorial-bluetooth.md']
 EXTRA = ['icon.png', 'card.png', 'LICENSE', 'docs/img/hc-sr04-microbit.png', 'docs/img/hc-sr04-microbit.svg',
          'docs/img/hy-srf05-microbit.png', 'docs/img/hy-srf05-microbit.svg']
 # Locale keys kept: these namespaces, enums and groups
-NAMESPACES = ['fisicabitSerial', 'fisicabitUltrasonic', 'fisicabitData']
-ENUMS = ['FbSampleRate', 'FbChannel', 'FbDistanceUnit', 'FbUltrasonicFilter']
+NAMESPACES = ['fisicabitSerial', 'fisicabitUltrasonic', 'fisicabitDS18B20', 'fisicabitData']
+ENUMS = ['FbSampleRate', 'FbChannel', 'FbDistanceUnit', 'FbUltrasonicFilter', 'FbTemperatureUnit', 'FbDS18B20Resolution']
 GROUPS = ['1. Send (inside forever)', '2. Optional', 'Advanced', 'Send without time',
           'Configuration', 'Diagnostics', 'Measurement']
 BT_NAMESPACE = 'fisicabitBluetooth'
@@ -71,7 +73,7 @@ def build(name, with_bluetooth):
     for f in CORE_FILES:
         if f == 'pxtparts.json':
             parts = load(os.path.join(ROOT, f))
-            dump({k: v for k, v in parts.items() if k in ('hcsr04', 'hysrf05')}, os.path.join(out, f))
+            dump({k: v for k, v in parts.items() if k in PARTS}, os.path.join(out, f))
         else:
             copy(f, out)
     if with_bluetooth:
@@ -110,7 +112,7 @@ def build(name, with_bluetooth):
         'version': core['version'],
         'description': ('micro:bit (V2) only. FisicaBit for fisicabit.com: send data over USB'
                         + (' or Bluetooth LE' if with_bluetooth else '')
-                        + ', HC-SR04 / HY-SRF05 ultrasonic distance with physical time stamps'
+                        + ', HC-SR04 / HY-SRF05 ultrasonic distance with physical time stamps, DS18B20 temperature probe'
                         + (' (replaces fisicabit-usb; incompatible with radio)' if with_bluetooth else ' (Bluetooth: fisicabit-bt)')),
         'license': core['license'],
         'authors': core['authors'],

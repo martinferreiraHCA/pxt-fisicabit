@@ -10,17 +10,21 @@
 //    Red     (VDD)  → 3V
 //    Black   (GND)  → GND
 //    Yellow/white (DATA) → P0 (any digital pin)
-//    ⚠ 4.7 kΩ pull-up resistor between DATA and 3V (mandatory; modules
-//      with a breakout board usually include it).
+//    4.7 kΩ pull-up resistor between DATA and 3V (modules with a breakout
+//    board include it). The driver also switches on the internal pull-up of
+//    the micro:bit pin, which is enough for short leads; with a cable of a
+//    metre or more the 4.7 kΩ resistor is needed.
 //
 //  ACCURACY: ±0.5 °C between −10 and 85 °C; range −55 to 125 °C.
 //  RESOLUTION: 9 to 12 bits (0.5 to 0.0625 °C); the conversion takes from
 //              94 ms (9 bits) to 750 ms (12 bits) and blocks the block.
 //  SEVERAL PROBES: one per pin (each block names its pin).
 //
-//  The native code is adapted from "microbit-dstemp" by Bill Siever
-//  (MIT license), with a real wait for the end of conversion and a
-//  configurable resolution.
+//  The native code is a port of "microbit-dstemp" by Bill Siever (MIT
+//  license), the DS18B20 extension approved for MakeCode: same bus sequence,
+//  slot timings, CRC check and retries. Added here: the wait for the end of
+//  the conversion, the configurable resolution, the internal pull-up and
+//  interrupt-safe bit timing (details in shims.cpp).
 // =============================================================================
 
 /** DS18B20 waterproof temperature probe (OneWire) for calorimetry and thermal experiments. */
@@ -87,7 +91,8 @@ namespace fisicabitDS18B20 {
      * there never was one).
      *
      * Wiring: red → 3V, black → GND, yellow (DATA) → P0, 4.7 kΩ resistor
-     * between DATA and 3V.
+     * between DATA and 3V (short leads also work with the internal pull-up
+     * the block switches on).
      *
      * Example (calorimetry): [forever] → [send to fisicabit.com time and
      * (DS18B20 temperature on P0 in °C) every 1000 ms]
@@ -98,6 +103,7 @@ namespace fisicabitDS18B20 {
     //% block="DS18B20 temperature on %pin in %unit"
     //% group="Measurement"
     //% weight=90
+    //% parts="ds18b20" trackArgs=0
     //% pin.defl=DigitalPin.P0
     //% unit.defl=FbTemperatureUnit.Celsius
     export function temperature(pin: DigitalPin, unit: FbTemperatureUnit): number {
@@ -155,13 +161,14 @@ namespace fisicabitDS18B20 {
 
     /**
      * True if a DS18B20 probe is responding on the pin (does not measure,
-     * only checks the connection; takes about 2 ms).
+     * only checks the connection; takes 2 to 6 ms).
      * @param pin Digital pin where DATA is connected
      */
     //% blockId=fisicabit_ds18b20_conectado
     //% block="DS18B20 connected on %pin?"
     //% group="Diagnostics"
     //% weight=65
+    //% parts="ds18b20" trackArgs=0
     //% pin.defl=DigitalPin.P0
     export function isConnected(pin: DigitalPin): boolean {
         return _hwPresent(pin) == 1

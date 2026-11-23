@@ -250,5 +250,73 @@
                 ]
             }
         ]
+    },
+    "ds18b20": {
+        "visual": {
+            "image": "parts/ds18b20.svg",
+            "width": 120,
+            "height": 160,
+            "pinDistance": 20,
+            "pinLocations": [
+                {
+                    "x": 40.0,
+                    "y": 159
+                },
+                {
+                    "x": 60.0,
+                    "y": 159
+                },
+                {
+                    "x": 80.0,
+                    "y": 159
+                }
+            ]
+        },
+        "numberOfPins": 3,
+        "pinDefinitions": [
+            {
+                "target": "ground",
+                "style": "male",
+                "orientation": "-Z"
+            },
+            {
+                "target": {
+                    "pinInstantiationIdx": 0
+                },
+                "style": "male",
+                "orientation": "-Z"
+            },
+            {
+                "target": "threeVolt",
+                "style": "male",
+                "orientation": "-Z"
+            }
+        ],
+        "instantiations": [
+            {
+                "kind": "function",
+                "fullyQualifiedName": "fisicabitDS18B20.temperature,fisicabitDS18B20.isConnected",
+                "argumentRoles": [
+                    {
+                        "pinInstantiationIdx": 0,
+                        "partParameter": "pin"
+                    }
+                ]
+            }
+        ],
+        "assembly": [
+            {
+                "part": true,
+                "pinIndices": [
+                    0,
+                    2
+                ]
+            },
+            {
+                "pinIndices": [
+                    1
+                ]
+            }
+        ]
     }
 }
